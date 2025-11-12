@@ -71,12 +71,12 @@ github.com/Azure/azure-sdk-for-go/sdk/azcore
 ```
 
 ### Supported Authentication Methods
-1. **Service Principal with Client Secret** (recommended for CI/CD)
-2. **Service Principal with Certificate**
-3. **Managed Identity** (for Azure-hosted environments)
-4. **Azure CLI Authentication** (for local development)
-5. **Device Code Flow** (for interactive scenarios)
-6. **Azure Workload Identity** (for Kubernetes workloads with federated identity)
+1. **Service Principal with Client Secret**
+2. **Service Principal with Workload Identity Credential** (recommended for CI/CD)
+3. **Service Principal with Certificate**
+4. **Managed Identity** (for Azure-hosted environments)
+5. **Azure CLI Authentication** (for local development)
+6. **Device Code Flow** (for interactive scenarios)
 
 ### Required Permissions
 - **AdminCenter.ReadWrite.All** on the "Dynamics 365 Business Central administration center" API
@@ -434,6 +434,11 @@ Only implement resources for entities that can be managed statefully. Avoid crea
 - Consistent code formatting (gofmt)
 - Proper error handling and logging
 - Clear and maintainable code structure
+
+### 5. Testing
+- Write unit tests for all functions
+- Implement integration tests against real API
+- Use acceptance tests for end-to-end validation
 
 ## Release Strategy
 
