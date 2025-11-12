@@ -2,6 +2,22 @@
 
 This Terraform provider enables Infrastructure as Code (IaC) management of Microsoft Dynamics 365 Business Central environments through the [Business Central Admin Center API](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api).
 
+## ⚠️ Important Warnings
+
+**This provider manages critical production infrastructure and requires administrator privileges.**
+
+- **Destructive Operations**: This provider will permanently delete environments when Terraform determines it's necessary (e.g., when changing immutable attributes). Always carefully review `terraform plan` output before applying changes.
+- **No Undo**: Environment deletions are permanent and cannot be reversed. Ensure you have proper backups before making changes.
+- **Development Status**: This provider is in active development and has not been extensively tested in production environments. Use at your own risk.
+- **No Warranty**: The authors and contributors are not responsible for any data loss, service interruption, or other issues that may occur from using this provider.
+
+**Best Practices**:
+- Always run `terraform plan` and carefully review changes before `terraform apply`
+- Test in non-production environments first
+- Use version control for your Terraform configurations
+- Implement proper backup strategies for critical environments
+- Consider using `-target` flag to limit changes to specific resources when needed
+
 ## Features
 
 - Manage Business Central production and sandbox environments
@@ -37,14 +53,14 @@ The provider supports multiple authentication methods via the Azure SDK:
 ```hcl
 terraform {
   required_providers {
-    bc_admin_center = {
+    bcadmincenter = {
       source  = "vllni/bc-admin-center"
       version = "~> 1.0"
     }
   }
 }
 
-provider "bc_admin_center" {
+provider "bcadmincenter" {
   client_id     = "00000000-0000-0000-0000-000000000000"
   client_secret = "your-client-secret"
   tenant_id     = "00000000-0000-0000-0000-000000000000"
@@ -66,7 +82,7 @@ The provider follows Azure SDK conventions and supports these environment variab
 For Azure Workload Identity in Kubernetes environments:
 
 ```hcl
-provider "bc_admin_center" {
+provider "bcadmincenter" {
   # Azure Workload Identity uses these environment variables:
   # AZURE_CLIENT_ID
   # AZURE_TENANT_ID
@@ -151,7 +167,7 @@ Then use it in your Terraform configuration:
 ```hcl
 terraform {
   required_providers {
-    bc_admin_center = {
+    bcadmincenter = {
       source  = "local/vllni/bc-admin-center"
       version = "1.0.0"
     }
@@ -171,12 +187,40 @@ Run acceptance tests (note: creates real resources):
 make testacc
 ```
 
+### Documentation Development
+
+This provider uses [terraform-plugin-docs](https://github.com/hashicorp/terraform-plugin-docs) for documentation generation.
+
+```shell
+# Generate documentation from templates
+make docs
+
+# Validate documentation compliance
+make validate-docs
+
+# Check if docs are up-to-date
+make docs-check
+
+# Format example files
+terraform fmt -recursive examples/
+```
+
+**Important**: Never edit files in `docs/` directly. Edit templates in `templates/` instead, then run `make docs`.
+
+See the [Documentation Quick Reference](docs/QUICK-REFERENCE.md) for more details.
+
 ## Documentation
 
 See the [docs](./docs) directory for detailed documentation on:
 - Resources
 - Data Sources
 - Configuration options
+
+**Documentation Development**:
+- [Documentation Quick Reference](docs/QUICK-REFERENCE.md) - Quick commands and checklist
+- [Compliance Guide](docs/COMPLIANCE.md) - Full validation pipeline documentation
+- [Template Guide](templates/README.md) - How to write documentation templates
+- [Validation Checklist](DOCUMENTATION.md) - Complete documentation requirements
 
 ## Contributing
 

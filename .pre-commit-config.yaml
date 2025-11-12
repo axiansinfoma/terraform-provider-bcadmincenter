@@ -1,0 +1,56 @@
+# Pre-commit hooks for documentation validation
+# Install with: pre-commit install
+# Run manually with: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^docs/
+      - id: end-of-file-fixer
+        exclude: ^docs/
+      - id: check-yaml
+        args: ['--unsafe']  # Allow custom tags in GitHub Actions
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.86.0
+    hooks:
+      - id: terraform_fmt
+        files: ^examples/
+
+  - repo: local
+    hooks:
+      - id: check-copyright-headers
+        name: Check copyright headers in examples
+        entry: bash -c 'for file in $(git diff --cached --name-only --diff-filter=ACM | grep "^examples/.*\.tf$"); do if ! grep -q "Copyright (c)" "$file"; then echo "Missing copyright header in $file"; exit 1; fi; done'
+        language: system
+        pass_filenames: false
+        files: ^examples/.*\.tf$
+
+      - id: validate-documentation-templates
+        name: Validate documentation templates
+        entry: bash -c 'for template in $(git diff --cached --name-only --diff-filter=ACM | grep "^templates/.*\.tmpl$"); do if ! grep -q "{{ .SchemaMarkdown }}" "$template"; then echo "Missing {{ .SchemaMarkdown }} in $template"; exit 1; fi; done'
+        language: system
+        pass_filenames: false
+        files: ^templates/.*\.tmpl$
+
+      - id: generate-documentation
+        name: Generate documentation
+        entry: bash -c 'if git diff --cached --name-only --diff-filter=ACM | grep -qE "^(templates/|internal/|examples/)"; then echo "Regenerating documentation..."; cd tools && go generate && cd ..; git add docs/; fi'
+        language: system
+        pass_filenames: false
+        files: ^(templates/|internal/|examples/)
+
+      - id: check-documentation-sync
+        name: Check documentation is in sync
+        entry: bash -c 'cd tools && go generate && cd .. && git diff --exit-code docs/ || (echo "Documentation out of sync. Changes have been staged." && exit 0)'
+        language: system
+        pass_filenames: false
+        stages: [commit]

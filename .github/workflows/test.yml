@@ -10,6 +10,8 @@ on:
   push:
     paths-ignore:
       - 'README.md'
+    branches:
+      - main
 
 # Testing only needs permissions to read the repository contents.
 permissions:
@@ -63,11 +65,8 @@ jobs:
       matrix:
         # list whatever Terraform versions here you would like to support
         terraform:
-          - '1.0.*'
-          - '1.1.*'
-          - '1.2.*'
-          - '1.3.*'
-          - '1.4.*'
+          - '1.13.*'
+
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0

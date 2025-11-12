@@ -7,21 +7,21 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 )
 
 // testAccProtoV6ProviderFactories is used to instantiate a provider during acceptance testing.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"bc_admin_center": providerserver.NewProtocol6WithError(New("test")()),
+	"bcadmincenter": providerserver.NewProtocol6WithError(New("test")()),
 }
 
-// testAccProtoV6ProviderFactoriesWithEcho includes the echo provider alongside the bc_admin_center provider.
+// testAccProtoV6ProviderFactoriesWithEcho includes the echo provider alongside the bcadmincenter provider.
 var testAccProtoV6ProviderFactoriesWithEcho = map[string]func() (tfprotov6.ProviderServer, error){
-	"bc_admin_center": providerserver.NewProtocol6WithError(New("test")()),
-	"echo":            echoprovider.NewProviderServer(),
+	"bcadmincenter": providerserver.NewProtocol6WithError(New("test")()),
+	"echo":          echoprovider.NewProviderServer(),
 }
 
 func testAccPreCheck(t *testing.T) {
@@ -39,8 +39,8 @@ func TestBCAdminCenterProvider_Metadata(t *testing.T) {
 
 	p.Metadata(context.Background(), req, resp)
 
-	if resp.TypeName != "bc_admin_center" {
-		t.Errorf("TypeName = %v, want bc_admin_center", resp.TypeName)
+	if resp.TypeName != "bcadmincenter" {
+		t.Errorf("TypeName = %v, want bcadmincenter", resp.TypeName)
 	}
 
 	if resp.Version != "test" {
@@ -91,15 +91,15 @@ func TestBCAdminCenterProvider_Configure(t *testing.T) {
 	t.Skip("Configuration testing requires full Terraform framework context")
 }
 
-
 func TestBCAdminCenterProvider_Resources(t *testing.T) {
 	p := &BCAdminCenterProvider{}
 
 	resources := p.Resources(context.Background())
 
-	// Currently we should have no resources implemented
-	if len(resources) != 0 {
-		t.Logf("Resources() returned %d resources (expected 0 for initial implementation)", len(resources))
+	// We should have 1 resource: environment
+	expectedCount := 1
+	if len(resources) != expectedCount {
+		t.Errorf("Resources() returned %d resources, want %d", len(resources), expectedCount)
 	}
 }
 
@@ -108,9 +108,10 @@ func TestBCAdminCenterProvider_DataSources(t *testing.T) {
 
 	dataSources := p.DataSources(context.Background())
 
-	// Currently we should have no data sources implemented
-	if len(dataSources) != 0 {
-		t.Logf("DataSources() returned %d data sources (expected 0 for initial implementation)", len(dataSources))
+	// We should have 4 data sources: available_applications, application_family, environment, environments
+	expectedCount := 4
+	if len(dataSources) != expectedCount {
+		t.Errorf("DataSources() returned %d data sources, want %d", len(dataSources), expectedCount)
 	}
 }
 

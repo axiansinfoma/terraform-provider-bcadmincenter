@@ -19,40 +19,40 @@ import (
 const (
 	// DefaultBaseURL is the default Business Central Admin Center API endpoint
 	DefaultBaseURL = "https://api.businesscentral.dynamics.com"
-	
+
 	// BusinessCentralResourceID is the Azure AD resource ID for Business Central
 	BusinessCentralResourceID = "996def3d-b36c-4153-8607-a6fd3c01b89f"
-	
+
 	// DefaultAPIVersion is the default API version to use
 	DefaultAPIVersion = "v2.24"
 )
 
 // Client represents a Business Central Admin Center API client
 type Client struct {
-	credential   azcore.TokenCredential
-	httpClient   *http.Client
-	baseURL      string
-	tenantID     string
-	apiVersion   string
+	credential azcore.TokenCredential
+	httpClient *http.Client
+	baseURL    string
+	tenantID   string
+	apiVersion string
 }
 
 // Config holds the configuration for creating a new client
 type Config struct {
-	ClientID       string
-	ClientSecret   string
-	TenantID       string
-	Environment    string
-	BaseURL        string
-	APIVersion     string
+	ClientID     string
+	ClientSecret string
+	TenantID     string
+	Environment  string
+	BaseURL      string
+	APIVersion   string
 }
 
 // AdminCenterError represents an error response from the Business Central Admin Center API
 type AdminCenterError struct {
-	Code         string                 `json:"code"`
-	Message      string                 `json:"message"`
-	Target       string                 `json:"target,omitempty"`
-	Details      []AdminCenterError     `json:"details,omitempty"`
-	InnerError   map[string]interface{} `json:"innererror,omitempty"`
+	Code       string                 `json:"code"`
+	Message    string                 `json:"message"`
+	Target     string                 `json:"target,omitempty"`
+	Details    []AdminCenterError     `json:"details,omitempty"`
+	InnerError map[string]interface{} `json:"innererror,omitempty"`
 }
 
 func (e *AdminCenterError) Error() string {
@@ -160,12 +160,12 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body io.Rea
 	// Check for error responses
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
-		
+
 		var apiError AdminCenterError
 		if err := json.NewDecoder(resp.Body).Decode(&apiError); err != nil {
 			return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, resp.Status)
 		}
-		
+
 		return nil, &apiError
 	}
 
@@ -195,4 +195,24 @@ func (c *Client) Delete(ctx context.Context, path string) (*http.Response, error
 // Patch performs an authenticated PATCH request
 func (c *Client) Patch(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
 	return c.DoRequest(ctx, http.MethodPatch, path, body)
+}
+
+// SetCredential sets the credential for testing purposes
+func (c *Client) SetCredential(credential azcore.TokenCredential) {
+	c.credential = credential
+}
+
+// SetBaseURL sets the base URL for testing purposes
+func (c *Client) SetBaseURL(baseURL string) {
+	c.baseURL = baseURL
+}
+
+// SetAPIVersion sets the API version for testing purposes
+func (c *Client) SetAPIVersion(apiVersion string) {
+	c.apiVersion = apiVersion
+}
+
+// SetHTTPClient sets the HTTP client for testing purposes
+func (c *Client) SetHTTPClient(httpClient *http.Client) {
+	c.httpClient = httpClient
 }

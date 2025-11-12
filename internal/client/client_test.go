@@ -92,7 +92,7 @@ func TestNewClient(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client, err := NewClient(context.Background(), tt.config)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("NewClient() expected error, got nil")

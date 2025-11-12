@@ -5,7 +5,7 @@ package provider
 
 import (
 	"context"
-	"net/http"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -14,6 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/vllni/terraform-provider-bc-admin-center/internal/client"
+	"github.com/vllni/terraform-provider-bc-admin-center/internal/services/available_applications"
+	"github.com/vllni/terraform-provider-bc-admin-center/internal/services/environments"
 )
 
 // Ensure BCAdminCenterProvider satisfies various provider interfaces.
@@ -31,15 +36,15 @@ type BCAdminCenterProvider struct {
 
 // BCAdminCenterProviderModel describes the provider data model.
 type BCAdminCenterProviderModel struct {
-	ClientID       types.String `tfsdk:"client_id"`
-	ClientSecret   types.String `tfsdk:"client_secret"`
-	TenantID       types.String `tfsdk:"tenant_id"`
-	Environment    types.String `tfsdk:"environment"`
-	AuxiliaryTenantIDs types.List `tfsdk:"auxiliary_tenant_ids"`
+	ClientID           types.String `tfsdk:"client_id"`
+	ClientSecret       types.String `tfsdk:"client_secret"`
+	TenantID           types.String `tfsdk:"tenant_id"`
+	Environment        types.String `tfsdk:"environment"`
+	AuxiliaryTenantIDs types.List   `tfsdk:"auxiliary_tenant_ids"`
 }
 
 func (p *BCAdminCenterProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "bc_admin_center"
+	resp.TypeName = "bcadmincenter"
 	resp.Version = p.version
 }
 
@@ -82,18 +87,64 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 		return
 	}
 
-	// TODO: Implement Azure authentication and client initialization
-	// This will be implemented when we create the client package
-	
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	// Get configuration values from provider config or environment variables
+	clientID := getConfigValue(data.ClientID, "AZURE_CLIENT_ID")
+	clientSecret := getConfigValue(data.ClientSecret, "AZURE_CLIENT_SECRET")
+	tenantID := getConfigValue(data.TenantID, "AZURE_TENANT_ID")
+	environment := getConfigValue(data.Environment, "AZURE_ENVIRONMENT")
+
+	// Validate required configuration
+	if tenantID == "" {
+		resp.Diagnostics.AddError(
+			"Missing Tenant ID",
+			"Tenant ID must be provided either through the provider configuration or AZURE_TENANT_ID environment variable",
+		)
+		return
+	}
+
+	// Set default environment if not specified
+	if environment == "" {
+		environment = "public"
+	}
+
+	tflog.Debug(ctx, "Configuring Business Central Admin Center client", map[string]interface{}{
+		"tenant_id":   tenantID,
+		"environment": environment,
+	})
+
+	// Create the client
+	config := &client.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TenantID:     tenantID,
+		Environment:  environment,
+	}
+
+	bcClient, err := client.NewClient(ctx, config)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create Business Central Admin Center client",
+			"Error: "+err.Error(),
+		)
+		return
+	}
+
+	// Make the client available to data sources and resources
+	resp.DataSourceData = bcClient
+	resp.ResourceData = bcClient
+}
+
+// getConfigValue returns the config value if set, otherwise returns the environment variable value
+func getConfigValue(configValue types.String, envVar string) string {
+	if !configValue.IsNull() && configValue.ValueString() != "" {
+		return configValue.ValueString()
+	}
+	return os.Getenv(envVar)
 }
 
 func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		// TODO: Add resources here as they are implemented
+		environments.NewEnvironmentResource,
 	}
 }
 
@@ -105,7 +156,10 @@ func (p *BCAdminCenterProvider) EphemeralResources(ctx context.Context) []func()
 
 func (p *BCAdminCenterProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		// TODO: Add data sources here as they are implemented
+		available_applications.NewAvailableApplicationsDataSource,
+		available_applications.NewApplicationFamilyDataSource,
+		environments.NewEnvironmentDataSource,
+		environments.NewEnvironmentsDataSource,
 	}
 }
 

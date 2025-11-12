@@ -1,17 +1,20 @@
+# Copyright (c) 2025 Michael Villani
+# SPDX-License-Identifier: MPL-2.0
+
 terraform {
   required_providers {
-    bc_admin_center = {
+    bcadmincenter = {
       source = "vllni/bc-admin-center"
     }
   }
 }
 
 # Example 1: Service Principal with Client Secret
-provider "bc_admin_center" {
+provider "bcadmincenter" {
   client_id     = "00000000-0000-0000-0000-000000000000"
   client_secret = "your-client-secret"
   tenant_id     = "00000000-0000-0000-0000-000000000000"
-  
+
   # Optional: Override default settings
   environment = "public" # public, usgovernment, china
 }
@@ -23,7 +26,7 @@ provider "bc_admin_center" {
 # AZURE_TENANT_ID
 # AZURE_ENVIRONMENT (optional)
 #
-# provider "bc_admin_center" {
+# provider "bcadmincenter" {
 #   # Configuration will be automatically picked up from environment
 # }
 
@@ -35,6 +38,6 @@ provider "bc_admin_center" {
 # AZURE_FEDERATED_TOKEN_FILE
 # AZURE_AUTHORITY_HOST
 #
-# provider "bc_admin_center" {
+# provider "bcadmincenter" {
 #   # Provider automatically detects and uses workload identity credentials
 # }

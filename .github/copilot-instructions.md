@@ -1,5 +1,11 @@
 # Terraform Provider for Business Central Admin Center
 
+## ⚠️ CRITICAL REQUIREMENTS
+
+**TESTING IS MANDATORY**: Every new resource, data source, or service method MUST have corresponding tests before it is considered complete. See the [Testing Strategy](#testing-strategy) section for detailed requirements.
+
+**DOCUMENTATION IS REQUIRED**: All resources and data sources must have complete documentation templates and examples. Do NOT create separate markdown files to summarize work - only update existing templates or generated docs.
+
 ## Project Overview
 
 This repository contains a Terraform provider for managing Microsoft Dynamics 365 Business Central environments through the [Business Central Admin Center API](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api). The provider enables Infrastructure as Code (IaC) for Business Central tenant administration tasks.
@@ -87,7 +93,7 @@ github.com/Azure/azure-sdk-for-go/sdk/azcore
 The provider will support the same authentication patterns as azurerm:
 
 ```hcl
-provider "bc_admin_center" {
+provider "bcadmincenter" {
   # Authentication via Service Principal
   client_id       = "00000000-0000-0000-0000-000000000000"
   client_secret   = "client-secret"
@@ -140,6 +146,8 @@ provider-bc-admin-center/
 ```
 
 ### Key Implementation Guidelines
+
+**REMINDER: All implementations require corresponding tests. See the Testing Strategy section below for requirements.**
 
 #### 1. Provider Configuration
 ```go
@@ -300,10 +308,123 @@ func waitForOperation(ctx context.Context, client *Client, operationID string, t
 
 ### Testing Strategy
 
+**CRITICAL: Always create tests when implementing new resources or data sources.**
+
+Every resource and data source MUST have comprehensive test coverage before being considered complete. Follow this testing checklist:
+
+#### Required Test Files
+
+When creating a new resource or data source, you MUST create the following test files:
+
+1. **Service Tests** (`service_test.go` in the service package)
+   - Test all service methods with mock HTTP responses
+   - Test success scenarios
+   - Test error scenarios (API errors, network errors, invalid responses)
+   - Test edge cases (empty responses, malformed data)
+
+2. **Data Source/Resource Tests** (`data_source_test.go` or `resource_test.go`)
+   - Test Metadata() method returns correct type name
+   - Test Schema() method defines all required and optional attributes
+   - Test Configure() method handles provider data correctly
+   - Test model structs can be created and populated
+
+3. **Provider Registration Tests** (update `provider_test.go`)
+   - Update DataSources() or Resources() test to expect the new count
+
 #### 1. Unit Tests
+
+**Service Layer Tests:**
+```go
+func TestService_MethodName(t *testing.T) {
+    tests := []struct {
+        name           string
+        responseBody   interface{}
+        responseStatus int
+        wantErr        bool
+        // Additional expectations
+    }{
+        {
+            name: "successful response",
+            responseBody: ExpectedResponse{...},
+            responseStatus: http.StatusOK,
+            wantErr: false,
+        },
+        {
+            name: "not found error",
+            responseBody: map[string]string{"error": "not found"},
+            responseStatus: http.StatusNotFound,
+            wantErr: true,
+        },
+        // More test cases...
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Create mock server
+            server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                w.WriteHeader(tt.responseStatus)
+                json.NewEncoder(w).Encode(tt.responseBody)
+            }))
+            defer server.Close()
+
+            // Create client with mock server
+            mockCred := &mockTokenCredential{token: "test-token"}
+            c := &client.Client{}
+            c.SetCredential(mockCred)
+            c.SetBaseURL(server.URL)
+            c.SetAPIVersion("v2.24")
+            c.SetHTTPClient(&http.Client{})
+
+            // Test the method
+            svc := NewService(c)
+            result, err := svc.MethodName(context.Background(), args...)
+
+            // Assert results
+            if (err != nil) != tt.wantErr {
+                t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+            }
+        })
+    }
+}
+```
+
+**Data Source/Resource Tests:**
+```go
+func TestDataSourceName_Metadata(t *testing.T) {
+    d := NewDataSource()
+    req := datasource.MetadataRequest{ProviderTypeName: "bcadmincenter"}
+    resp := &datasource.MetadataResponse{}
+    
+    d.Metadata(context.Background(), req, resp)
+    
+    expected := "bcadmincenter_resource_name"
+    if resp.TypeName != expected {
+        t.Errorf("TypeName = %v, want %v", resp.TypeName, expected)
+    }
+}
+
+func TestDataSourceName_Schema(t *testing.T) {
+    d := NewDataSource()
+    req := datasource.SchemaRequest{}
+    resp := &datasource.SchemaResponse{}
+    
+    d.Schema(context.Background(), req, resp)
+    
+    if resp.Diagnostics.HasError() {
+        t.Fatalf("Schema() errors: %v", resp.Diagnostics)
+    }
+    
+    // Verify required attributes exist
+    if _, ok := resp.Schema.Attributes["required_attr"]; !ok {
+        t.Error("Schema missing required_attr")
+    }
+}
+```
+
 - Test individual functions and utilities
 - Mock API responses for consistent testing
 - Validate schema and validation functions
+- Test model struct creation and population
 
 #### 2. Integration Tests
 - Test against real Business Central Admin Center API
@@ -334,23 +455,234 @@ func TestAccEnvironment_basic(t *testing.T) {
 
 ## Documentation Requirements
 
-### 1. Provider Documentation
-- Overview and getting started guide
-- Authentication configuration
-- Complete resource and data source reference
+### 1. Provider Documentation Structure
 
-### 2. Resource Documentation
-For each resource and data source:
-- Description and use cases
-- Complete schema documentation
-- Usage examples
-- Import instructions
+The provider uses [terraform-plugin-docs](https://github.com/hashicorp/terraform-plugin-docs) (`tfplugindocs`) to generate documentation that complies with the [Terraform Registry documentation requirements](https://developer.hashicorp.com/terraform/registry/providers/docs).
 
-### 3. Examples
-- Basic environment setup
-- Complete tenant configuration
-- Multi-environment scenarios
-- Integration with existing Terraform configurations
+#### Directory Structure
+```
+provider-bc-admin-center/
+├── docs/                          # Generated documentation (do not edit manually)
+│   ├── index.md                  # Provider overview and configuration
+│   ├── resources/                # Resource documentation
+│   │   └── environment.md
+│   └── data-sources/             # Data source documentation
+│       └── available_applications.md
+├── templates/                     # Documentation templates (edit these)
+│   ├── index.md.tmpl             # Provider documentation template
+│   ├── resources/                # Resource documentation templates
+│   │   └── environment.md.tmpl
+│   └── data-sources/             # Data source documentation templates
+│       └── available_applications.md.tmpl
+└── examples/                      # Example Terraform configurations
+    ├── provider/
+    │   └── provider.tf           # Provider configuration examples
+    ├── resources/
+    │   └── bc_admin_center_environment/
+    │       └── resource.tf       # Resource usage examples
+    └── data-sources/
+        └── bc_admin_center_available_applications/
+            └── data-source.tf    # Data source usage examples
+```
+
+#### Documentation Generation Workflow
+
+1. **Edit Templates**: Modify files in `templates/` directory
+   - Use `{{.SchemaMarkdown}}` placeholder for schema documentation
+   - Use `{{tffile "path/to/example.tf"}}` to include example files
+   - Follow Terraform Registry markdown conventions
+
+2. **Create Examples**: Add example Terraform configurations in `examples/`
+   - Each resource/data source should have a dedicated subdirectory
+   - Examples should be complete, working configurations
+   - Include provider configuration when needed for context
+
+3. **Generate Documentation**: Run the documentation generator
+   ```bash
+   cd tools
+   go generate
+   ```
+   This will:
+   - Extract schema from provider code
+   - Process template files
+   - Include example files
+   - Generate final markdown in `docs/`
+
+4. **Review Generated Docs**: Check `docs/` directory
+   - Ensure schema is correctly rendered
+   - Verify examples are properly included
+   - Check for broken links or formatting issues
+
+### 2. Documentation Template Guidelines
+
+#### Provider Template (index.md.tmpl)
+
+Must include:
+- **Clear description** of provider purpose and capabilities
+- **Authentication methods** with complete setup instructions
+- **Required permissions** and how to configure them
+- **Multiple usage examples** covering different authentication scenarios
+- **Environment variables** reference table
+- **Schema documentation** using `{{ .SchemaMarkdown }}` placeholder
+- **Links to additional resources**
+
+Best practices:
+- Use callouts for warnings (`~>`) and notes (`->`)
+- Provide step-by-step setup instructions
+- Include CLI commands for common setup tasks
+- Document all supported authentication methods
+- Link to official Microsoft documentation
+
+**IMPORTANT**: Do NOT create separate markdown files to summarize work, document changes, or log completed steps. All documentation should be updates to existing template files or generated docs only.
+
+#### Resource Templates (resources/*.md.tmpl)
+
+Must include:
+- **Clear description** of what the resource manages
+- **Important warnings** about destructive operations or limitations
+- **Multiple usage examples** showing common patterns
+- **Import instructions** with exact format and examples
+- **Timeouts documentation** if supported
+- **Attribute reference** (auto-generated from schema)
+- **Best practices** section
+- **Common issues** and troubleshooting
+
+Template structure:
+```markdown
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+[Additional context about the resource]
+
+## Important Notes
+
+~> **Warning:** [Critical warnings about the resource]
+
+## Example Usage
+
+### Basic Example
+
+{{tffile "examples/resources/[resource_name]/resource.tf"}}
+
+### Advanced Example
+
+[Inline example or additional tffile reference]
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+[Import instructions with examples]
+
+## Best Practices
+
+[Usage recommendations]
+
+## Common Issues
+
+[Troubleshooting guidance]
+```
+
+#### Data Source Templates (data-sources/*.md.tmpl)
+
+Must include:
+- **Clear description** of what data is retrieved
+- **Usage examples** showing common query patterns
+- **Attribute reference** (auto-generated)
+- **Use cases** demonstrating practical applications
+- **Integration examples** with resources
+
+### 3. Example File Requirements
+
+All example files must:
+- **Include copyright headers**
+- **Be complete, working configurations**
+- **Use realistic but safe values** (no real credentials)
+- **Include comments** explaining non-obvious configurations
+- **Follow Terraform style guidelines**
+- **Be formatted** with `terraform fmt`
+
+Example file template:
+```terraform
+# Copyright (c) 2025 Michael Villani
+# SPDX-License-Identifier: MPL-2.0
+
+# [Brief description of what this example demonstrates]
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "vllni/bc-admin-center"
+    }
+  }
+}
+
+provider "bcadmincenter" {
+  # Configuration
+}
+
+# [Resource or data source usage]
+```
+
+### 4. Documentation Validation
+
+Before submitting documentation:
+
+1. **Generate docs**: `cd tools && go generate`
+2. **Review output**: Check for warnings or errors
+3. **Validate examples**: Run `terraform fmt -recursive examples/`
+4. **Check links**: Ensure all links are valid
+5. **Test imports**: Verify import examples are accurate
+6. **Spell check**: Review for typos and grammar
+
+### 5. Continuous Documentation Updates
+
+When adding new resources or data sources:
+
+1. Create template file in `templates/resources/` or `templates/data-sources/`
+2. Add example file in `examples/resources/` or `examples/data-sources/`
+3. Run documentation generator
+4. Commit both templates and generated docs
+5. Update main README.md with new capabilities
+
+### 6. Documentation Best Practices
+
+- **Be concise but complete**: Provide necessary detail without overwhelming users
+- **Use consistent terminology**: Match Terraform and Business Central terminology
+- **Include error scenarios**: Document common errors and solutions
+- **Show real-world patterns**: Examples should reflect actual use cases
+- **Link to Microsoft docs**: Reference official BC documentation for detailed API behavior
+- **Keep examples updated**: Ensure examples work with current provider version
+- **Use semantic line breaks**: Break lines at sentence boundaries in templates for better diffs
+
+### 7. Required Documentation Sections
+
+Every resource and data source must document:
+
+- [ ] Description and purpose
+- [ ] At least one basic example
+- [ ] Complete schema (auto-generated)
+- [ ] Import instructions (resources only)
+- [ ] Timeouts (if applicable)
+- [ ] Important warnings or limitations
+- [ ] Related resources and data sources
+
+Provider documentation must include:
+
+- [ ] Feature overview
+- [ ] All authentication methods
+- [ ] Permission requirements
+- [ ] Environment variables reference
+- [ ] Example configurations
+- [ ] Links to additional resources
 
 ## Development Workflow
 
@@ -376,13 +708,40 @@ cp terraform-provider-bc-admin-center ~/.terraform.d/plugins/local/provider/bc-a
 ```hcl
 terraform {
   required_providers {
-    bc_admin_center = {
+    bcadmincenter = {
       source = "local/provider/bc-admin-center"
       version = "1.0.0"
     }
   }
 }
 ```
+
+### 4. Running Tests
+
+**CRITICAL: Always run tests before committing code.**
+
+```bash
+# Run all tests
+go test ./... -v
+
+# Run tests for a specific package
+go test ./internal/services/available_applications/... -v
+
+# Run tests with coverage
+go test ./... -cover
+
+# Run tests with coverage report
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
+
+**Test Checklist Before Commit:**
+- [ ] All unit tests pass
+- [ ] New code has test coverage
+- [ ] Service tests include success and error scenarios
+- [ ] Data source/resource tests verify Metadata, Schema, and Configure
+- [ ] Provider tests updated with new resource/data source counts
+- [ ] No test files are missing for new implementations
 
 ## Resource Design Principles
 
