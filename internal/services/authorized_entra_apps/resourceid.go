@@ -10,19 +10,19 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
-// BuildAuthorizedEntraAppID creates an ARM-like resource ID for an authorized Entra app
-// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/authorizedEntraApps/{appId}
+// BuildAuthorizedEntraAppID creates an ARM-like resource ID for an authorized Entra app.
+// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/authorizedEntraApps/{appId}.
 func BuildAuthorizedEntraAppID(tenantID, appID string) string {
 	return fmt.Sprintf("/tenants/%s/providers/%s/authorizedEntraApps/%s",
 		tenantID, constants.ProviderNamespace, appID)
 }
 
-// ParseAuthorizedEntraAppID parses an authorized Entra app resource ID
-// Returns: tenantID, appID, error
+// ParseAuthorizedEntraAppID parses an authorized Entra app resource ID.
+// Returns: tenantID, appID, error.
 func ParseAuthorizedEntraAppID(id string) (string, string, error) {
 	parts := strings.Split(strings.TrimPrefix(id, "/"), "/")
 
-	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/authorizedEntraApps/{appId}
+	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/authorizedEntraApps/{appId}.
 	if len(parts) != 6 {
 		return "", "", fmt.Errorf("invalid authorized Entra app ID format: expected '/tenants/{tenantId}/providers/%s/authorizedEntraApps/{appId}', got: %s", constants.ProviderNamespace, id)
 	}

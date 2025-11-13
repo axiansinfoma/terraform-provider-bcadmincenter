@@ -34,8 +34,8 @@ var _ provider.ProviderWithEphemeralResources = &BCAdminCenterProvider{}
 
 // BCAdminCenterProvider defines the provider implementation.
 type BCAdminCenterProvider struct {
-	// version is set to the provider version on release, "dev" when the
-	// provider is built and ran locally, and "test" when running acceptance
+	// version is set to the provider version on release, "dev" when the.
+	// provider is built and ran locally, and "test" when running acceptance.
 	// testing.
 	version string
 }
@@ -93,13 +93,13 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 		return
 	}
 
-	// Get configuration values from provider config or environment variables
+	// Get configuration values from provider config or environment variables.
 	clientID := getConfigValue(data.ClientID, "AZURE_CLIENT_ID")
 	clientSecret := getConfigValue(data.ClientSecret, "AZURE_CLIENT_SECRET")
 	tenantID := getConfigValue(data.TenantID, "AZURE_TENANT_ID")
 	environment := getConfigValue(data.Environment, "AZURE_ENVIRONMENT")
 
-	// Validate required configuration
+	// Validate required configuration.
 	if tenantID == "" {
 		resp.Diagnostics.AddError(
 			"Missing Tenant ID",
@@ -108,7 +108,7 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 		return
 	}
 
-	// Set default environment if not specified
+	// Set default environment if not specified.
 	if environment == "" {
 		environment = "public"
 	}
@@ -118,7 +118,7 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 		"environment": environment,
 	})
 
-	// Create the client
+	// Create the client.
 	config := &client.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -135,12 +135,12 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 		return
 	}
 
-	// Make the client available to data sources and resources
+	// Make the client available to data sources and resources.
 	resp.DataSourceData = bcClient
 	resp.ResourceData = bcClient
 }
 
-// getConfigValue returns the config value if set, otherwise returns the environment variable value
+// getConfigValue returns the config value if set, otherwise returns the environment variable value.
 func getConfigValue(configValue types.String, envVar string) string {
 	if !configValue.IsNull() && configValue.ValueString() != "" {
 		return configValue.ValueString()
@@ -160,7 +160,7 @@ func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource
 
 func (p *BCAdminCenterProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
-		// TODO: Add ephemeral resources here as they are implemented
+		// TODO: Add ephemeral resources here as they are implemented.
 	}
 }
 
@@ -180,7 +180,7 @@ func (p *BCAdminCenterProvider) DataSources(ctx context.Context) []func() dataso
 
 func (p *BCAdminCenterProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
-		// TODO: Add functions here as they are implemented
+		// TODO: Add functions here as they are implemented.
 	}
 }
 

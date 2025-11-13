@@ -16,7 +16,7 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
-// mockTokenCredential implements azcore.TokenCredential for testing
+// mockTokenCredential implements azcore.TokenCredential for testing.
 type mockTokenCredential struct {
 	token string
 }
@@ -74,14 +74,18 @@ func TestService_GetTimeZones(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create mock server
+			// Create mock server.
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
-			// Create client with mock server
+			// Create client with mock server.
 			mockCred := &mockTokenCredential{token: "test-token"}
 			c := &client.Client{}
 			c.SetCredential(mockCred)
@@ -89,11 +93,11 @@ func TestService_GetTimeZones(t *testing.T) {
 			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
-			// Test the method
+			// Test the method.
 			svc := NewService(c)
 			result, err := svc.GetTimeZones(context.Background())
 
-			// Assert results
+			// Assert results.
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
 				return

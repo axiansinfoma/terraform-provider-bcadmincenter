@@ -3,7 +3,7 @@
 
 package environmentsupportcontact
 
-// SupportContact represents the support contact information for an environment
+// SupportContact represents the support contact information for an environment.
 type SupportContact struct {
 	Name  string `json:"name"`  // The name of the support contact
 	Email string `json:"email"` // The email address of the support contact

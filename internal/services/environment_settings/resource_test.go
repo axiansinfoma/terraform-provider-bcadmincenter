@@ -34,7 +34,7 @@ func TestEnvironmentSettingsResource_Schema(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	requiredAttrs := []string{"application_family", "environment_name"}
 	for _, attr := range requiredAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
@@ -42,7 +42,7 @@ func TestEnvironmentSettingsResource_Schema(t *testing.T) {
 		}
 	}
 
-	// Verify optional settings exist
+	// Verify optional settings exist.
 	optionalAttrs := []string{
 		"update_window_start_time",
 		"update_window_end_time",
@@ -60,14 +60,17 @@ func TestEnvironmentSettingsResource_Schema(t *testing.T) {
 		}
 	}
 
-	// Verify computed id exists
+	// Verify computed id exists.
 	if _, ok := resp.Schema.Attributes["id"]; !ok {
 		t.Error("Schema missing computed 'id' attribute")
 	}
 }
 
 func TestEnvironmentSettingsResource_Configure(t *testing.T) {
-	r := NewEnvironmentSettingsResource().(*EnvironmentSettingsResource)
+	r, ok := NewEnvironmentSettingsResource().(*EnvironmentSettingsResource)
+	if !ok {
+		t.Fatal("Failed to cast to EnvironmentSettingsResource")
+	}
 
 	// Test with nil provider data (should not error)
 	req := resource.ConfigureRequest{ProviderData: nil}

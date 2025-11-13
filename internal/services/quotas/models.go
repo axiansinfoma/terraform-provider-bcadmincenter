@@ -3,7 +3,7 @@
 
 package quotas
 
-// QuotasResponse represents the API response for environment quotas
+// QuotasResponse represents the API response for environment quotas.
 type QuotasResponse struct {
 	ProductionEnvironmentsQuota     int `json:"productionEnvironmentsQuota"`
 	ProductionEnvironmentsAllocated int `json:"productionEnvironmentsAllocated"`

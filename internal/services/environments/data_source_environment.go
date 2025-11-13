@@ -114,13 +114,13 @@ func (d *environmentDataSource) Configure(_ context.Context, req datasource.Conf
 func (d *environmentDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state environmentDataSourceModel
 
-	// Read Terraform configuration data into the model
+	// Read Terraform configuration data into the model.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Get environment from API
+	// Get environment from API.
 	service := NewService(d.client)
 	env, err := service.Get(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString())
 	if err != nil {
@@ -131,7 +131,7 @@ func (d *environmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	// Map response to model
+	// Map response to model.
 	state.Type = types.StringValue(env.Type)
 	state.CountryCode = types.StringValue(env.CountryCode)
 	state.RingName = types.StringValue(env.RingName)
@@ -140,6 +140,6 @@ func (d *environmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 	state.WebClientLoginURL = types.StringValue(env.WebClientLoginURL)
 	state.AadTenantID = types.StringValue(env.AADTenantID)
 
-	// Set state
+	// Set state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }

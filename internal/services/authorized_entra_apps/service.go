@@ -12,20 +12,20 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Service handles authorized Microsoft Entra apps operations
+// Service handles authorized Microsoft Entra apps operations.
 type Service struct {
 	client *client.Client
 }
 
-// NewService creates a new instance of the authorized apps service
+// NewService creates a new instance of the authorized apps service.
 func NewService(c *client.Client) *Service {
 	return &Service{
 		client: c,
 	}
 }
 
-// ListAuthorizedApps returns all authorized Microsoft Entra apps for the tenant
-// Note: This endpoint cannot be used when authenticated as an app
+// ListAuthorizedApps returns all authorized Microsoft Entra apps for the tenant.
+// Note: This endpoint cannot be used when authenticated as an app.
 func (s *Service) ListAuthorizedApps(ctx context.Context) ([]AuthorizedApp, error) {
 	path := "authorizedAadApps"
 
@@ -47,9 +47,9 @@ func (s *Service) ListAuthorizedApps(ctx context.Context) ([]AuthorizedApp, erro
 	return apps, nil
 }
 
-// AuthorizeApp authorizes a Microsoft Entra app to call the Business Central Admin Center API
-// Note: This endpoint cannot be used when authenticated as an app
-// This does not grant admin consent or assign permission sets in environments
+// AuthorizeApp authorizes a Microsoft Entra app to call the Business Central Admin Center API.
+// Note: This endpoint cannot be used when authenticated as an app.
+// This does not grant admin consent or assign permission sets in environments.
 func (s *Service) AuthorizeApp(ctx context.Context, appID string) (*AuthorizedApp, error) {
 	path := fmt.Sprintf("authorizedAadApps/%s", appID)
 
@@ -71,8 +71,8 @@ func (s *Service) AuthorizeApp(ctx context.Context, appID string) (*AuthorizedAp
 	return &app, nil
 }
 
-// RemoveAuthorizedApp removes a Microsoft Entra app from the authorized apps list
-// This does not revoke admin consent in Microsoft Entra ID nor remove permission sets in environments
+// RemoveAuthorizedApp removes a Microsoft Entra app from the authorized apps list.
+// This does not revoke admin consent in Microsoft Entra ID nor remove permission sets in environments.
 func (s *Service) RemoveAuthorizedApp(ctx context.Context, appID string) error {
 	path := fmt.Sprintf("authorizedAadApps/%s", appID)
 
@@ -89,8 +89,8 @@ func (s *Service) RemoveAuthorizedApp(ctx context.Context, appID string) error {
 	return nil
 }
 
-// GetManageableTenants returns a list of tenants where the app is authorized
-// Note: This endpoint can only be used when authenticated as an app
+// GetManageableTenants returns a list of tenants where the app is authorized.
+// Note: This endpoint can only be used when authenticated as an app.
 func (s *Service) GetManageableTenants(ctx context.Context) ([]ManageableTenant, error) {
 	path := "authorizedAadApps/manageableTenants"
 

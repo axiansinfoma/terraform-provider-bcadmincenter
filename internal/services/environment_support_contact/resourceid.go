@@ -10,19 +10,19 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
-// BuildEnvironmentSupportContactID creates an ARM-like resource ID for environment support contact
-// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact
+// BuildEnvironmentSupportContactID creates an ARM-like resource ID for environment support contact.
+// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact.
 func BuildEnvironmentSupportContactID(tenantID, applicationFamily, environmentName string) string {
 	return fmt.Sprintf("/tenants/%s/providers/%s/applications/%s/environments/%s/supportContact",
 		tenantID, constants.ProviderNamespace, applicationFamily, environmentName)
 }
 
-// ParseEnvironmentSupportContactID parses an environment support contact resource ID
-// Returns: tenantID, applicationFamily, environmentName, error
+// ParseEnvironmentSupportContactID parses an environment support contact resource ID.
+// Returns: tenantID, applicationFamily, environmentName, error.
 func ParseEnvironmentSupportContactID(id string) (string, string, string, error) {
 	parts := strings.Split(strings.TrimPrefix(id, "/"), "/")
 
-	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact
+	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact.
 	if len(parts) != 9 {
 		return "", "", "", fmt.Errorf("invalid environment support contact ID format: expected '/tenants/{tenantId}/providers/%s/applications/{applicationFamily}/environments/{environmentName}/supportContact', got: %s", constants.ProviderNamespace, id)
 	}

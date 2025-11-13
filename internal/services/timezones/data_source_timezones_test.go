@@ -34,7 +34,7 @@ func TestTimeZonesDataSource_Schema(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	if _, ok := resp.Schema.Attributes["id"]; !ok {
 		t.Error("Schema missing id attribute")
 	}

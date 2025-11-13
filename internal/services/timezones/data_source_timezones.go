@@ -13,29 +13,29 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Ensure the implementation satisfies the expected interfaces
+// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ datasource.DataSource              = &TimeZonesDataSource{}
 	_ datasource.DataSourceWithConfigure = &TimeZonesDataSource{}
 )
 
-// NewTimeZonesDataSource is a helper function to simplify the provider implementation
+// NewTimeZonesDataSource is a helper function to simplify the provider implementation.
 func NewTimeZonesDataSource() datasource.DataSource {
 	return &TimeZonesDataSource{}
 }
 
-// TimeZonesDataSource is the data source implementation
+// TimeZonesDataSource is the data source implementation.
 type TimeZonesDataSource struct {
 	client *client.Client
 }
 
-// TimeZonesDataSourceModel describes the data source data model
+// TimeZonesDataSourceModel describes the data source data model.
 type TimeZonesDataSourceModel struct {
 	ID        types.String    `tfsdk:"id"`
 	TimeZones []TimeZoneModel `tfsdk:"timezones"`
 }
 
-// TimeZoneModel represents a single timezone
+// TimeZoneModel represents a single timezone.
 type TimeZoneModel struct {
 	ID                      types.String `tfsdk:"id"`
 	DisplayName             types.String `tfsdk:"display_name"`
@@ -43,12 +43,12 @@ type TimeZoneModel struct {
 	OffsetFromUTC           types.String `tfsdk:"offset_from_utc"`
 }
 
-// Metadata returns the data source type name
+// Metadata returns the data source type name.
 func (d *TimeZonesDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_timezones"
 }
 
-// Schema defines the schema for the data source
+// Schema defines the schema for the data source.
 func (d *TimeZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Retrieves the list of valid time zone identifiers that can be used for environment update window settings.",
@@ -85,7 +85,7 @@ func (d *TimeZonesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 	}
 }
 
-// Configure adds the provider configured client to the data source
+// Configure adds the provider configured client to the data source.
 func (d *TimeZonesDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -103,14 +103,14 @@ func (d *TimeZonesDataSource) Configure(_ context.Context, req datasource.Config
 	d.client = client
 }
 
-// Read refreshes the Terraform state with the latest data
+// Read refreshes the Terraform state with the latest data.
 func (d *TimeZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state TimeZonesDataSourceModel
 
-	// Create service
+	// Create service.
 	svc := NewService(d.client)
 
-	// Get timezones
+	// Get timezones.
 	result, err := svc.GetTimeZones(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -120,10 +120,10 @@ func (d *TimeZonesDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	// Set static ID
+	// Set static ID.
 	state.ID = types.StringValue("timezones")
 
-	// Map response to state
+	// Map response to state.
 	state.TimeZones = make([]TimeZoneModel, 0, len(result.Value))
 	for _, tz := range result.Value {
 		state.TimeZones = append(state.TimeZones, TimeZoneModel{
@@ -134,7 +134,7 @@ func (d *TimeZonesDataSource) Read(ctx context.Context, req datasource.ReadReque
 		})
 	}
 
-	// Set state
+	// Set state.
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }

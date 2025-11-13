@@ -10,19 +10,19 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
-// BuildEnvironmentID creates an ARM-like resource ID for an environment
-// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}
+// BuildEnvironmentID creates an ARM-like resource ID for an environment.
+// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}.
 func BuildEnvironmentID(tenantID, applicationFamily, environmentName string) string {
 	return fmt.Sprintf("/tenants/%s/providers/%s/applications/%s/environments/%s",
 		tenantID, constants.ProviderNamespace, applicationFamily, environmentName)
 }
 
-// ParseEnvironmentID parses an environment resource ID
-// Returns: tenantID, applicationFamily, environmentName, error
+// ParseEnvironmentID parses an environment resource ID.
+// Returns: tenantID, applicationFamily, environmentName, error.
 func ParseEnvironmentID(id string) (string, string, string, error) {
 	parts := strings.Split(strings.TrimPrefix(id, "/"), "/")
 
-	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}
+	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}.
 	if len(parts) != 8 {
 		return "", "", "", fmt.Errorf("invalid environment ID format: expected '/tenants/{tenantId}/providers/%s/applications/{applicationFamily}/environments/{environmentName}', got: %s", constants.ProviderNamespace, id)
 	}

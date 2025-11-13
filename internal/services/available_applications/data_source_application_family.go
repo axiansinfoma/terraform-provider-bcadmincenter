@@ -109,17 +109,17 @@ func (d *ApplicationFamilyDataSource) Configure(ctx context.Context, req datasou
 func (d *ApplicationFamilyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data ApplicationFamilyDataSourceModel
 
-	// Read Terraform configuration data into the model
+	// Read Terraform configuration data into the model.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Create service
+	// Create service.
 	svc := NewService(d.client)
 
-	// Get the specific application family
+	// Get the specific application family.
 	appFamily, err := svc.GetApplicationFamily(ctx, data.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -129,7 +129,7 @@ func (d *ApplicationFamilyDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	// Map API response to Terraform state
+	// Map API response to Terraform state.
 	data.CountriesRingDetails = make([]CountryRingDetailsModel, 0, len(appFamily.CountriesRingDetails))
 
 	for _, countryRingDetails := range appFamily.CountriesRingDetails {
@@ -150,9 +150,9 @@ func (d *ApplicationFamilyDataSource) Read(ctx context.Context, req datasource.R
 		data.CountriesRingDetails = append(data.CountriesRingDetails, countryModel)
 	}
 
-	// Set ID to the application family name
+	// Set ID to the application family name.
 	data.ID = types.StringValue(data.Name.ValueString())
 
-	// Save data into Terraform state
+	// Save data into Terraform state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

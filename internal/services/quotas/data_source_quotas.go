@@ -13,23 +13,23 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Ensure the implementation satisfies the expected interfaces
+// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ datasource.DataSource              = &QuotasDataSource{}
 	_ datasource.DataSourceWithConfigure = &QuotasDataSource{}
 )
 
-// NewQuotasDataSource is a helper function to simplify the provider implementation
+// NewQuotasDataSource is a helper function to simplify the provider implementation.
 func NewQuotasDataSource() datasource.DataSource {
 	return &QuotasDataSource{}
 }
 
-// QuotasDataSource is the data source implementation
+// QuotasDataSource is the data source implementation.
 type QuotasDataSource struct {
 	client *client.Client
 }
 
-// QuotasDataSourceModel describes the data source data model
+// QuotasDataSourceModel describes the data source data model.
 type QuotasDataSourceModel struct {
 	ID                              types.String `tfsdk:"id"`
 	ProductionEnvironmentsQuota     types.Int64  `tfsdk:"production_environments_quota"`
@@ -43,12 +43,12 @@ type QuotasDataSourceModel struct {
 	StorageAvailableGB              types.Int64  `tfsdk:"storage_available_gb"`
 }
 
-// Metadata returns the data source type name
+// Metadata returns the data source type name.
 func (d *QuotasDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_quotas"
 }
 
-// Schema defines the schema for the data source
+// Schema defines the schema for the data source.
 func (d *QuotasDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Retrieves environment quotas and capacity information for the tenant, including production and sandbox environment limits and storage capacity.",
@@ -97,7 +97,7 @@ func (d *QuotasDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	}
 }
 
-// Configure adds the provider configured client to the data source
+// Configure adds the provider configured client to the data source.
 func (d *QuotasDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -115,14 +115,14 @@ func (d *QuotasDataSource) Configure(_ context.Context, req datasource.Configure
 	d.client = client
 }
 
-// Read refreshes the Terraform state with the latest data
+// Read refreshes the Terraform state with the latest data.
 func (d *QuotasDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state QuotasDataSourceModel
 
-	// Create service
+	// Create service.
 	svc := NewService(d.client)
 
-	// Get quotas
+	// Get quotas.
 	result, err := svc.GetQuotas(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -132,10 +132,10 @@ func (d *QuotasDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	// Set static ID
+	// Set static ID.
 	state.ID = types.StringValue("quotas")
 
-	// Map response to state
+	// Map response to state.
 	state.ProductionEnvironmentsQuota = types.Int64Value(int64(result.ProductionEnvironmentsQuota))
 	state.ProductionEnvironmentsAllocated = types.Int64Value(int64(result.ProductionEnvironmentsAllocated))
 	state.ProductionEnvironmentsAvailable = types.Int64Value(int64(result.ProductionEnvironmentsQuota - result.ProductionEnvironmentsAllocated))
@@ -148,7 +148,7 @@ func (d *QuotasDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	state.StorageAllocatedGB = types.Int64Value(int64(result.StorageAllocatedGB))
 	state.StorageAvailableGB = types.Int64Value(int64(result.StorageQuotaGB - result.StorageAllocatedGB))
 
-	// Set state
+	// Set state.
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }

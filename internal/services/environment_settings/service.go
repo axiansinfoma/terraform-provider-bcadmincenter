@@ -14,19 +14,19 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Service handles environment settings operations for the Business Central Admin Center API
+// Service handles environment settings operations for the Business Central Admin Center API.
 type Service struct {
 	client *client.Client
 }
 
-// NewService creates a new environment settings service
+// NewService creates a new environment settings service.
 func NewService(c *client.Client) *Service {
 	return &Service{
 		client: c,
 	}
 }
 
-// GetUpdateSettings retrieves the update window settings for an environment
+// GetUpdateSettings retrieves the update window settings for an environment.
 func (s *Service) GetUpdateSettings(ctx context.Context, applicationFamily, environmentName string) (*UpdateSettings, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/upgrade", applicationFamily, environmentName)
 
@@ -49,7 +49,7 @@ func (s *Service) GetUpdateSettings(ctx context.Context, applicationFamily, envi
 	return &settings, nil
 }
 
-// SetUpdateSettings configures the update window for an environment
+// SetUpdateSettings configures the update window for an environment.
 func (s *Service) SetUpdateSettings(ctx context.Context, applicationFamily, environmentName string, settings *UpdateSettings) (*UpdateSettings, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/upgrade", applicationFamily, environmentName)
 
@@ -72,7 +72,7 @@ func (s *Service) SetUpdateSettings(ctx context.Context, applicationFamily, envi
 	return &updatedSettings, nil
 }
 
-// GetTimeZones retrieves the list of available time zones for update settings
+// GetTimeZones retrieves the list of available time zones for update settings.
 func (s *Service) GetTimeZones(ctx context.Context) ([]TimeZone, error) {
 	path := "applications/settings/timezones"
 
@@ -90,8 +90,8 @@ func (s *Service) GetTimeZones(ctx context.Context) ([]TimeZone, error) {
 	return tzList.Value, nil
 }
 
-// SetAppInsightsKey sets the Application Insights connection string for an environment
-// Note: This triggers an automatic environment restart
+// SetAppInsightsKey sets the Application Insights connection string for an environment.
+// Note: This triggers an automatic environment restart.
 func (s *Service) SetAppInsightsKey(ctx context.Context, applicationFamily, environmentName, key string) error {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/appinsightskey", applicationFamily, environmentName)
 
@@ -115,7 +115,7 @@ func (s *Service) SetAppInsightsKey(ctx context.Context, applicationFamily, envi
 	return nil
 }
 
-// GetSecurityGroup retrieves the Microsoft Entra security group assigned to an environment
+// GetSecurityGroup retrieves the Microsoft Entra security group assigned to an environment.
 func (s *Service) GetSecurityGroup(ctx context.Context, applicationFamily, environmentName string) (*SecurityGroupResponse, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/securitygroupaccess", applicationFamily, environmentName)
 
@@ -125,7 +125,7 @@ func (s *Service) GetSecurityGroup(ctx context.Context, applicationFamily, envir
 	}
 	defer resp.Body.Close()
 
-	// 204 means no group is configured
+	// 204 means no group is configured.
 	if resp.StatusCode == http.StatusNoContent {
 		return nil, nil
 	}
@@ -138,7 +138,7 @@ func (s *Service) GetSecurityGroup(ctx context.Context, applicationFamily, envir
 	return &group, nil
 }
 
-// SetSecurityGroup assigns a Microsoft Entra security group to an environment
+// SetSecurityGroup assigns a Microsoft Entra security group to an environment.
 func (s *Service) SetSecurityGroup(ctx context.Context, applicationFamily, environmentName, groupID string) error {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/securitygroupaccess", applicationFamily, environmentName)
 
@@ -162,7 +162,7 @@ func (s *Service) SetSecurityGroup(ctx context.Context, applicationFamily, envir
 	return nil
 }
 
-// ClearSecurityGroup removes the Microsoft Entra security group from an environment
+// ClearSecurityGroup removes the Microsoft Entra security group from an environment.
 func (s *Service) ClearSecurityGroup(ctx context.Context, applicationFamily, environmentName string) error {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/securitygroupaccess", applicationFamily, environmentName)
 
@@ -180,14 +180,14 @@ func (s *Service) ClearSecurityGroup(ctx context.Context, applicationFamily, env
 	return nil
 }
 
-// GetAccessWithM365Licenses retrieves whether M365 license access is enabled
-// Returns nil if the setting is not available (404) or not configured
+// GetAccessWithM365Licenses retrieves whether M365 license access is enabled.
+// Returns nil if the setting is not available (404) or not configured.
 func (s *Service) GetAccessWithM365Licenses(ctx context.Context, applicationFamily, environmentName string) (*AccessWithM365LicensesResponse, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/accesswithm365licenses", applicationFamily, environmentName)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
-		// Check if it's a 404 - feature not available on this environment
+		// Check if it's a 404 - feature not available on this environment.
 		if apiErr, ok := err.(*client.AdminCenterError); ok && apiErr.Code == "ResourceNotFound" {
 			return nil, nil // Return nil, nil to indicate feature not available
 		}
@@ -195,7 +195,7 @@ func (s *Service) GetAccessWithM365Licenses(ctx context.Context, applicationFami
 	}
 	defer resp.Body.Close()
 
-	// Handle 204 No Content - setting not configured
+	// Handle 204 No Content - setting not configured.
 	if resp.StatusCode == http.StatusNoContent {
 		return nil, nil
 	}
@@ -208,7 +208,7 @@ func (s *Service) GetAccessWithM365Licenses(ctx context.Context, applicationFami
 	return &accessSetting, nil
 }
 
-// SetAccessWithM365Licenses enables or disables M365 license access
+// SetAccessWithM365Licenses enables or disables M365 license access.
 func (s *Service) SetAccessWithM365Licenses(ctx context.Context, applicationFamily, environmentName string, enabled bool) error {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/accesswithm365licenses", applicationFamily, environmentName)
 
@@ -232,7 +232,7 @@ func (s *Service) SetAccessWithM365Licenses(ctx context.Context, applicationFami
 	return nil
 }
 
-// SetAppUpdateCadence configures how frequently AppSource apps are updated
+// SetAppUpdateCadence configures how frequently AppSource apps are updated.
 func (s *Service) SetAppUpdateCadence(ctx context.Context, applicationFamily, environmentName, cadence string) error {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/appSourceAppsUpdateCadence", applicationFamily, environmentName)
 
@@ -256,7 +256,7 @@ func (s *Service) SetAppUpdateCadence(ctx context.Context, applicationFamily, en
 	return nil
 }
 
-// GetPartnerAccess retrieves partner access settings for an environment
+// GetPartnerAccess retrieves partner access settings for an environment.
 func (s *Service) GetPartnerAccess(ctx context.Context, applicationFamily, environmentName string) (*PartnerAccessResponse, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/partneraccess", applicationFamily, environmentName)
 
@@ -274,7 +274,7 @@ func (s *Service) GetPartnerAccess(ctx context.Context, applicationFamily, envir
 	return &accessSettings, nil
 }
 
-// SetPartnerAccess configures partner access settings for an environment
+// SetPartnerAccess configures partner access settings for an environment.
 func (s *Service) SetPartnerAccess(ctx context.Context, applicationFamily, environmentName string, settings *PartnerAccessRequest) error {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/partneraccess", applicationFamily, environmentName)
 

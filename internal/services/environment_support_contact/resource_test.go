@@ -34,7 +34,7 @@ func TestEnvironmentSupportContactResource_Schema(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	requiredAttrs := []string{"application_family", "environment_name", "name", "email"}
 	for _, attr := range requiredAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
@@ -42,7 +42,7 @@ func TestEnvironmentSupportContactResource_Schema(t *testing.T) {
 		}
 	}
 
-	// Verify optional attributes exist
+	// Verify optional attributes exist.
 	optionalAttrs := []string{"url"}
 	for _, attr := range optionalAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
@@ -50,14 +50,17 @@ func TestEnvironmentSupportContactResource_Schema(t *testing.T) {
 		}
 	}
 
-	// Verify computed id exists
+	// Verify computed id exists.
 	if _, ok := resp.Schema.Attributes["id"]; !ok {
 		t.Error("Schema missing computed 'id' attribute")
 	}
 }
 
 func TestEnvironmentSupportContactResource_Configure(t *testing.T) {
-	r := NewEnvironmentSupportContactResource().(*EnvironmentSupportContactResource)
+	r, ok := NewEnvironmentSupportContactResource().(*EnvironmentSupportContactResource)
+	if !ok {
+		t.Fatal("Failed to cast to EnvironmentSupportContactResource")
+	}
 
 	// Test with nil provider data (should not error)
 	req := resource.ConfigureRequest{ProviderData: nil}

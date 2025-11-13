@@ -52,11 +52,6 @@ Based on the [Microsoft Learn documentation](https://learn.microsoft.com/en-us/d
 - `data "bc_environment_operations"` - Query environment operation history
 - `resource "bc_environment_operation"` - Trigger specific environment operations
 
-**App Management (`/admin/v2.24/applications/{applicationFamily}/environments/{environmentName}/apps`)**
-- `resource "bc_environment_app"` - Install, update, and uninstall apps
-- `data "bc_environment_app"` - Get app installation details
-- `data "bc_environment_apps"` - List installed apps
-
 #### Administrative Resources
 
 **Available Applications (`/admin/v2.24/applications/{applicationFamily}/Countries/{countryCode}/Rings/{ringName}`)**
@@ -921,7 +916,44 @@ Only implement resources for entities that can be managed statefully. Avoid crea
 - Proper error handling and logging
 - Clear and maintainable code structure
 
-### 5. Testing
+### 5. Linting Guidelines
+
+**CRITICAL: Always respect standardized boilerplate formats.**
+
+The project uses golangci-lint with multiple enabled linters. When fixing linting issues:
+
+**DO NOT modify standardized boilerplate:**
+- ✅ Copyright headers: `// Copyright (c) 2025 Michael Villani` (no period)
+- ✅ SPDX identifiers: `// SPDX-License-Identifier: MPL-2.0` (no period)
+- ✅ Build tags: `// +build` or `//go:build` directives (exact format required)
+- ✅ Generated code markers: `// Code generated ... DO NOT EDIT` (exact format)
+- ✅ Linter directives: `// nolint:lintername` (exact format)
+- ✅ Go directives: `//go:generate`, `//go:embed` (exact format)
+
+**When linter rules conflict with standardized formats:**
+- Configure `.golangci.yml` to exclude the patterns (see `linters-settings.godot.exclude`)
+- NEVER modify standardized boilerplate to satisfy linter rules
+- Document exclusions with comments explaining why
+
+**Regular code comments SHOULD end with periods** (per `godot` linter):
+- Function/method documentation comments
+- Inline explanatory comments
+- TODO/FIXME/NOTE comments
+- Package documentation
+
+**Running linting:**
+```bash
+# Run all linters
+golangci-lint run ./...
+
+# Run specific linter
+golangci-lint run --disable-all --enable=godot ./...
+
+# Auto-fix safe issues
+golangci-lint run --fix ./...
+```
+
+### 6. Testing
 - Write unit tests for all functions
 - Implement integration tests against real API
 - Use acceptance tests for end-to-end validation

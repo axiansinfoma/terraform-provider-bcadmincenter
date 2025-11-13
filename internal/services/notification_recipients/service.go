@@ -13,19 +13,19 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Service handles notification recipient operations for the Business Central Admin Center API
+// Service handles notification recipient operations for the Business Central Admin Center API.
 type Service struct {
 	client *client.Client
 }
 
-// NewService creates a new notification recipients service
+// NewService creates a new notification recipients service.
 func NewService(c *client.Client) *Service {
 	return &Service{
 		client: c,
 	}
 }
 
-// List retrieves all notification recipients for a specific tenant
+// List retrieves all notification recipients for a specific tenant.
 func (s *Service) List(ctx context.Context, tenantID string) ([]NotificationRecipient, error) {
 	path := fmt.Sprintf("applications/%s/settings/notification/recipients", tenantID)
 
@@ -47,7 +47,7 @@ func (s *Service) List(ctx context.Context, tenantID string) ([]NotificationReci
 	return recipientsResp.Value, nil
 }
 
-// Get retrieves a specific notification recipient by ID for a specific tenant
+// Get retrieves a specific notification recipient by ID for a specific tenant.
 func (s *Service) Get(ctx context.Context, tenantID, id string) (*NotificationRecipient, error) {
 	recipients, err := s.List(ctx, tenantID)
 	if err != nil {
@@ -63,7 +63,7 @@ func (s *Service) Get(ctx context.Context, tenantID, id string) (*NotificationRe
 	return nil, fmt.Errorf("notification recipient with ID %s not found", id)
 }
 
-// Create creates a new notification recipient for a specific tenant
+// Create creates a new notification recipient for a specific tenant.
 func (s *Service) Create(ctx context.Context, tenantID, email, name string) (*NotificationRecipient, error) {
 	path := fmt.Sprintf("applications/%s/settings/notification/recipients", tenantID)
 
@@ -95,7 +95,7 @@ func (s *Service) Create(ctx context.Context, tenantID, email, name string) (*No
 	return &recipient, nil
 }
 
-// Delete deletes a notification recipient by ID for a specific tenant
+// Delete deletes a notification recipient by ID for a specific tenant.
 func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
 	path := fmt.Sprintf("applications/%s/settings/notification/recipients/%s", tenantID, id)
 
@@ -112,7 +112,7 @@ func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
 	return nil
 }
 
-// GetNotificationSettings retrieves the complete notification settings including all recipients for a specific tenant
+// GetNotificationSettings retrieves the complete notification settings including all recipients for a specific tenant.
 func (s *Service) GetNotificationSettings(ctx context.Context, tenantID string) (*NotificationSettings, error) {
 	path := fmt.Sprintf("applications/%s/settings/notification", tenantID)
 

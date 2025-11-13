@@ -5,7 +5,7 @@ package environments
 
 import "time"
 
-// Environment represents a Business Central environment from the Admin Center API
+// Environment represents a Business Central environment from the Admin Center API.
 type Environment struct {
 	AADTenantID           string           `json:"aadTenantId"`
 	ApplicationFamily     string           `json:"applicationFamily"`
@@ -24,7 +24,7 @@ type Environment struct {
 	SourceEnvironmentType string           `json:"sourceEnvironmentType,omitempty"`
 }
 
-// LocationOption represents available Azure regions for the environment
+// LocationOption represents available Azure regions for the environment.
 type LocationOption struct {
 	Type   string `json:"type"`
 	Code   string `json:"code"`
@@ -32,7 +32,7 @@ type LocationOption struct {
 	Region string `json:"region,omitempty"`
 }
 
-// CreateEnvironmentRequest represents the request body for creating a new environment
+// CreateEnvironmentRequest represents the request body for creating a new environment.
 type CreateEnvironmentRequest struct {
 	EnvironmentType    string `json:"environmentType"`
 	Name               string `json:"name"`
@@ -42,18 +42,18 @@ type CreateEnvironmentRequest struct {
 	AzureRegion        string `json:"azureRegion,omitempty"`
 }
 
-// UpdateEnvironmentRequest represents the request body for updating an environment
+// UpdateEnvironmentRequest represents the request body for updating an environment.
 type UpdateEnvironmentRequest struct {
-	// Currently the BC Admin Center API has limited update capabilities
-	// Most changes require recreating the environment
+	// Currently the BC Admin Center API has limited update capabilities.
+	// Most changes require recreating the environment.
 }
 
-// EnvironmentListResponse represents the response when listing environments
+// EnvironmentListResponse represents the response when listing environments.
 type EnvironmentListResponse struct {
 	Value []Environment `json:"value"`
 }
 
-// Operation represents an asynchronous operation in the Admin Center API
+// Operation represents an asynchronous operation in the Admin Center API.
 type Operation struct {
 	ID                     string    `json:"id"`
 	Type                   string    `json:"type"`
@@ -70,8 +70,8 @@ type Operation struct {
 	EnvironmentType        string    `json:"environmentType,omitempty"` // Type of the environment
 }
 
-// OperationStatus represents the possible states of an operation
-// Note: API returns lowercase status values
+// OperationStatus represents the possible states of an operation.
+// Note: API returns lowercase status values.
 const (
 	OperationStatusQueued    = "queued"
 	OperationStatusRunning   = "running"
@@ -80,7 +80,7 @@ const (
 	OperationStatusCancelled = "cancelled"
 )
 
-// EnvironmentStatus represents the possible states of an environment
+// EnvironmentStatus represents the possible states of an environment.
 const (
 	EnvironmentStatusActive   = "Active"
 	EnvironmentStatusCreating = "Creating"
@@ -88,7 +88,7 @@ const (
 	EnvironmentStatusFailed   = "Failed"
 )
 
-// EnvironmentType represents the type of Business Central environment
+// EnvironmentType represents the type of Business Central environment.
 const (
 	EnvironmentTypeProduction = "Production"
 	EnvironmentTypeSandbox    = "Sandbox"

@@ -18,18 +18,18 @@ var (
 	_ datasource.DataSourceWithConfigure = &authorizedEntraAppsDataSource{}
 )
 
-// NewAuthorizedEntraAppsDataSource creates a new instance of the data source
+// NewAuthorizedEntraAppsDataSource creates a new instance of the data source.
 func NewAuthorizedEntraAppsDataSource() datasource.DataSource {
 	return &authorizedEntraAppsDataSource{}
 }
 
-// authorizedEntraAppsDataSource is the data source implementation
+// authorizedEntraAppsDataSource is the data source implementation.
 type authorizedEntraAppsDataSource struct {
 	client  *client.Client
 	service *Service
 }
 
-// authorizedEntraAppsDataSourceModel describes the data source data model
+// authorizedEntraAppsDataSourceModel describes the data source data model.
 type authorizedEntraAppsDataSourceModel struct {
 	Apps []authorizedAppModel `tfsdk:"apps"`
 }
@@ -39,12 +39,12 @@ type authorizedAppModel struct {
 	IsAdminConsentGranted types.Bool   `tfsdk:"is_admin_consent_granted"`
 }
 
-// Metadata returns the data source type name
+// Metadata returns the data source type name.
 func (d *authorizedEntraAppsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_authorized_entra_apps"
 }
 
-// Schema defines the schema for the data source
+// Schema defines the schema for the data source.
 func (d *authorizedEntraAppsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Retrieves a list of all Microsoft Entra apps authorized to call the Business Central Admin Center API.",
@@ -69,7 +69,7 @@ func (d *authorizedEntraAppsDataSource) Schema(_ context.Context, _ datasource.S
 	}
 }
 
-// Configure adds the provider configured client to the data source
+// Configure adds the provider configured client to the data source.
 func (d *authorizedEntraAppsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -88,11 +88,11 @@ func (d *authorizedEntraAppsDataSource) Configure(_ context.Context, req datasou
 	d.service = NewService(providerClient)
 }
 
-// Read refreshes the Terraform state with the latest data
+// Read refreshes the Terraform state with the latest data.
 func (d *authorizedEntraAppsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state authorizedEntraAppsDataSourceModel
 
-	// Get all authorized apps
+	// Get all authorized apps.
 	apps, err := d.service.ListAuthorizedApps(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -102,7 +102,7 @@ func (d *authorizedEntraAppsDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	// Convert to model
+	// Convert to model.
 	state.Apps = make([]authorizedAppModel, len(apps))
 	for i, app := range apps {
 		state.Apps[i] = authorizedAppModel{

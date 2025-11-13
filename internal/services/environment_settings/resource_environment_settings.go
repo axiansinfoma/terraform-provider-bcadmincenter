@@ -19,24 +19,24 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Ensure the implementation satisfies the expected interfaces
+// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &EnvironmentSettingsResource{}
 	_ resource.ResourceWithConfigure   = &EnvironmentSettingsResource{}
 	_ resource.ResourceWithImportState = &EnvironmentSettingsResource{}
 )
 
-// NewEnvironmentSettingsResource is a helper function to simplify the provider implementation
+// NewEnvironmentSettingsResource is a helper function to simplify the provider implementation.
 func NewEnvironmentSettingsResource() resource.Resource {
 	return &EnvironmentSettingsResource{}
 }
 
-// EnvironmentSettingsResource is the resource implementation
+// EnvironmentSettingsResource is the resource implementation.
 type EnvironmentSettingsResource struct {
 	client *client.Client
 }
 
-// EnvironmentSettingsResourceModel maps the resource schema data
+// EnvironmentSettingsResourceModel maps the resource schema data.
 type EnvironmentSettingsResourceModel struct {
 	ID                      types.String `tfsdk:"id"`
 	ApplicationFamily       types.String `tfsdk:"application_family"`
@@ -52,12 +52,12 @@ type EnvironmentSettingsResourceModel struct {
 	AllowedPartnerTenantIDs types.List   `tfsdk:"allowed_partner_tenant_ids"`
 }
 
-// Metadata returns the resource type name
+// Metadata returns the resource type name.
 func (r *EnvironmentSettingsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_environment_settings"
 }
 
-// Schema defines the schema for the resource
+// Schema defines the schema for the resource.
 func (r *EnvironmentSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages Business Central environment settings including update windows, telemetry, security groups, and access controls.",
@@ -144,7 +144,7 @@ func (r *EnvironmentSettingsResource) Schema(_ context.Context, _ resource.Schem
 	}
 }
 
-// Configure adds the provider configured client to the resource
+// Configure adds the provider configured client to the resource.
 func (r *EnvironmentSettingsResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -162,7 +162,7 @@ func (r *EnvironmentSettingsResource) Configure(_ context.Context, req resource.
 	r.client = client
 }
 
-// Create creates the resource and sets the initial Terraform state
+// Create creates the resource and sets the initial Terraform state.
 func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan EnvironmentSettingsResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -171,7 +171,7 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	// Set the ID to the ARM-like format
+	// Set the ID to the ARM-like format.
 	tenantID := r.client.GetTenantID()
 	plan.ID = types.StringValue(BuildEnvironmentSettingsID(
 		tenantID,
@@ -179,10 +179,10 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		plan.EnvironmentName.ValueString(),
 	))
 
-	// Create service
+	// Create service.
 	svc := NewService(r.client)
 
-	// Apply update window settings if provided
+	// Apply update window settings if provided.
 	if !plan.UpdateWindowStartTime.IsNull() || !plan.UpdateWindowEndTime.IsNull() || !plan.UpdateWindowTimeZone.IsNull() {
 		if err := r.applyUpdateSettings(ctx, svc, &plan); err != nil {
 			resp.Diagnostics.AddError(
@@ -193,7 +193,7 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		}
 	}
 
-	// Apply Application Insights key if provided
+	// Apply Application Insights key if provided.
 	if !plan.AppInsightsKey.IsNull() {
 		if err := svc.SetAppInsightsKey(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AppInsightsKey.ValueString()); err != nil {
 			resp.Diagnostics.AddError(
@@ -204,7 +204,7 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		}
 	}
 
-	// Apply security group if provided
+	// Apply security group if provided.
 	if !plan.SecurityGroupID.IsNull() {
 		if err := svc.SetSecurityGroup(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.SecurityGroupID.ValueString()); err != nil {
 			resp.Diagnostics.AddError(
@@ -215,7 +215,7 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		}
 	}
 
-	// Apply M365 license access if provided
+	// Apply M365 license access if provided.
 	if !plan.AccessWithM365Licenses.IsNull() {
 		if err := svc.SetAccessWithM365Licenses(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AccessWithM365Licenses.ValueBool()); err != nil {
 			resp.Diagnostics.AddError(
@@ -226,7 +226,7 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		}
 	}
 
-	// Apply app update cadence if provided
+	// Apply app update cadence if provided.
 	if !plan.AppUpdateCadence.IsNull() {
 		if err := svc.SetAppUpdateCadence(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AppUpdateCadence.ValueString()); err != nil {
 			resp.Diagnostics.AddError(
@@ -237,7 +237,7 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		}
 	}
 
-	// Apply partner access if provided
+	// Apply partner access if provided.
 	if !plan.PartnerAccessStatus.IsNull() {
 		if err := r.applyPartnerAccessSettings(ctx, svc, &plan); err != nil {
 			resp.Diagnostics.AddError(
@@ -248,12 +248,12 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		}
 	}
 
-	// Save data into Terraform state
+	// Save data into Terraform state.
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 }
 
-// Read refreshes the Terraform state with the latest data
+// Read refreshes the Terraform state with the latest data.
 func (r *EnvironmentSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state EnvironmentSettingsResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -264,7 +264,7 @@ func (r *EnvironmentSettingsResource) Read(ctx context.Context, req resource.Rea
 
 	svc := NewService(r.client)
 
-	// Read update settings
+	// Read update settings.
 	updateSettings, err := svc.GetUpdateSettings(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -289,7 +289,7 @@ func (r *EnvironmentSettingsResource) Read(ctx context.Context, req resource.Rea
 	// Read security group (404/NoContent is expected if not set)
 	securityGroup, err := svc.GetSecurityGroup(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
 	if err != nil {
-		// Log but don't fail - security group may not be set
+		// Log but don't fail - security group may not be set.
 		resp.Diagnostics.AddWarning(
 			"Could not read security group",
 			err.Error(),
@@ -304,7 +304,7 @@ func (r *EnvironmentSettingsResource) Read(ctx context.Context, req resource.Rea
 	// Read M365 license access (may not be available on older environments)
 	m365Access, err := svc.GetAccessWithM365Licenses(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
 	if err != nil {
-		// Only warn on actual errors, not when feature is unavailable
+		// Only warn on actual errors, not when feature is unavailable.
 		resp.Diagnostics.AddWarning(
 			"Could not read M365 license access setting",
 			err.Error(),
@@ -313,20 +313,20 @@ func (r *EnvironmentSettingsResource) Read(ctx context.Context, req resource.Rea
 	} else if m365Access != nil {
 		state.AccessWithM365Licenses = types.BoolValue(m365Access.Enabled)
 	} else {
-		// Feature not available or not configured - set to null
+		// Feature not available or not configured - set to null.
 		state.AccessWithM365Licenses = types.BoolNull()
 	}
 
 	// Note: AppInsightsKey cannot be read back (write-only)
-	// Note: AppUpdateCadence has no GET endpoint
-	// Note: PartnerAccess requires global admin permissions
+	// Note: AppUpdateCadence has no GET endpoint.
+	// Note: PartnerAccess requires global admin permissions.
 
-	// Save updated data into Terraform state
+	// Save updated data into Terraform state.
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }
 
-// Update updates the resource and sets the updated Terraform state on success
+// Update updates the resource and sets the updated Terraform state on success.
 func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan EnvironmentSettingsResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -344,7 +344,7 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 
 	svc := NewService(r.client)
 
-	// Update window settings if changed
+	// Update window settings if changed.
 	if !plan.UpdateWindowStartTime.Equal(state.UpdateWindowStartTime) ||
 		!plan.UpdateWindowEndTime.Equal(state.UpdateWindowEndTime) ||
 		!plan.UpdateWindowTimeZone.Equal(state.UpdateWindowTimeZone) {
@@ -357,7 +357,7 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 		}
 	}
 
-	// Update Application Insights key if changed
+	// Update Application Insights key if changed.
 	if !plan.AppInsightsKey.Equal(state.AppInsightsKey) && !plan.AppInsightsKey.IsNull() {
 		if err := svc.SetAppInsightsKey(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AppInsightsKey.ValueString()); err != nil {
 			resp.Diagnostics.AddError(
@@ -368,10 +368,10 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 		}
 	}
 
-	// Update security group if changed
+	// Update security group if changed.
 	if !plan.SecurityGroupID.Equal(state.SecurityGroupID) {
 		if plan.SecurityGroupID.IsNull() {
-			// Clear the security group
+			// Clear the security group.
 			if err := svc.ClearSecurityGroup(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString()); err != nil {
 				resp.Diagnostics.AddError(
 					"Error Clearing Security Group",
@@ -380,7 +380,7 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 				return
 			}
 		} else {
-			// Set new security group
+			// Set new security group.
 			if err := svc.SetSecurityGroup(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.SecurityGroupID.ValueString()); err != nil {
 				resp.Diagnostics.AddError(
 					"Error Updating Security Group",
@@ -391,7 +391,7 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 		}
 	}
 
-	// Update M365 license access if changed
+	// Update M365 license access if changed.
 	if !plan.AccessWithM365Licenses.Equal(state.AccessWithM365Licenses) && !plan.AccessWithM365Licenses.IsNull() {
 		if err := svc.SetAccessWithM365Licenses(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AccessWithM365Licenses.ValueBool()); err != nil {
 			resp.Diagnostics.AddError(
@@ -402,7 +402,7 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 		}
 	}
 
-	// Update app update cadence if changed
+	// Update app update cadence if changed.
 	if !plan.AppUpdateCadence.Equal(state.AppUpdateCadence) && !plan.AppUpdateCadence.IsNull() {
 		if err := svc.SetAppUpdateCadence(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AppUpdateCadence.ValueString()); err != nil {
 			resp.Diagnostics.AddError(
@@ -413,7 +413,7 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 		}
 	}
 
-	// Update partner access if changed
+	// Update partner access if changed.
 	if !plan.PartnerAccessStatus.Equal(state.PartnerAccessStatus) || !plan.AllowedPartnerTenantIDs.Equal(state.AllowedPartnerTenantIDs) {
 		if !plan.PartnerAccessStatus.IsNull() {
 			if err := r.applyPartnerAccessSettings(ctx, svc, &plan); err != nil {
@@ -426,12 +426,12 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 		}
 	}
 
-	// Save updated data into Terraform state
+	// Save updated data into Terraform state.
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 }
 
-// Delete deletes the resource and removes the Terraform state on success
+// Delete deletes the resource and removes the Terraform state on success.
 func (r *EnvironmentSettingsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state EnvironmentSettingsResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -440,9 +440,9 @@ func (r *EnvironmentSettingsResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
-	// Environment settings are tied to the environment lifecycle
-	// Deleting the resource doesn't delete the settings, just removes from Terraform state
-	// Settings will revert to defaults or remain as configured
+	// Environment settings are tied to the environment lifecycle.
+	// Deleting the resource doesn't delete the settings, just removes from Terraform state.
+	// Settings will revert to defaults or remain as configured.
 
 	resp.Diagnostics.AddWarning(
 		"Environment Settings Not Reset",
@@ -451,16 +451,16 @@ func (r *EnvironmentSettingsResource) Delete(ctx context.Context, req resource.D
 	)
 }
 
-// ImportState imports the resource state
+// ImportState imports the resource state.
 func (r *EnvironmentSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import using format: applicationFamily/environmentName
+	// Import using format: applicationFamily/environmentName.
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 
-	// Parse the ID to set application_family and environment_name
-	// This will be handled in the Read operation
+	// Parse the ID to set application_family and environment_name.
+	// This will be handled in the Read operation.
 }
 
-// Helper functions
+// Helper functions.
 
 func (r *EnvironmentSettingsResource) applyUpdateSettings(ctx context.Context, svc *Service, plan *EnvironmentSettingsResourceModel) error {
 	settings := &UpdateSettings{}
@@ -498,5 +498,5 @@ func (r *EnvironmentSettingsResource) applyPartnerAccessSettings(ctx context.Con
 	return svc.SetPartnerAccess(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), settings)
 }
 
-// Regex for time format validation (HH:mm)
+// Regex for time format validation (HH:mm).
 var timeFormatRegex = regexp.MustCompile(`^([01]\d|2[0-3]):([0-5]\d)$`)

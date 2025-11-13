@@ -17,22 +17,22 @@ import (
 var _ datasource.DataSource = &NotificationSettingsDataSource{}
 var _ datasource.DataSourceWithConfigure = &NotificationSettingsDataSource{}
 
-// NewNotificationSettingsDataSource is a helper function to simplify the provider implementation
+// NewNotificationSettingsDataSource is a helper function to simplify the provider implementation.
 func NewNotificationSettingsDataSource() datasource.DataSource {
 	return &NotificationSettingsDataSource{}
 }
 
-// NotificationSettingsDataSource is the data source implementation
+// NotificationSettingsDataSource is the data source implementation.
 type NotificationSettingsDataSource struct {
 	client *client.Client
 }
 
-// Metadata returns the data source type name
+// Metadata returns the data source type name.
 func (d *NotificationSettingsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_notification_settings"
 }
 
-// Schema defines the schema for the data source
+// Schema defines the schema for the data source.
 func (d *NotificationSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Retrieves the complete notification settings for the Business Central tenant, " +
@@ -72,7 +72,7 @@ func (d *NotificationSettingsDataSource) Schema(_ context.Context, _ datasource.
 	}
 }
 
-// Configure adds the provider configured client to the data source
+// Configure adds the provider configured client to the data source.
 func (d *NotificationSettingsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -90,23 +90,23 @@ func (d *NotificationSettingsDataSource) Configure(_ context.Context, req dataso
 	d.client = client
 }
 
-// Read refreshes the Terraform state with the latest data
+// Read refreshes the Terraform state with the latest data.
 func (d *NotificationSettingsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config NotificationSettingsDataSourceModel
 
-	// Read configuration
+	// Read configuration.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Determine tenant ID to use
+	// Determine tenant ID to use.
 	tenantID := d.client.GetTenantID()
 	if !config.AADTenantID.IsNull() && !config.AADTenantID.IsUnknown() {
 		tenantID = config.AADTenantID.ValueString()
 	}
 
-	// Get notification settings from API
+	// Get notification settings from API.
 	svc := NewService(d.client)
 	settings, err := svc.GetNotificationSettings(ctx, tenantID)
 	if err != nil {
@@ -117,11 +117,11 @@ func (d *NotificationSettingsDataSource) Read(ctx context.Context, req datasourc
 		return
 	}
 
-	// Map response to state
+	// Map response to state.
 	config.ID = types.StringValue(settings.AADTenantID)
 	config.AADTenantID = types.StringValue(settings.AADTenantID)
 
-	// Map recipients
+	// Map recipients.
 	recipients := make([]NotificationRecipientDataSourceModel, len(settings.Recipients))
 	for i, recipient := range settings.Recipients {
 		recipients[i] = NotificationRecipientDataSourceModel{
@@ -132,7 +132,7 @@ func (d *NotificationSettingsDataSource) Read(ctx context.Context, req datasourc
 	}
 	config.Recipients = recipients
 
-	// Save data into Terraform state
+	// Save data into Terraform state.
 	diags := resp.State.Set(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 }

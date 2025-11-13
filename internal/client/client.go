@@ -18,7 +18,7 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
-// Client represents a Business Central Admin Center API client
+// Client represents a Business Central Admin Center API client.
 type Client struct {
 	credential azcore.TokenCredential
 	httpClient *http.Client
@@ -27,7 +27,7 @@ type Client struct {
 	apiVersion string
 }
 
-// Config holds the configuration for creating a new client
+// Config holds the configuration for creating a new client.
 type Config struct {
 	ClientID     string
 	ClientSecret string
@@ -37,7 +37,7 @@ type Config struct {
 	APIVersion   string
 }
 
-// AdminCenterError represents an error response from the Business Central Admin Center API
+// AdminCenterError represents an error response from the Business Central Admin Center API.
 type AdminCenterError struct {
 	Code       string                 `json:"code"`
 	Message    string                 `json:"message"`
@@ -53,7 +53,7 @@ func (e *AdminCenterError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
 
-// NewClient creates a new Business Central Admin Center API client
+// NewClient creates a new Business Central Admin Center API client.
 func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config cannot be nil")
@@ -63,11 +63,11 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 		return nil, fmt.Errorf("tenant_id is required")
 	}
 
-	// Initialize credential
+	// Initialize credential.
 	var credential azcore.TokenCredential
 	var err error
 
-	// If ClientID and ClientSecret are provided, use ClientSecretCredential
+	// If ClientID and ClientSecret are provided, use ClientSecretCredential.
 	if config.ClientID != "" && config.ClientSecret != "" {
 		credential, err = azidentity.NewClientSecretCredential(
 			config.TenantID,
@@ -79,7 +79,7 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 			return nil, fmt.Errorf("failed to create client secret credential: %w", err)
 		}
 	} else {
-		// Otherwise, use DefaultAzureCredential for other auth methods
+		// Otherwise, use DefaultAzureCredential for other auth methods.
 		credential, err = azidentity.NewDefaultAzureCredential(nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create default credential: %w", err)
@@ -109,7 +109,7 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	return client, nil
 }
 
-// GetToken retrieves an access token for the Business Central Admin Center API
+// GetToken retrieves an access token for the Business Central Admin Center API.
 func (c *Client) GetToken(ctx context.Context) (string, error) {
 	token, err := c.credential.GetToken(ctx, policy.TokenRequestOptions{
 		Scopes: []string{fmt.Sprintf("%s/.default", constants.BusinessCentralResourceID)},
@@ -120,35 +120,35 @@ func (c *Client) GetToken(ctx context.Context) (string, error) {
 	return token.Token, nil
 }
 
-// DoRequest performs an authenticated HTTP request to the Business Central Admin Center API
+// DoRequest performs an authenticated HTTP request to the Business Central Admin Center API.
 func (c *Client) DoRequest(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
-	// Get authentication token
+	// Get authentication token.
 	token, err := c.GetToken(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build request URL
+	// Build request URL.
 	url := fmt.Sprintf("%s/admin/%s/%s", c.baseURL, c.apiVersion, path)
 
-	// Create request
+	// Create request.
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Set headers
+	// Set headers.
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	// Execute request
+	// Execute request.
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 
-	// Check for error responses
+	// Check for error responses.
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
 
@@ -163,52 +163,52 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body io.Rea
 	return resp, nil
 }
 
-// Get performs an authenticated GET request
+// Get performs an authenticated GET request.
 func (c *Client) Get(ctx context.Context, path string) (*http.Response, error) {
 	return c.DoRequest(ctx, http.MethodGet, path, nil)
 }
 
-// Post performs an authenticated POST request
+// Post performs an authenticated POST request.
 func (c *Client) Post(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
 	return c.DoRequest(ctx, http.MethodPost, path, body)
 }
 
-// Put performs an authenticated PUT request
+// Put performs an authenticated PUT request.
 func (c *Client) Put(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
 	return c.DoRequest(ctx, http.MethodPut, path, body)
 }
 
-// Delete performs an authenticated DELETE request
+// Delete performs an authenticated DELETE request.
 func (c *Client) Delete(ctx context.Context, path string) (*http.Response, error) {
 	return c.DoRequest(ctx, http.MethodDelete, path, nil)
 }
 
-// Patch performs an authenticated PATCH request
+// Patch performs an authenticated PATCH request.
 func (c *Client) Patch(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
 	return c.DoRequest(ctx, http.MethodPatch, path, body)
 }
 
-// SetCredential sets the credential for testing purposes
+// SetCredential sets the credential for testing purposes.
 func (c *Client) SetCredential(credential azcore.TokenCredential) {
 	c.credential = credential
 }
 
-// SetBaseURL sets the base URL for testing purposes
+// SetBaseURL sets the base URL for testing purposes.
 func (c *Client) SetBaseURL(baseURL string) {
 	c.baseURL = baseURL
 }
 
-// SetAPIVersion sets the API version for testing purposes
+// SetAPIVersion sets the API version for testing purposes.
 func (c *Client) SetAPIVersion(apiVersion string) {
 	c.apiVersion = apiVersion
 }
 
-// SetHTTPClient sets the HTTP client for testing purposes
+// SetHTTPClient sets the HTTP client for testing purposes.
 func (c *Client) SetHTTPClient(httpClient *http.Client) {
 	c.httpClient = httpClient
 }
 
-// GetTenantID returns the configured tenant ID
+// GetTenantID returns the configured tenant ID.
 func (c *Client) GetTenantID() string {
 	return c.tenantID
 }

@@ -10,19 +10,19 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
-// BuildNotificationRecipientID creates an ARM-like resource ID for a notification recipient
-// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/{recipientId}
+// BuildNotificationRecipientID creates an ARM-like resource ID for a notification recipient.
+// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/{recipientId}.
 func BuildNotificationRecipientID(tenantID, recipientID string) string {
 	return fmt.Sprintf("/tenants/%s/providers/%s/notificationRecipients/%s",
 		tenantID, constants.ProviderNamespace, recipientID)
 }
 
-// ParseNotificationRecipientID parses a notification recipient resource ID
-// Returns: tenantID, recipientID, error
+// ParseNotificationRecipientID parses a notification recipient resource ID.
+// Returns: tenantID, recipientID, error.
 func ParseNotificationRecipientID(id string) (string, string, error) {
 	parts := strings.Split(strings.TrimPrefix(id, "/"), "/")
 
-	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/{recipientId}
+	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/{recipientId}.
 	if len(parts) != 6 {
 		return "", "", fmt.Errorf("invalid notification recipient ID format: expected '/tenants/{tenantId}/providers/%s/notificationRecipients/{recipientId}', got: %s", constants.ProviderNamespace, id)
 	}

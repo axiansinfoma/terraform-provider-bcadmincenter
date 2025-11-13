@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 )
 
-// mockTokenCredential implements azcore.TokenCredential for testing
+// mockTokenCredential implements azcore.TokenCredential for testing.
 type mockTokenCredential struct {
 	token string
 	err   error
@@ -115,7 +115,7 @@ func TestNewClient(t *testing.T) {
 				return
 			}
 
-			// Check defaults
+			// Check defaults.
 			if tt.config.BaseURL == "" && client.baseURL != constants.DefaultBaseURL {
 				t.Errorf("Client baseURL = %v, want %v", client.baseURL, constants.DefaultBaseURL)
 			}
@@ -239,15 +239,15 @@ func TestClient_DoRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create test server
+			// Create test server.
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Verify authorization header
+				// Verify authorization header.
 				authHeader := r.Header.Get("Authorization")
 				if authHeader != "Bearer test-token" {
 					t.Errorf("Authorization header = %v, want Bearer test-token", authHeader)
 				}
 
-				// Verify content-type and accept headers
+				// Verify content-type and accept headers.
 				if r.Header.Get("Content-Type") != "application/json" {
 					t.Errorf("Content-Type header = %v, want application/json", r.Header.Get("Content-Type"))
 				}
@@ -255,7 +255,7 @@ func TestClient_DoRequest(t *testing.T) {
 					t.Errorf("Accept header = %v, want application/json", r.Header.Get("Accept"))
 				}
 
-				// Verify request path contains API version and path
+				// Verify request path contains API version and path.
 				expectedPath := "/admin/" + constants.DefaultAPIVersion + "/" + tt.path
 				if r.URL.Path != expectedPath {
 					t.Errorf("Request path = %v, want %v", r.URL.Path, expectedPath)
@@ -263,7 +263,11 @@ func TestClient_DoRequest(t *testing.T) {
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -283,7 +287,7 @@ func TestClient_DoRequest(t *testing.T) {
 					t.Error("DoRequest() expected error, got nil")
 					return
 				}
-				// Verify error type
+				// Verify error type.
 				if _, ok := err.(*AdminCenterError); !ok && tt.wantErrType == "*client.AdminCenterError" {
 					t.Errorf("DoRequest() error type = %T, want %v", err, tt.wantErrType)
 				}
@@ -394,7 +398,7 @@ func TestAdminCenterError_Error(t *testing.T) {
 
 func TestClient_ContextCancellation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// This should never be called
+		// This should never be called.
 		t.Error("Server should not be called with cancelled context")
 	}))
 	defer server.Close()

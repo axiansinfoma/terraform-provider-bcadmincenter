@@ -15,19 +15,19 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Service handles environment-related operations for the Business Central Admin Center API
+// Service handles environment-related operations for the Business Central Admin Center API.
 type Service struct {
 	client *client.Client
 }
 
-// NewService creates a new environment service
+// NewService creates a new environment service.
 func NewService(c *client.Client) *Service {
 	return &Service{
 		client: c,
 	}
 }
 
-// List retrieves all environments for the specified application family
+// List retrieves all environments for the specified application family.
 func (s *Service) List(ctx context.Context, applicationFamily string) ([]Environment, error) {
 	path := fmt.Sprintf("applications/%s/environments", applicationFamily)
 
@@ -45,7 +45,7 @@ func (s *Service) List(ctx context.Context, applicationFamily string) ([]Environ
 	return envList.Value, nil
 }
 
-// Get retrieves a specific environment by name
+// Get retrieves a specific environment by name.
 func (s *Service) Get(ctx context.Context, applicationFamily, environmentName string) (*Environment, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, environmentName)
 
@@ -63,9 +63,9 @@ func (s *Service) Get(ctx context.Context, applicationFamily, environmentName st
 	return &env, nil
 }
 
-// Create creates a new Business Central environment
+// Create creates a new Business Central environment.
 func (s *Service) Create(ctx context.Context, applicationFamily string, req *CreateEnvironmentRequest) (*Operation, error) {
-	// The API uses PUT with the environment name in the URL path
+	// The API uses PUT with the environment name in the URL path.
 	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, req.Name)
 
 	body, err := json.Marshal(req)
@@ -79,7 +79,7 @@ func (s *Service) Create(ctx context.Context, applicationFamily string, req *Cre
 	}
 	defer resp.Body.Close()
 
-	// The API returns a 202 Accepted with an operation in the response
+	// The API returns a 202 Accepted with an operation in the response.
 	if resp.StatusCode != http.StatusAccepted {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
@@ -93,7 +93,7 @@ func (s *Service) Create(ctx context.Context, applicationFamily string, req *Cre
 	return &operation, nil
 }
 
-// Delete deletes a Business Central environment
+// Delete deletes a Business Central environment.
 func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName string) (*Operation, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, environmentName)
 
@@ -103,13 +103,13 @@ func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName
 	}
 	defer resp.Body.Close()
 
-	// The API returns a 202 Accepted with an operation in the response
+	// The API returns a 202 Accepted with an operation in the response.
 	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusNoContent {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	// If 204 No Content, the environment was already deleted or doesn't exist
+	// If 204 No Content, the environment was already deleted or doesn't exist.
 	if resp.StatusCode == http.StatusNoContent {
 		return nil, nil
 	}
@@ -122,10 +122,10 @@ func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName
 	return &operation, nil
 }
 
-// GetOperation retrieves the status of an operation
-// Uses the environment-specific operations endpoint
+// GetOperation retrieves the status of an operation.
+// Uses the environment-specific operations endpoint.
 func (s *Service) GetOperation(ctx context.Context, applicationFamily, environmentName, operationID string) (*Operation, error) {
-	// GET /admin/{version}/applications/{applicationFamily}/environments/{environmentName}/operations/{id}
+	// GET /admin/{version}/applications/{applicationFamily}/environments/{environmentName}/operations/{id}.
 	path := fmt.Sprintf("applications/%s/environments/%s/operations/%s", applicationFamily, environmentName, operationID)
 
 	resp, err := s.client.Get(ctx, path)
@@ -142,7 +142,7 @@ func (s *Service) GetOperation(ctx context.Context, applicationFamily, environme
 	return &operation, nil
 }
 
-// WaitForOperation polls an operation until it completes or times out
+// WaitForOperation polls an operation until it completes or times out.
 func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, environmentName, operationID string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -150,17 +150,17 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	// Check immediately first
+	// Check immediately first.
 	operation, err := s.GetOperation(ctx, applicationFamily, environmentName, operationID)
 	if err != nil {
-		// For delete operations, if the environment is not found, consider it success
+		// For delete operations, if the environment is not found, consider it success.
 		if isEnvironmentNotFoundError(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to check operation status: %w", err)
 	}
 
-	// Log initial operation status
+	// Log initial operation status.
 	fmt.Printf("[DEBUG] Initial operation status: %s (ID: %s)\n", operation.Status, operation.ID)
 
 	if operation.Status == OperationStatusSucceeded {
@@ -174,7 +174,7 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 		return fmt.Errorf("operation was cancelled")
 	}
 
-	// Then poll at intervals
+	// Then poll at intervals.
 	for {
 		select {
 		case <-ctx.Done():
@@ -182,14 +182,14 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 		case <-ticker.C:
 			operation, err := s.GetOperation(ctx, applicationFamily, environmentName, operationID)
 			if err != nil {
-				// For delete operations, if the environment is not found, consider it success
+				// For delete operations, if the environment is not found, consider it success.
 				if isEnvironmentNotFoundError(err) {
 					return nil
 				}
 				return fmt.Errorf("failed to check operation status: %w", err)
 			}
 
-			// Log polling status
+			// Log polling status.
 			fmt.Printf("[DEBUG] Polling operation status: %s (ID: %s)\n", operation.Status, operation.ID)
 
 			switch operation.Status {
@@ -201,7 +201,7 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 			case OperationStatusCancelled:
 				return fmt.Errorf("operation was cancelled")
 			case OperationStatusQueued, OperationStatusRunning:
-				// Continue polling
+				// Continue polling.
 				continue
 			default:
 				return fmt.Errorf("unknown operation status: %s", operation.Status)
@@ -210,23 +210,23 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 	}
 }
 
-// isEnvironmentNotFoundError checks if an error is an EnvironmentNotFound error
-// This is useful for delete operations where the environment no longer exists
+// isEnvironmentNotFoundError checks if an error is an EnvironmentNotFound error.
+// This is useful for delete operations where the environment no longer exists.
 func isEnvironmentNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Check if the error message contains "EnvironmentNotFound"
+	// Check if the error message contains "EnvironmentNotFound".
 	errMsg := err.Error()
 	return contains(errMsg, "EnvironmentNotFound")
 }
 
-// contains checks if a string contains a substring
+// contains checks if a string contains a substring.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexOfSubstring(s, substr) >= 0)
 }
 
-// indexOfSubstring returns the index of the first instance of substr in s, or -1 if substr is not present in s
+// indexOfSubstring returns the index of the first instance of substr in s, or -1 if substr is not present in s.
 func indexOfSubstring(s, substr string) int {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {

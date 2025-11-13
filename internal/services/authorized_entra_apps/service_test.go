@@ -17,7 +17,7 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// mockTokenCredential implements azcore.TokenCredential for testing
+// mockTokenCredential implements azcore.TokenCredential for testing.
 type mockTokenCredential struct {
 	token string
 }
@@ -75,7 +75,11 @@ func TestService_ListAuthorizedApps(t *testing.T) {
 					t.Errorf("unexpected path: %s, expected: %s", r.URL.Path, expectedPath)
 				}
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -145,7 +149,11 @@ func TestService_AuthorizeApp(t *testing.T) {
 					t.Errorf("unexpected method: %s", r.Method)
 				}
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -270,7 +278,11 @@ func TestService_GetManageableTenants(t *testing.T) {
 					t.Errorf("unexpected path: %s, expected: %s", r.URL.Path, expectedPath)
 				}
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 

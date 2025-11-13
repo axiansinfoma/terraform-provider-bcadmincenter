@@ -132,17 +132,17 @@ func (d *AvailableApplicationsDataSource) Configure(ctx context.Context, req dat
 func (d *AvailableApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data AvailableApplicationsDataSourceModel
 
-	// Read Terraform configuration data into the model
+	// Read Terraform configuration data into the model.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Create service
+	// Create service.
 	svc := NewService(d.client)
 
-	// Get available applications
+	// Get available applications.
 	availableApps, err := svc.GetAvailableApplications(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -152,7 +152,7 @@ func (d *AvailableApplicationsDataSource) Read(ctx context.Context, req datasour
 		return
 	}
 
-	// Map API response to Terraform state
+	// Map API response to Terraform state.
 	data.ApplicationFamilies = make([]ApplicationFamilyModel, 0, len(availableApps.Value))
 
 	for _, appFamily := range availableApps.Value {
@@ -182,9 +182,9 @@ func (d *AvailableApplicationsDataSource) Read(ctx context.Context, req datasour
 		data.ApplicationFamilies = append(data.ApplicationFamilies, appFamilyModel)
 	}
 
-	// Set a static ID since this is a singleton data source
+	// Set a static ID since this is a singleton data source.
 	data.ID = types.StringValue("available_applications")
 
-	// Save data into Terraform state
+	// Save data into Terraform state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

@@ -11,17 +11,17 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Service handles timezone operations
+// Service handles timezone operations.
 type Service struct {
 	client *client.Client
 }
 
-// NewService creates a new timezones service
+// NewService creates a new timezones service.
 func NewService(c *client.Client) *Service {
 	return &Service{client: c}
 }
 
-// GetTimeZones retrieves the list of available time zones
+// GetTimeZones retrieves the list of available time zones.
 func (s *Service) GetTimeZones(ctx context.Context) (*TimeZoneResponse, error) {
 	path := "applications/settings/timezones"
 

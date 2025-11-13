@@ -35,7 +35,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	requiredAttrs := []string{"name", "type", "country_code"}
 	for _, attr := range requiredAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
@@ -43,7 +43,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 		}
 	}
 
-	// Verify optional attributes exist
+	// Verify optional attributes exist.
 	optionalAttrs := []string{"application_family", "ring_name", "application_version", "azure_region"}
 	for _, attr := range optionalAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
@@ -51,7 +51,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 		}
 	}
 
-	// Verify computed attributes exist
+	// Verify computed attributes exist.
 	computedAttrs := []string{"id", "status", "web_client_login_url", "web_service_url", "app_insights_key", "platform_version", "aad_tenant_id"}
 	for _, attr := range computedAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
@@ -81,10 +81,10 @@ func TestEnvironmentResource_Configure(t *testing.T) {
 }
 
 func TestEnvironmentResourceModel(t *testing.T) {
-	// Test that the model struct can be created and populated
+	// Test that the model struct can be created and populated.
 	model := EnvironmentResourceModel{}
 
-	// Verify the struct has all expected fields
+	// Verify the struct has all expected fields.
 	_ = model.ID
 	_ = model.Name
 	_ = model.ApplicationFamily
@@ -356,7 +356,7 @@ func TestUpdateModelFromEnvironment(t *testing.T) {
 func TestEnvironmentResource_Configure_WithInvalidType(t *testing.T) {
 	r := &EnvironmentResource{}
 
-	// Test with invalid provider data type
+	// Test with invalid provider data type.
 	req := resource.ConfigureRequest{
 		ProviderData: "invalid-type",
 	}
@@ -370,7 +370,7 @@ func TestEnvironmentResource_Configure_WithInvalidType(t *testing.T) {
 }
 
 func TestEnvironmentResource_ImportState_Success(t *testing.T) {
-	// Test successful parsing of import ID format
+	// Test successful parsing of import ID format.
 	importID := "9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/BusinessCentral/production"
 	parts := strings.Split(importID, "/")
 

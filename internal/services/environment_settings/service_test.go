@@ -16,7 +16,7 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// mockTokenCredential implements azcore.TokenCredential for testing
+// mockTokenCredential implements azcore.TokenCredential for testing.
 type mockTokenCredential struct {
 	token string
 }
@@ -71,7 +71,11 @@ func TestService_GetUpdateSettings(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
 				if tt.responseBody != nil {
-					json.NewEncoder(w).Encode(tt.responseBody)
+					if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+						t.Fatalf("Failed to encode response: %v", err)
+
+					}
 				}
 			}))
 			defer server.Close()
@@ -142,7 +146,11 @@ func TestService_SetUpdateSettings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -197,7 +205,11 @@ func TestService_GetSecurityGroup(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
 				if tt.responseBody != nil {
-					json.NewEncoder(w).Encode(tt.responseBody)
+					if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+						t.Fatalf("Failed to encode response: %v", err)
+
+					}
 				}
 			}))
 			defer server.Close()
@@ -304,7 +316,11 @@ func TestService_GetAccessWithM365Licenses(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -329,7 +345,7 @@ func TestService_GetAccessWithM365Licenses(t *testing.T) {
 	}
 }
 
-// Helper function to create string pointers
+// Helper function to create string pointers.
 func strPtr(s string) *string {
 	return &s
 }

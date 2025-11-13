@@ -22,24 +22,24 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Ensure the implementation satisfies the expected interfaces
+// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &EnvironmentResource{}
 	_ resource.ResourceWithConfigure   = &EnvironmentResource{}
 	_ resource.ResourceWithImportState = &EnvironmentResource{}
 )
 
-// NewEnvironmentResource is a helper function to simplify the provider implementation
+// NewEnvironmentResource is a helper function to simplify the provider implementation.
 func NewEnvironmentResource() resource.Resource {
 	return &EnvironmentResource{}
 }
 
-// EnvironmentResource is the resource implementation
+// EnvironmentResource is the resource implementation.
 type EnvironmentResource struct {
 	client *client.Client
 }
 
-// EnvironmentResourceModel describes the resource data model
+// EnvironmentResourceModel describes the resource data model.
 type EnvironmentResourceModel struct {
 	ID                 types.String `tfsdk:"id"`
 	Name               types.String `tfsdk:"name"`
@@ -58,12 +58,12 @@ type EnvironmentResourceModel struct {
 	Timeouts           types.Object `tfsdk:"timeouts"`
 }
 
-// Metadata returns the resource type name
+// Metadata returns the resource type name.
 func (r *EnvironmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_environment"
 }
 
-// Schema defines the schema for the resource
+// Schema defines the schema for the resource.
 func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a Business Central environment in the Admin Center.\n\n" +
@@ -192,7 +192,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 	}
 }
 
-// Configure adds the provider configured client to the resource
+// Configure adds the provider configured client to the resource.
 func (r *EnvironmentResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -210,11 +210,11 @@ func (r *EnvironmentResource) Configure(_ context.Context, req resource.Configur
 	r.client = client
 }
 
-// Create creates the resource and sets the initial Terraform state
+// Create creates the resource and sets the initial Terraform state.
 func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan EnvironmentResourceModel
 
-	// Read Terraform plan data into the model
+	// Read Terraform plan data into the model.
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -226,10 +226,10 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		"type":               plan.Type.ValueString(),
 	})
 
-	// Create environment service
+	// Create environment service.
 	svc := NewService(r.client)
 
-	// Prepare create request
+	// Prepare create request.
 	createReq := &CreateEnvironmentRequest{
 		EnvironmentType:    plan.Type.ValueString(),
 		Name:               plan.Name.ValueString(),
@@ -239,7 +239,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		AzureRegion:        plan.AzureRegion.ValueString(),
 	}
 
-	// Create the environment
+	// Create the environment.
 	operation, err := svc.Create(ctx, plan.ApplicationFamily.ValueString(), createReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -249,7 +249,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	// Log the operation response for debugging
+	// Log the operation response for debugging.
 	tflog.Debug(ctx, "Create operation response", map[string]interface{}{
 		"operation_id":       operation.ID,
 		"operation_type":     operation.Type,
@@ -260,14 +260,12 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		"source_env":         operation.SourceEnvironment,
 	})
 
-	// Determine timeout
+	// Determine timeout.
+	// TODO: Parse timeout from plan.Timeouts if needed.
 	timeout := 60 * time.Minute // default
-	if !plan.Timeouts.IsNull() {
-		// TODO: Parse timeout from plan.Timeouts
-	}
 
-	// Wait for the operation to complete
-	// Use ProductFamily from operation response if available, otherwise use the plan value
+	// Wait for the operation to complete.
+	// Use ProductFamily from operation response if available, otherwise use the plan value.
 	appFamily := operation.ProductFamily
 	if appFamily == "" {
 		appFamily = operation.ApplicationFamily
@@ -299,14 +297,14 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	// Log what we're about to use for the Get call
+	// Log what we're about to use for the Get call.
 	tflog.Debug(ctx, "Reading created environment", map[string]interface{}{
 		"application_family": appFamily,
 		"environment_name":   envName,
 	})
 
-	// Wait for the environment to become Active
-	// The operation succeeds when the create request is accepted, but the environment
+	// Wait for the environment to become Active.
+	// The operation succeeds when the create request is accepted, but the environment.
 	// may still be in "Preparing" status. We need to poll until it's "Active".
 	tflog.Debug(ctx, "Waiting for environment to become Active", map[string]interface{}{
 		"application_family": appFamily,
@@ -334,13 +332,13 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		})
 
 		if env.Status == "Active" {
-			// Environment is ready, update state and return
+			// Environment is ready, update state and return.
 			r.updateModelFromEnvironment(&plan, env)
 			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 			return
 		}
 
-		// Check for failed states
+		// Check for failed states.
 		if env.Status == "Failed" || env.Status == "Suspended" {
 			resp.Diagnostics.AddError(
 				"Environment creation failed",
@@ -349,7 +347,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			return
 		}
 
-		// Wait for next tick or timeout
+		// Wait for next tick or timeout.
 		select {
 		case <-envTimeout.Done():
 			resp.Diagnostics.AddError(
@@ -358,17 +356,17 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			)
 			return
 		case <-ticker.C:
-			// Continue polling
+			// Continue polling.
 			continue
 		}
 	}
 }
 
-// Read refreshes the Terraform state with the latest data
+// Read refreshes the Terraform state with the latest data.
 func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state EnvironmentResourceModel
 
-	// Read current state
+	// Read current state.
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -379,10 +377,10 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		"application_family": state.ApplicationFamily.ValueString(),
 	})
 
-	// Create environment service
+	// Create environment service.
 	svc := NewService(r.client)
 
-	// Get the environment
+	// Get the environment.
 	env, err := svc.Get(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -392,28 +390,28 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	// Update state with current environment data
+	// Update state with current environment data.
 	r.updateModelFromEnvironment(&state, env)
 
-	// Set refreshed state
+	// Set refreshed state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update updates the resource and sets the updated Terraform state on success
+// Update updates the resource and sets the updated Terraform state on success.
 func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Most environment attributes require replacement (ForceNew)
-	// This method is here for completeness but may not be used in practice
+	// This method is here for completeness but may not be used in practice.
 	resp.Diagnostics.AddError(
 		"Update not supported",
 		"Environment resources do not support in-place updates. Most changes require replacement.",
 	)
 }
 
-// Delete deletes the resource and removes the Terraform state on success
+// Delete deletes the resource and removes the Terraform state on success.
 func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state EnvironmentResourceModel
 
-	// Read current state
+	// Read current state.
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -424,10 +422,10 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 		"application_family": state.ApplicationFamily.ValueString(),
 	})
 
-	// Create environment service
+	// Create environment service.
 	svc := NewService(r.client)
 
-	// Delete the environment
+	// Delete the environment.
 	operation, err := svc.Delete(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -437,19 +435,17 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	// If operation is nil, the environment was already deleted
+	// If operation is nil, the environment was already deleted.
 	if operation == nil {
 		return
 	}
 
-	// Determine timeout
+	// Determine timeout.
+	// TODO: Parse timeout from state.Timeouts if needed.
 	timeout := 60 * time.Minute // default
-	if !state.Timeouts.IsNull() {
-		// TODO: Parse timeout from state.Timeouts
-	}
 
-	// Wait for the operation to complete
-	// Use ProductFamily from operation response if available, otherwise fall back to state
+	// Wait for the operation to complete.
+	// Use ProductFamily from operation response if available, otherwise fall back to state.
 	appFamily := operation.ProductFamily
 	if appFamily == "" {
 		appFamily = operation.ApplicationFamily
@@ -482,9 +478,9 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 }
 
-// ImportState imports an existing resource into Terraform state
+// ImportState imports an existing resource into Terraform state.
 func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Parse the ARM-like ID
+	// Parse the ARM-like ID.
 	tenantID, applicationFamily, environmentName, err := ParseEnvironmentID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -495,19 +491,19 @@ func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.Impo
 		return
 	}
 
-	// Set the attributes
+	// Set the attributes.
 	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
 	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
 	resp.State.SetAttribute(ctx, path.Root("name"), environmentName)
 	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
 }
 
-// updateModelFromEnvironment updates the Terraform model with data from the API
+// updateModelFromEnvironment updates the Terraform model with data from the API.
 func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResourceModel, env *Environment) {
-	// Build ARM-like ID using tenant ID from aad_tenant_id field
+	// Build ARM-like ID using tenant ID from aad_tenant_id field.
 	tenantID := env.AADTenantID
 	if tenantID == "" {
-		// Fallback to provider tenant if not available in response
+		// Fallback to provider tenant if not available in response.
 		tenantID = r.client.GetTenantID()
 	}
 
@@ -532,11 +528,11 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 		model.AppInsightsKey = types.StringNull()
 	}
 
-	// Azure region is not returned by the API, so always set to null
+	// Azure region is not returned by the API, so always set to null.
 	model.AzureRegion = types.StringNull()
 
-	// Normalize ring name from API response format to Terraform format
-	// API accepts "PROD", "PREVIEW", "FAST" on input but returns "Production", "Preview", "Fast" on output
+	// Normalize ring name from API response format to Terraform format.
+	// API accepts "PROD", "PREVIEW", "FAST" on input but returns "Production", "Preview", "Fast" on output.
 	if env.RingName != "" {
 		normalizedRing := normalizeRingName(env.RingName)
 		model.RingName = types.StringValue(normalizedRing)
@@ -557,8 +553,8 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 	}
 }
 
-// normalizeRingName converts API ring name format to Terraform format
-// API returns "Production", "Preview", "Fast" but Terraform expects "PROD", "PREVIEW", "FAST"
+// normalizeRingName converts API ring name format to Terraform format.
+// API returns "Production", "Preview", "Fast" but Terraform expects "PROD", "PREVIEW", "FAST".
 func normalizeRingName(apiRingName string) string {
 	switch apiRingName {
 	case "Production":
@@ -568,7 +564,7 @@ func normalizeRingName(apiRingName string) string {
 	case "Fast":
 		return "FAST"
 	default:
-		// Return as-is if unknown
+		// Return as-is if unknown.
 		return apiRingName
 	}
 }

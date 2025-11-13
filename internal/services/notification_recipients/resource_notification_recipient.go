@@ -23,22 +23,22 @@ var _ resource.Resource = &NotificationRecipientResource{}
 var _ resource.ResourceWithConfigure = &NotificationRecipientResource{}
 var _ resource.ResourceWithImportState = &NotificationRecipientResource{}
 
-// NewNotificationRecipientResource is a helper function to simplify the provider implementation
+// NewNotificationRecipientResource is a helper function to simplify the provider implementation.
 func NewNotificationRecipientResource() resource.Resource {
 	return &NotificationRecipientResource{}
 }
 
-// NotificationRecipientResource is the resource implementation
+// NotificationRecipientResource is the resource implementation.
 type NotificationRecipientResource struct {
 	client *client.Client
 }
 
-// Metadata returns the resource type name
+// Metadata returns the resource type name.
 func (r *NotificationRecipientResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_notification_recipient"
 }
 
-// Schema defines the schema for the resource
+// Schema defines the schema for the resource.
 func (r *NotificationRecipientResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a notification recipient for the Business Central tenant. " +
@@ -86,7 +86,7 @@ func (r *NotificationRecipientResource) Schema(_ context.Context, _ resource.Sch
 	}
 }
 
-// Configure adds the provider configured client to the resource
+// Configure adds the provider configured client to the resource.
 func (r *NotificationRecipientResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -104,7 +104,7 @@ func (r *NotificationRecipientResource) Configure(_ context.Context, req resourc
 	r.client = client
 }
 
-// Create creates the resource and sets the initial Terraform state
+// Create creates the resource and sets the initial Terraform state.
 func (r *NotificationRecipientResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan NotificationRecipientResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -113,10 +113,10 @@ func (r *NotificationRecipientResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Create the notification recipient
+	// Create the notification recipient.
 	svc := NewService(r.client)
 
-	// Use aad_tenant_id from plan if provided, otherwise use provider's tenant ID
+	// Use aad_tenant_id from plan if provided, otherwise use provider's tenant ID.
 	tenantID := r.client.GetTenantID()
 	if !plan.AADTenantID.IsNull() && !plan.AADTenantID.IsUnknown() {
 		tenantID = plan.AADTenantID.ValueString()
@@ -131,7 +131,7 @@ func (r *NotificationRecipientResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Update the plan with the response
+	// Update the plan with the response.
 	plan.ID = types.StringValue(BuildNotificationRecipientID(tenantID, recipient.ID))
 	plan.Email = types.StringValue(recipient.Email)
 	plan.Name = types.StringValue(recipient.Name)
@@ -140,7 +140,7 @@ func (r *NotificationRecipientResource) Create(ctx context.Context, req resource
 	resp.Diagnostics.Append(diags...)
 }
 
-// Read refreshes the Terraform state with the latest data
+// Read refreshes the Terraform state with the latest data.
 func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state NotificationRecipientResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -151,7 +151,7 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 
 	svc := NewService(r.client)
 
-	// Parse the ARM-like ID to get tenant ID and recipient ID
+	// Parse the ARM-like ID to get tenant ID and recipient ID.
 	tenantID, recipientID, err := ParseNotificationRecipientID(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -163,7 +163,7 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 
 	recipient, err := svc.Get(ctx, tenantID, recipientID)
 	if err != nil {
-		// If the recipient is not found, remove it from state
+		// If the recipient is not found, remove it from state.
 		resp.Diagnostics.AddWarning(
 			"Notification Recipient Not Found",
 			fmt.Sprintf("The notification recipient with ID %s was not found and will be removed from state.", state.ID.ValueString()),
@@ -172,21 +172,21 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	// Update the state
+	// Update the state.
 	state.Email = types.StringValue(recipient.Email)
 	state.Name = types.StringValue(recipient.Name)
 	state.AADTenantID = types.StringValue(tenantID)
 
-	// Save updated data into Terraform state
+	// Save updated data into Terraform state.
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }
 
-// Update updates the resource and sets the updated Terraform state on success
+// Update updates the resource and sets the updated Terraform state on success.
 func (r *NotificationRecipientResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// The API does not support updating notification recipients
-	// Since email and name both have RequiresReplace, this should never be called
-	// However, we implement it for completeness
+	// The API does not support updating notification recipients.
+	// Since email and name both have RequiresReplace, this should never be called.
+	// However, we implement it for completeness.
 	resp.Diagnostics.AddError(
 		"Update Not Supported",
 		"The Business Central Admin Center API does not support updating notification recipients. "+
@@ -194,7 +194,7 @@ func (r *NotificationRecipientResource) Update(ctx context.Context, req resource
 	)
 }
 
-// Delete deletes the resource and removes the Terraform state on success
+// Delete deletes the resource and removes the Terraform state on success.
 func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state NotificationRecipientResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -203,10 +203,10 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	// Delete the notification recipient
+	// Delete the notification recipient.
 	svc := NewService(r.client)
 
-	// Parse the ARM-like ID to get tenant ID and recipient ID
+	// Parse the ARM-like ID to get tenant ID and recipient ID.
 	tenantID, recipientID, err := ParseNotificationRecipientID(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -224,12 +224,12 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	// Resource is removed from state automatically
+	// Resource is removed from state automatically.
 }
 
-// ImportState imports the resource state
+// ImportState imports the resource state.
 func (r *NotificationRecipientResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Parse the ARM-like ID
+	// Parse the ARM-like ID.
 	tenantID, recipientID, err := ParseNotificationRecipientID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -240,10 +240,10 @@ func (r *NotificationRecipientResource) ImportState(ctx context.Context, req res
 		return
 	}
 
-	// Set the ID and tenant ID in state
+	// Set the ID and tenant ID in state.
 	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
 	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
 
-	// Note: The Read method will populate email and name
+	// Note: The Read method will populate email and name.
 	_ = recipientID // Used by Read method via ID parsing
 }

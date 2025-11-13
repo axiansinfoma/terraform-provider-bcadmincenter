@@ -127,13 +127,13 @@ func (d *environmentsDataSource) Configure(_ context.Context, req datasource.Con
 func (d *environmentsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state environmentsDataSourceModel
 
-	// Read Terraform configuration data into the model
+	// Read Terraform configuration data into the model.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Get environments from API
+	// Get environments from API.
 	service := NewService(d.client)
 	environments, err := service.List(ctx, state.ApplicationFamily.ValueString())
 	if err != nil {
@@ -144,7 +144,7 @@ func (d *environmentsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	// Map response to model
+	// Map response to model.
 	state.Environments = make([]environmentListItemModel, len(environments))
 	for i, env := range environments {
 		state.Environments[i] = environmentListItemModel{
@@ -159,6 +159,6 @@ func (d *environmentsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		}
 	}
 
-	// Set state
+	// Set state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }

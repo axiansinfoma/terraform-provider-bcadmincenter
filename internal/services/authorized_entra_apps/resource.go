@@ -22,18 +22,18 @@ var (
 	_ resource.ResourceWithImportState = &AuthorizedEntraAppResource{}
 )
 
-// NewAuthorizedEntraAppResource creates a new instance of the authorized Entra app resource
+// NewAuthorizedEntraAppResource creates a new instance of the authorized Entra app resource.
 func NewAuthorizedEntraAppResource() resource.Resource {
 	return &AuthorizedEntraAppResource{}
 }
 
-// AuthorizedEntraAppResource defines the resource implementation
+// AuthorizedEntraAppResource defines the resource implementation.
 type AuthorizedEntraAppResource struct {
 	client  *client.Client
 	service *Service
 }
 
-// authorizedEntraAppResourceModel describes the resource data model
+// authorizedEntraAppResourceModel describes the resource data model.
 type authorizedEntraAppResourceModel struct {
 	ID                    types.String `tfsdk:"id"`
 	AADTenantID           types.String `tfsdk:"aad_tenant_id"`
@@ -41,12 +41,12 @@ type authorizedEntraAppResourceModel struct {
 	IsAdminConsentGranted types.Bool   `tfsdk:"is_admin_consent_granted"`
 }
 
-// Metadata returns the resource type name
+// Metadata returns the resource type name.
 func (r *AuthorizedEntraAppResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_authorized_entra_app"
 }
 
-// Schema defines the schema for the resource
+// Schema defines the schema for the resource.
 func (r *AuthorizedEntraAppResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages authorization of a Microsoft Entra app to call the Business Central Admin Center API. " +
@@ -83,7 +83,7 @@ func (r *AuthorizedEntraAppResource) Schema(_ context.Context, _ resource.Schema
 	}
 }
 
-// Configure adds the provider configured client to the resource
+// Configure adds the provider configured client to the resource.
 func (r *AuthorizedEntraAppResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -102,7 +102,7 @@ func (r *AuthorizedEntraAppResource) Configure(_ context.Context, req resource.C
 	r.service = NewService(providerClient)
 }
 
-// Create creates the resource and sets the initial Terraform state
+// Create creates the resource and sets the initial Terraform state.
 func (r *AuthorizedEntraAppResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan authorizedEntraAppResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -110,14 +110,14 @@ func (r *AuthorizedEntraAppResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	// Use provider tenant ID if not specified
+	// Use provider tenant ID if not specified.
 	tenantID := plan.AADTenantID.ValueString()
 	if tenantID == "" {
 		tenantID = r.client.GetTenantID()
 		plan.AADTenantID = types.StringValue(tenantID)
 	}
 
-	// Authorize the app
+	// Authorize the app.
 	app, err := r.service.AuthorizeApp(ctx, plan.AppID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -127,14 +127,14 @@ func (r *AuthorizedEntraAppResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	// Set resource ID
+	// Set resource ID.
 	plan.ID = types.StringValue(BuildAuthorizedEntraAppID(tenantID, app.AppID))
 	plan.IsAdminConsentGranted = types.BoolValue(app.IsAdminConsentGranted)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-// Read refreshes the Terraform state with the latest data
+// Read refreshes the Terraform state with the latest data.
 func (r *AuthorizedEntraAppResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state authorizedEntraAppResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -142,8 +142,8 @@ func (r *AuthorizedEntraAppResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	// Get current state from API by listing all apps and filtering
-	// Note: The API doesn't provide a GET endpoint for a single app
+	// Get current state from API by listing all apps and filtering.
+	// Note: The API doesn't provide a GET endpoint for a single app.
 	apps, err := r.service.ListAuthorizedApps(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -153,18 +153,18 @@ func (r *AuthorizedEntraAppResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	// Find the specific app in the list
+	// Find the specific app in the list.
 	var found bool
 	for _, app := range apps {
 		if app.AppID == state.AppID.ValueString() {
-			// Update state
+			// Update state.
 			state.IsAdminConsentGranted = types.BoolValue(app.IsAdminConsentGranted)
 			found = true
 			break
 		}
 	}
 
-	// If app is not found, remove from state
+	// If app is not found, remove from state.
 	if !found {
 		resp.State.RemoveResource(ctx)
 		return
@@ -173,16 +173,16 @@ func (r *AuthorizedEntraAppResource) Read(ctx context.Context, req resource.Read
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update updates the resource and sets the updated Terraform state on success
+// Update updates the resource and sets the updated Terraform state on success.
 func (r *AuthorizedEntraAppResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// This resource doesn't support updates - all attributes are either computed or require replacement
+	// This resource doesn't support updates - all attributes are either computed or require replacement.
 	resp.Diagnostics.AddError(
 		"Update not supported",
 		"Authorized Entra App resource does not support updates. All changes require replacement.",
 	)
 }
 
-// Delete deletes the resource and removes the Terraform state on success
+// Delete deletes the resource and removes the Terraform state on success.
 func (r *AuthorizedEntraAppResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state authorizedEntraAppResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -190,7 +190,7 @@ func (r *AuthorizedEntraAppResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	// Remove the authorized app
+	// Remove the authorized app.
 	err := r.service.RemoveAuthorizedApp(ctx, state.AppID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -201,9 +201,9 @@ func (r *AuthorizedEntraAppResource) Delete(ctx context.Context, req resource.De
 	}
 }
 
-// ImportState imports the resource into Terraform state
+// ImportState imports the resource into Terraform state.
 func (r *AuthorizedEntraAppResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Parse the resource ID
+	// Parse the resource ID.
 	tenantID, appID, err := ParseAuthorizedEntraAppID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -214,7 +214,7 @@ func (r *AuthorizedEntraAppResource) ImportState(ctx context.Context, req resour
 		return
 	}
 
-	// Set the parsed values
+	// Set the parsed values.
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("app_id"), appID)...)

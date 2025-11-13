@@ -17,7 +17,7 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// mockTokenCredential is a mock implementation of azcore.TokenCredential for testing
+// mockTokenCredential is a mock implementation of azcore.TokenCredential for testing.
 type mockTokenCredential struct {
 	token string
 }
@@ -85,7 +85,11 @@ func TestService_List(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -150,7 +154,11 @@ func TestService_Get(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -222,7 +230,11 @@ func TestService_Create(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -287,7 +299,11 @@ func TestService_Delete(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
 				if tt.responseBody != nil {
-					json.NewEncoder(w).Encode(tt.responseBody)
+					if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+						t.Fatalf("Failed to encode response: %v", err)
+
+					}
 				}
 			}))
 			defer server.Close()
@@ -358,7 +374,11 @@ func TestService_GetOperation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
@@ -425,11 +445,15 @@ func TestService_WaitForOperation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(Operation{
+				if err := json.NewEncoder(w).Encode(Operation{
 					ID:           tt.operationID,
 					Status:       tt.operationStatus,
 					ErrorMessage: tt.errorMessage,
-				})
+				}); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 

@@ -28,6 +28,12 @@ linters:
       - third_party$
       - builtin$
       - examples$
+linters-settings:
+  godot:
+    # Exclude copyright and license headers from period checks.
+    exclude:
+      - "^Copyright"
+      - "^SPDX-License-Identifier"
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

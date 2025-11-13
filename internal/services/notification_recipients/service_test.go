@@ -16,7 +16,7 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// mockTokenCredential implements azcore.TokenCredential for testing
+// mockTokenCredential implements azcore.TokenCredential for testing.
 type mockTokenCredential struct {
 	token string
 }
@@ -78,7 +78,11 @@ func TestService_List(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
 				if tt.responseBody != nil {
-					json.NewEncoder(w).Encode(tt.responseBody)
+					if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+						t.Fatalf("Failed to encode response: %v", err)
+
+					}
 				}
 			}))
 			defer server.Close()
@@ -154,7 +158,11 @@ func TestService_Get(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
 				if tt.responseBody != nil {
-					json.NewEncoder(w).Encode(tt.responseBody)
+					if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+						t.Fatalf("Failed to encode response: %v", err)
+
+					}
 				}
 			}))
 			defer server.Close()
@@ -238,7 +246,11 @@ func TestService_Create(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
 				if tt.responseBody != nil {
-					json.NewEncoder(w).Encode(tt.responseBody)
+					if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+						t.Fatalf("Failed to encode response: %v", err)
+
+					}
 				}
 			}))
 			defer server.Close()
@@ -385,7 +397,11 @@ func TestService_GetNotificationSettings(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
 				if tt.responseBody != nil {
-					json.NewEncoder(w).Encode(tt.responseBody)
+					if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+						t.Fatalf("Failed to encode response: %v", err)
+
+					}
 				}
 			}))
 			defer server.Close()

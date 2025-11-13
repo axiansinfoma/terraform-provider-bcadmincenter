@@ -10,19 +10,19 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
-// BuildEnvironmentSettingsID creates an ARM-like resource ID for environment settings
-// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings
+// BuildEnvironmentSettingsID creates an ARM-like resource ID for environment settings.
+// Format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings.
 func BuildEnvironmentSettingsID(tenantID, applicationFamily, environmentName string) string {
 	return fmt.Sprintf("/tenants/%s/providers/%s/applications/%s/environments/%s/settings",
 		tenantID, constants.ProviderNamespace, applicationFamily, environmentName)
 }
 
-// ParseEnvironmentSettingsID parses an environment settings resource ID
-// Returns: tenantID, applicationFamily, environmentName, error
+// ParseEnvironmentSettingsID parses an environment settings resource ID.
+// Returns: tenantID, applicationFamily, environmentName, error.
 func ParseEnvironmentSettingsID(id string) (string, string, string, error) {
 	parts := strings.Split(strings.TrimPrefix(id, "/"), "/")
 
-	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings
+	// Expected format: tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings.
 	if len(parts) != 9 {
 		return "", "", "", fmt.Errorf("invalid environment settings ID format: expected '/tenants/{tenantId}/providers/%s/applications/{applicationFamily}/environments/{environmentName}/settings', got: %s", constants.ProviderNamespace, id)
 	}

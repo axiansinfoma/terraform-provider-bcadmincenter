@@ -35,7 +35,7 @@ func TestNotificationRecipientResource_Schema(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	requiredAttrs := []string{"email", "name"}
 	for _, attr := range requiredAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
@@ -43,14 +43,17 @@ func TestNotificationRecipientResource_Schema(t *testing.T) {
 		}
 	}
 
-	// Verify computed id exists
+	// Verify computed id exists.
 	if _, ok := resp.Schema.Attributes["id"]; !ok {
 		t.Error("Schema missing computed 'id' attribute")
 	}
 }
 
 func TestNotificationRecipientResource_Configure(t *testing.T) {
-	r := NewNotificationRecipientResource().(*NotificationRecipientResource)
+	r, ok := NewNotificationRecipientResource().(*NotificationRecipientResource)
+	if !ok {
+		t.Fatal("Failed to cast to NotificationRecipientResource")
+	}
 
 	// Test with nil provider data (should not error)
 	req := resource.ConfigureRequest{ProviderData: nil}
@@ -86,7 +89,7 @@ func TestNotificationSettingsDataSource_Schema(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify computed attributes exist
+	// Verify computed attributes exist.
 	computedAttrs := []string{"id", "aad_tenant_id", "recipients"}
 	for _, attr := range computedAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
@@ -96,7 +99,10 @@ func TestNotificationSettingsDataSource_Schema(t *testing.T) {
 }
 
 func TestNotificationSettingsDataSource_Configure(t *testing.T) {
-	d := NewNotificationSettingsDataSource().(*NotificationSettingsDataSource)
+	d, ok := NewNotificationSettingsDataSource().(*NotificationSettingsDataSource)
+	if !ok {
+		t.Fatal("Failed to cast to NotificationSettingsDataSource")
+	}
 
 	// Test with nil provider data (should not error)
 	req := datasource.ConfigureRequest{ProviderData: nil}

@@ -11,17 +11,17 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// Service handles quotas operations
+// Service handles quotas operations.
 type Service struct {
 	client *client.Client
 }
 
-// NewService creates a new quotas service
+// NewService creates a new quotas service.
 func NewService(c *client.Client) *Service {
 	return &Service{client: c}
 }
 
-// GetQuotas retrieves the environment quotas for the tenant
+// GetQuotas retrieves the environment quotas for the tenant.
 func (s *Service) GetQuotas(ctx context.Context) (*QuotasResponse, error) {
 	path := "environments/quotas"
 

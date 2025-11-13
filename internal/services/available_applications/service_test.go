@@ -17,7 +17,7 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
-// mockTokenCredential implements azcore.TokenCredential for testing
+// mockTokenCredential implements azcore.TokenCredential for testing.
 type mockTokenCredential struct {
 	token string
 	err   error
@@ -146,26 +146,30 @@ func TestService_GetAvailableApplications(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a test server
+			// Create a test server.
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Verify the request path
+				// Verify the request path.
 				expectedPath := "/admin/" + constants.DefaultAPIVersion + "/applications/"
 				if r.URL.Path != expectedPath {
 					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 				}
 
-				// Verify authorization header
+				// Verify authorization header.
 				authHeader := r.Header.Get("Authorization")
 				if authHeader != "Bearer test-token" {
 					t.Errorf("Expected Authorization header 'Bearer test-token', got '%s'", authHeader)
 				}
 
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
-			// Create a client with the test server
+			// Create a client with the test server.
 			mockCred := &mockTokenCredential{token: "test-token"}
 			c := &client.Client{}
 			c.SetCredential(mockCred)
@@ -173,13 +177,13 @@ func TestService_GetAvailableApplications(t *testing.T) {
 			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
-			// Create service
+			// Create service.
 			svc := NewService(c)
 
-			// Call the method
+			// Call the method.
 			result, err := svc.GetAvailableApplications(context.Background())
 
-			// Check error expectation
+			// Check error expectation.
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAvailableApplications() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -189,7 +193,7 @@ func TestService_GetAvailableApplications(t *testing.T) {
 				return
 			}
 
-			// Verify results
+			// Verify results.
 			if len(result.Value) != tt.wantFamilies {
 				t.Errorf("GetAvailableApplications() returned %d families, want %d", len(result.Value), tt.wantFamilies)
 			}
@@ -300,14 +304,18 @@ func TestService_GetApplicationFamily(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a test server
+			// Create a test server.
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				json.NewEncoder(w).Encode(tt.responseBody)
+				if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+
+					t.Fatalf("Failed to encode response: %v", err)
+
+				}
 			}))
 			defer server.Close()
 
-			// Create a client with the test server
+			// Create a client with the test server.
 			mockCred := &mockTokenCredential{token: "test-token"}
 			c := &client.Client{}
 			c.SetCredential(mockCred)
@@ -315,13 +323,13 @@ func TestService_GetApplicationFamily(t *testing.T) {
 			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
-			// Create service
+			// Create service.
 			svc := NewService(c)
 
-			// Call the method
+			// Call the method.
 			result, err := svc.GetApplicationFamily(context.Background(), tt.familyName)
 
-			// Check error expectation
+			// Check error expectation.
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetApplicationFamily() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -336,7 +344,7 @@ func TestService_GetApplicationFamily(t *testing.T) {
 				return
 			}
 
-			// Verify results
+			// Verify results.
 			if result.ApplicationFamily != tt.familyName {
 				t.Errorf("GetApplicationFamily() returned family %s, want %s", result.ApplicationFamily, tt.familyName)
 			}
@@ -365,7 +373,7 @@ func TestNewService(t *testing.T) {
 	}
 }
 
-// contains checks if a string contains a substring
+// contains checks if a string contains a substring.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))

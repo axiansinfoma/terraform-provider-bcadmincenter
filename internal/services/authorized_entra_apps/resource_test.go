@@ -48,7 +48,7 @@ func TestDataSourceSchema_AuthorizedEntraApps(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	if _, ok := resp.Schema.Attributes["apps"]; !ok {
 		t.Error("Schema missing apps attribute")
 	}
@@ -65,7 +65,7 @@ func TestDataSourceSchema_ManageableTenants(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	if _, ok := resp.Schema.Attributes["tenants"]; !ok {
 		t.Error("Schema missing tenants attribute")
 	}
@@ -95,7 +95,7 @@ func TestResourceSchema_AuthorizedEntraApp(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	if _, ok := resp.Schema.Attributes["id"]; !ok {
 		t.Error("Schema missing id attribute")
 	}

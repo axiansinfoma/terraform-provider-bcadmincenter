@@ -35,7 +35,7 @@ func TestEnvironmentDataSource_Schema(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	if _, ok := resp.Schema.Attributes["application_family"]; !ok {
 		t.Error("Schema missing application_family attribute")
 	}
@@ -67,7 +67,7 @@ func TestEnvironmentDataSource_Configure(t *testing.T) {
 func TestEnvironmentDataSource_Configure_WithInvalidType(t *testing.T) {
 	d := &environmentDataSource{}
 
-	// Test with invalid provider data type
+	// Test with invalid provider data type.
 	req := datasource.ConfigureRequest{
 		ProviderData: "invalid-type",
 	}
@@ -81,7 +81,7 @@ func TestEnvironmentDataSource_Configure_WithInvalidType(t *testing.T) {
 }
 
 func TestEnvironmentDataSourceModel(t *testing.T) {
-	// Test that the model struct can be created and populated
+	// Test that the model struct can be created and populated.
 	model := environmentDataSourceModel{
 		ApplicationFamily:  types.StringValue("BusinessCentral"),
 		Name:               types.StringValue("test-env"),
@@ -126,7 +126,7 @@ func TestEnvironmentsDataSource_Schema(t *testing.T) {
 		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
 	}
 
-	// Verify required attributes exist
+	// Verify required attributes exist.
 	if _, ok := resp.Schema.Attributes["application_family"]; !ok {
 		t.Error("Schema missing application_family attribute")
 	}
@@ -152,7 +152,7 @@ func TestEnvironmentsDataSource_Configure(t *testing.T) {
 func TestEnvironmentsDataSource_Configure_WithInvalidType(t *testing.T) {
 	d := &environmentsDataSource{}
 
-	// Test with invalid provider data type
+	// Test with invalid provider data type.
 	req := datasource.ConfigureRequest{
 		ProviderData: "invalid-type",
 	}
@@ -166,7 +166,7 @@ func TestEnvironmentsDataSource_Configure_WithInvalidType(t *testing.T) {
 }
 
 func TestEnvironmentsDataSourceModel(t *testing.T) {
-	// Test that the model struct can be created and populated
+	// Test that the model struct can be created and populated.
 	model := environmentsDataSourceModel{
 		ApplicationFamily: types.StringValue("BusinessCentral"),
 		Environments: []environmentListItemModel{
