@@ -26,6 +26,14 @@ This data source retrieves the catalog of available Business Central application
 
 # Query available applications, countries, and rings
 
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "vllni/bcadmincenter"
+    }
+  }
+}
+
 data "bcadmincenter_available_applications" "example" {}
 
 # Output all available application families

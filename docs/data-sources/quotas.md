@@ -20,6 +20,15 @@ This data source retrieves environment quota information for the tenant, includi
 # SPDX-License-Identifier: MPL-2.0
 
 # Query tenant environment quotas
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "vllni/bcadmincenter"
+    }
+  }
+}
+
 data "bcadmincenter_quotas" "tenant" {}
 
 # Output quota information

@@ -27,6 +27,15 @@ Use this data source to retrieve the complete notification configuration for you
 # SPDX-License-Identifier: MPL-2.0
 
 # Get notification settings for the tenant
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "vllni/bcadmincenter"
+    }
+  }
+}
+
 data "bcadmincenter_notification_settings" "current" {
 }
 
