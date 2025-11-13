@@ -2,6 +2,15 @@
 # SPDX-License-Identifier: MPL-2.0
 
 # Basic environment settings with update window configuration
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "vllni/bcadmincenter"
+    }
+  }
+}
+
 resource "bc_admin_center_environment_settings" "production" {
   application_family = "BusinessCentral"
   environment_name   = "production"

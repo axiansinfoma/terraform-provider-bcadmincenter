@@ -2,6 +2,15 @@
 # SPDX-License-Identifier: MPL-2.0
 
 # Query available time zones
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "vllni/bcadmincenter"
+    }
+  }
+}
+
 data "bcadmincenter_timezones" "available" {}
 
 # Output all timezones

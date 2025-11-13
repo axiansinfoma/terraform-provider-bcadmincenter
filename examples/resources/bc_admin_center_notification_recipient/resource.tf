@@ -2,6 +2,15 @@
 # SPDX-License-Identifier: MPL-2.0
 
 # Configure a notification recipient for the tenant
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "vllni/bcadmincenter"
+    }
+  }
+}
+
 resource "bcadmincenter_notification_recipient" "admin" {
   email = "admin@example.com"
   name  = "Primary Administrator"

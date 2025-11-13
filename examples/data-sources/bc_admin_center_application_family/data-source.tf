@@ -2,6 +2,15 @@
 # SPDX-License-Identifier: MPL-2.0
 
 # Retrieve information about the BusinessCentral application family
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "vllni/bcadmincenter"
+    }
+  }
+}
+
 data "bcadmincenter_application_family" "bc" {
   name = "BusinessCentral"
 }
