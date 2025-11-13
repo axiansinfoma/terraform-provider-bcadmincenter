@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	authorizedentraapps "github.com/vllni/terraform-provider-bcadmincenter/internal/services/authorized_entra_apps"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/available_applications"
 	environmentsettings "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_settings"
 	environmentsupportcontact "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_support_contact"
@@ -147,6 +148,7 @@ func getConfigValue(configValue types.String, envVar string) string {
 
 func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		authorizedentraapps.NewAuthorizedEntraAppResource,
 		environments.NewEnvironmentResource,
 		environmentsettings.NewEnvironmentSettingsResource,
 		environmentsupportcontact.NewEnvironmentSupportContactResource,
@@ -162,6 +164,8 @@ func (p *BCAdminCenterProvider) EphemeralResources(ctx context.Context) []func()
 
 func (p *BCAdminCenterProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		authorizedentraapps.NewAuthorizedEntraAppsDataSource,
+		authorizedentraapps.NewManageableTenantsDataSource,
 		available_applications.NewAvailableApplicationsDataSource,
 		available_applications.NewApplicationFamilyDataSource,
 		environments.NewEnvironmentDataSource,

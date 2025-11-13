@@ -306,6 +306,84 @@ func waitForOperation(ctx context.Context, client *Client, operationID string, t
 }
 ```
 
+#### 6. Resource ID Format
+
+All resources in this provider use an ARM-like resource ID format to support multi-tenant scenarios. Resource IDs follow this structure:
+
+```
+/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/{resourcePath}
+```
+
+**Examples:**
+
+- **Notification Recipient**: `/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/{recipientId}`
+- **Environment**: `/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}`
+- **Environment Settings**: `/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings`
+- **Environment Support Contact**: `/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact`
+
+**Implementation Guidelines:**
+
+1. **Use the `resourceid` Package**: All resource ID building and parsing logic is centralized in `internal/resourceid/resourceid.go`
+   
+2. **Builder Functions**: Use the appropriate builder function to create resource IDs:
+   ```go
+   import "github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
+   
+   // In resource Create/Read methods
+   id := resourceid.BuildEnvironmentID(tenantID, applicationFamily, environmentName)
+   resp.State.Set(ctx, &data)
+   ```
+
+3. **Parser Functions**: Use the appropriate parser function in ImportState and Read methods:
+   ```go
+   // In resource ImportState method
+   tenantID, applicationFamily, environmentName, err := resourceid.ParseEnvironmentID(req.ID)
+   if err != nil {
+       resp.Diagnostics.AddError("Invalid Import ID", err.Error())
+       return
+   }
+   ```
+
+4. **Multi-Tenant Support**: All resources support an optional `aad_tenant_id` attribute that:
+   - Defaults to the provider's configured tenant ID if not specified
+   - Allows managing resources in different tenants when explicitly set
+   - Is included in the resource ID for proper multi-tenant isolation
+
+5. **Testing Resource IDs**: When adding new resource types:
+   - Add builder and parser functions to `internal/resourceid/resourceid.go`
+   - Add comprehensive tests to `internal/resourceid/resourceid_test.go`
+   - Include tests for: valid IDs, invalid formats, wrong providers, missing parts, and round-trip conversions
+
+**Example Resource Implementation:**
+```go
+func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+    // ... create resource via API ...
+    
+    // Build ARM-like resource ID
+    data.ID = types.StringValue(resourceid.BuildEnvironmentID(
+        data.AADTenantID.ValueString(),
+        data.ApplicationFamily.ValueString(),
+        data.Name.ValueString(),
+    ))
+    
+    resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+    // Parse ARM-like resource ID
+    tenantID, appFamily, envName, err := resourceid.ParseEnvironmentID(req.ID)
+    if err != nil {
+        resp.Diagnostics.AddError("Invalid Import ID", err.Error())
+        return
+    }
+    
+    // Set parsed values in state
+    resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)...)
+    resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_family"), appFamily)...)
+    resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), envName)...)
+}
+```
+
 ### Testing Strategy
 
 **CRITICAL: Always create tests when implementing new resources or data sources.**
