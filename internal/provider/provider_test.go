@@ -149,8 +149,8 @@ func TestBCAdminCenterProvider_Resources(t *testing.T) {
 
 	resources := p.Resources(context.Background())
 
-	// We should have 1 resource: environment
-	expectedCount := 1
+	// We should have 2 resources: environment, environment_settings
+	expectedCount := 2
 	if len(resources) != expectedCount {
 		t.Errorf("Resources() returned %d resources, want %d", len(resources), expectedCount)
 	}

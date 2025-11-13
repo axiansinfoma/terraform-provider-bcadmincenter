@@ -18,6 +18,7 @@ import (
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/available_applications"
+	environmentsettings "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_settings"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/environments"
 )
 
@@ -145,6 +146,7 @@ func getConfigValue(configValue types.String, envVar string) string {
 func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		environments.NewEnvironmentResource,
+		environmentsettings.NewEnvironmentSettingsResource,
 	}
 }
 

@@ -10,23 +10,13 @@ resource "bcadmincenter_environment" "test" {
   ring_name          = "PROD"
 }
 
-# Output the environment details
-output "environment_name" {
-  value       = bcadmincenter_environment.test.name
-  description = "The name of the created environment"
-}
+resource "bcadmincenter_environment_settings" "test" {
+  application_family = bcadmincenter_environment.test.application_family
+  environment_name   = bcadmincenter_environment.test.name
 
-output "environment_status" {
-  value       = bcadmincenter_environment.test.status
-  description = "The status of the environment"
-}
+  update_window_start_time = "21:00"
+  update_window_end_time   = "03:00"
+  update_window_timezone   = "Central European Standard Time"
 
-output "web_client_url" {
-  value       = bcadmincenter_environment.test.web_client_login_url
-  description = "URL to access the Business Central web client"
-}
-
-output "aad_tenant_id" {
-  value       = bcadmincenter_environment.test.aad_tenant_id
-  description = "The Azure AD tenant ID"
+  app_update_cadence = "Default"
 }
