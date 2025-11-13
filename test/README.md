@@ -1,6 +1,23 @@
 # Test Configuration for BC Admin Center Provider
 
-This directory contains a sample Terraform configuration for testing the BC Admin Center provider locally.
+This directory contains comprehensive test configurations for all resources and data sources in the BC Admin Center provider.
+
+## Test Files Overview
+
+### Core Provider Configuration
+- **main.tf** - Provider configuration (reads credentials from environment variables)
+
+### Resource Tests
+- **environment.tf** - Environment resource testing
+- **notification_recipients.tf** - Notification recipient resource testing
+- **authorized_entra_apps.tf** - Authorized Entra app resource and data sources
+- **complete_example.tf.example** - Comprehensive multi-environment example (rename to .tf to use)
+
+### Data Source Tests
+- **notification_settings.tf** - Notification settings data source
+- **available_applications.tf** - Available applications and application family data sources
+- **environments_data.tf** - Environment and environments data sources
+- **reference_data.tf** - Timezones and quotas data sources
 
 ## Prerequisites
 
@@ -33,6 +50,23 @@ This directory contains a sample Terraform configuration for testing the BC Admi
 
 ## Usage
 
+### Testing Specific Resources/Data Sources
+
+You can selectively enable test files by commenting out unwanted configurations or using targeted applies:
+
+```bash
+# Test only data sources
+terraform plan -target=data.bcadmincenter_quotas.tenant
+
+# Test only specific resource
+terraform plan -target=bcadmincenter_environment.test
+
+# Test notification system
+terraform plan -target=bcadmincenter_notification_recipient.test
+```
+
+### Full Test Workflow
+
 1. Initialize Terraform:
    ```bash
    terraform init
@@ -49,6 +83,31 @@ This directory contains a sample Terraform configuration for testing the BC Admi
    ```bash
    terraform apply
    ```
+
+### Testing Individual Components
+
+#### Data Sources Only (No Infrastructure Created)
+```bash
+# Test quotas and capacity planning
+terraform plan -target=data.bcadmincenter_quotas.tenant
+
+# Test timezone lookup
+terraform plan -target=data.bcadmincenter_timezones.all
+
+# Test available applications
+terraform plan -target=data.bcadmincenter_available_applications.all
+```
+
+#### Resources (Creates Infrastructure)
+**WARNING**: Resource tests will create actual environments and configurations in your BC tenant.
+
+```bash
+# Test environment creation (creates real sandbox)
+terraform apply -target=bcadmincenter_environment.test
+
+# Test notification recipient
+terraform apply -target=bcadmincenter_notification_recipient.test
+```
 
 4. Clean up when done:
    ```bash

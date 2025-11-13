@@ -37,6 +37,9 @@ test/.terraform.lock.hcl
 test/terraform.tfstate
 test/terraform.tfstate.backup
 test/*.log
+test/tfplan
+test/plan.txt
+test/.terraform.tfstate.lock.info
 
 # Keep windows files with windows line endings
 *.winfile eol=crlf
