@@ -28,12 +28,12 @@ func (m *mockTokenCredential) GetToken(ctx context.Context, options policy.Token
 
 func TestService_GetUpdateSettings(t *testing.T) {
 	tests := []struct {
-		name             string
-		responseBody     interface{}
-		responseStatus   int
-		wantErr          bool
-		wantNil          bool
-		checkStartTime   bool
+		name              string
+		responseBody      interface{}
+		responseStatus    int
+		wantErr           bool
+		wantNil           bool
+		checkStartTime    bool
 		expectedStartTime string
 	}{
 		{
@@ -273,10 +273,10 @@ func TestService_SetAppInsightsKey(t *testing.T) {
 
 func TestService_GetAccessWithM365Licenses(t *testing.T) {
 	tests := []struct {
-		name           string
-		responseBody   interface{}
-		responseStatus int
-		wantErr        bool
+		name            string
+		responseBody    interface{}
+		responseStatus  int
+		wantErr         bool
 		expectedEnabled bool
 	}{
 		{

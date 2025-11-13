@@ -38,18 +38,18 @@ type EnvironmentSettingsResource struct {
 
 // EnvironmentSettingsResourceModel maps the resource schema data
 type EnvironmentSettingsResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	ApplicationFamily        types.String `tfsdk:"application_family"`
-	EnvironmentName          types.String `tfsdk:"environment_name"`
-	UpdateWindowStartTime    types.String `tfsdk:"update_window_start_time"`
-	UpdateWindowEndTime      types.String `tfsdk:"update_window_end_time"`
-	UpdateWindowTimeZone     types.String `tfsdk:"update_window_timezone"`
-	AppInsightsKey           types.String `tfsdk:"app_insights_key"`
-	SecurityGroupID          types.String `tfsdk:"security_group_id"`
-	AccessWithM365Licenses   types.Bool   `tfsdk:"access_with_m365_licenses"`
-	AppUpdateCadence         types.String `tfsdk:"app_update_cadence"`
-	PartnerAccessStatus      types.String `tfsdk:"partner_access_status"`
-	AllowedPartnerTenantIDs  types.List   `tfsdk:"allowed_partner_tenant_ids"`
+	ID                      types.String `tfsdk:"id"`
+	ApplicationFamily       types.String `tfsdk:"application_family"`
+	EnvironmentName         types.String `tfsdk:"environment_name"`
+	UpdateWindowStartTime   types.String `tfsdk:"update_window_start_time"`
+	UpdateWindowEndTime     types.String `tfsdk:"update_window_end_time"`
+	UpdateWindowTimeZone    types.String `tfsdk:"update_window_timezone"`
+	AppInsightsKey          types.String `tfsdk:"app_insights_key"`
+	SecurityGroupID         types.String `tfsdk:"security_group_id"`
+	AccessWithM365Licenses  types.Bool   `tfsdk:"access_with_m365_licenses"`
+	AppUpdateCadence        types.String `tfsdk:"app_update_cadence"`
+	PartnerAccessStatus     types.String `tfsdk:"partner_access_status"`
+	AllowedPartnerTenantIDs types.List   `tfsdk:"allowed_partner_tenant_ids"`
 }
 
 // Metadata returns the resource type name
