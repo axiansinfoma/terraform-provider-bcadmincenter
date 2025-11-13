@@ -1,0 +1,93 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+This data source retrieves information about a specific Business Central environment within an application family. Use this to query environment details such as status, version, URLs, and configuration.
+
+## Example Usage
+
+### Basic Example
+
+{{tffile "examples/data-sources/bc_admin_center_environment/data-source.tf"}}
+
+### Using with Resource
+
+```terraform
+# Get information about an existing environment
+data "bcadmincenter_environment" "existing" {
+  application_family = "BusinessCentral"
+  name               = "my-env"
+}
+
+# Use the data in conditional logic
+resource "bcadmincenter_environment" "new_sandbox" {
+  count = data.bcadmincenter_environment.existing.type == "Production" ? 1 : 0
+
+  application_family  = "BusinessCentral"
+  name                = "${data.bcadmincenter_environment.existing.name}-sandbox"
+  type                = "Sandbox"
+  country_code        = data.bcadmincenter_environment.existing.country_code
+  ring_name           = data.bcadmincenter_environment.existing.ring_name
+  application_version = data.bcadmincenter_environment.existing.application_version
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Use Cases
+
+### Environment Status Monitoring
+
+Query environment status to integrate with monitoring systems:
+
+```terraform
+data "bcadmincenter_environment" "prod" {
+  application_family = "BusinessCentral"
+  name               = "production"
+}
+
+output "prod_status" {
+  value = {
+    status             = data.bcadmincenter_environment.prod.status
+    version            = data.bcadmincenter_environment.prod.application_version
+    web_client_url     = data.bcadmincenter_environment.prod.web_client_login_url
+  }
+}
+```
+
+### Configuration Replication
+
+Use environment details to create similar environments:
+
+```terraform
+data "bcadmincenter_environment" "template" {
+  application_family = "BusinessCentral"
+  name               = "template-env"
+}
+
+resource "bcadmincenter_environment" "replica" {
+  application_family  = data.bcadmincenter_environment.template.application_family
+  name                = "replica-env"
+  type                = "Sandbox"
+  country_code        = data.bcadmincenter_environment.template.country_code
+  ring_name           = data.bcadmincenter_environment.template.ring_name
+  application_version = data.bcadmincenter_environment.template.application_version
+}
+```
+
+## Common Issues
+
+### Environment Not Found
+
+If the environment doesn't exist, the data source will return an error. Ensure the environment name is correct and that your authentication has access to view it.
+
+### Permission Denied
+
+Ensure your Azure AD application has the `AdminCenter.ReadWrite.All` permission and is added to the **AdminAgents** group for the Business Central tenant.

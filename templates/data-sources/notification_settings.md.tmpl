@@ -1,0 +1,222 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+Use this data source to retrieve the complete notification configuration for your Business Central tenant, including all configured notification recipients. This is useful for:
+
+- Viewing current notification recipients
+- Making conditional decisions based on existing configuration
+- Validating notification setup
+- Cross-referencing recipient information
+
+-> **Note:** This data source provides read-only access to tenant-wide notification settings. To manage individual recipients, use the `bcadmincenter_notification_recipient` resource.
+
+## Example Usage
+
+### Basic Usage
+
+{{tffile "examples/data-sources/bc_admin_center_notification_settings/data-source.tf"}}
+
+### Conditional Resource Creation
+
+```terraform
+data "bcadmincenter_notification_settings" "current" {
+}
+
+# Only create a new recipient if fewer than 10 exist
+resource "bcadmincenter_notification_recipient" "backup" {
+  count = length(data.bcadmincenter_notification_settings.current.recipients) < 10 ? 1 : 0
+  
+  email = "backup-admin@example.com"
+  name  = "Backup Administrator"
+}
+```
+
+### Check for Existing Recipients
+
+```terraform
+data "bcadmincenter_notification_settings" "current" {
+}
+
+locals {
+  admin_emails = [for r in data.bcadmincenter_notification_settings.current.recipients : r.email]
+  has_admin    = contains(local.admin_emails, "admin@example.com")
+}
+
+output "admin_configured" {
+  value       = local.has_admin
+  description = "Whether admin@example.com is configured as a recipient"
+}
+
+output "recipient_count" {
+  value       = length(data.bcadmincenter_notification_settings.current.recipients)
+  description = "Total number of notification recipients"
+}
+```
+
+### List All Recipients
+
+```terraform
+data "bcadmincenter_notification_settings" "current" {
+}
+
+output "all_recipients" {
+  value = [
+    for recipient in data.bcadmincenter_notification_settings.current.recipients : {
+      name  = recipient.name
+      email = recipient.email
+    }
+  ]
+  description = "All configured notification recipients"
+}
+```
+
+### Validate Recipient Limit
+
+```terraform
+data "bcadmincenter_notification_settings" "current" {
+}
+
+# Ensure we don't exceed the 100 recipient limit
+check "recipient_limit" {
+  assert {
+    condition = length(data.bcadmincenter_notification_settings.current.recipients) < 100
+    error_message = "Recipient limit approaching maximum of 100"
+  }
+}
+```
+
+### Multi-Tenant Query
+
+```terraform
+# Query notification settings for the provider's default tenant
+data "bcadmincenter_notification_settings" "primary_tenant" {
+}
+
+# Query notification settings for a different tenant
+data "bcadmincenter_notification_settings" "secondary_tenant" {
+  aad_tenant_id = var.secondary_tenant_id
+}
+
+output "tenant_comparison" {
+  value = {
+    primary_count   = length(data.bcadmincenter_notification_settings.primary_tenant.recipients)
+    secondary_count = length(data.bcadmincenter_notification_settings.secondary_tenant.recipients)
+  }
+  description = "Comparison of notification recipients across tenants"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Attributes Reference
+
+In addition to the schema attributes, the following computed attributes are available:
+
+- `recipients` - A list of notification recipient objects, each containing:
+  - `id` - The unique identifier (GUID) of the recipient
+  - `email` - The email address of the recipient
+  - `name` - The full name of the recipient
+
+## Notes
+
+### Data Freshness
+
+The data source queries the Business Central Admin Center API each time Terraform runs. The data is always current as of the time of the Terraform operation.
+
+### Tenant Context
+
+The `aad_tenant_id` returned matches the tenant ID used for authentication. This confirms which tenant's notification settings are being retrieved.
+
+### Recipient Count Limit
+
+Business Central supports up to 100 notification recipients per tenant. If you need to notify more people, consider using a distribution list email address as one of the recipients.
+
+### No Input Required
+
+This data source does not require any input parameters. It automatically retrieves the notification settings for the authenticated tenant.
+
+## Related Resources
+
+- `bcadmincenter_notification_recipient` - Manage individual notification recipients
+- `bcadmincenter_environment` - Manage Business Central environments
+- `bcadmincenter_environment_support_contact` - Manage environment-specific support contacts
+
+## Use Cases
+
+### Audit and Compliance
+
+```terraform
+data "bcadmincenter_notification_settings" "current" {
+}
+
+# Export for audit purposes
+output "notification_audit" {
+  value = {
+    tenant_id        = data.bcadmincenter_notification_settings.current.aad_tenant_id
+    recipient_count  = length(data.bcadmincenter_notification_settings.current.recipients)
+    recipients       = data.bcadmincenter_notification_settings.current.recipients
+    last_checked     = timestamp()
+  }
+  sensitive = false
+}
+```
+
+### Monitoring
+
+```terraform
+data "bcadmincenter_notification_settings" "current" {
+}
+
+# Alert if no recipients are configured
+check "recipients_configured" {
+  assert {
+    condition     = length(data.bcadmincenter_notification_settings.current.recipients) > 0
+    error_message = "WARNING: No notification recipients configured! Important updates may be missed."
+  }
+}
+```
+
+### Multi-Tenant Management
+
+```terraform
+# When managing multiple tenants, verify configuration across all
+data "bcadmincenter_notification_settings" "current" {
+}
+
+locals {
+  required_recipients = [
+    "admin@example.com",
+    "ops@example.com"
+  ]
+  
+  configured_emails = [
+    for r in data.bcadmincenter_notification_settings.current.recipients : r.email
+  ]
+  
+  missing_recipients = [
+    for email in local.required_recipients : email
+    if !contains(local.configured_emails, email)
+  ]
+}
+
+output "missing_recipients" {
+  value       = local.missing_recipients
+  description = "Required recipients not yet configured"
+}
+```
+
+## Additional Information
+
+For more information about notification management in Business Central:
+
+- [Managing Tenant Notifications](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/tenant-admin-center-notifications)
+- [Business Central Admin Center API - Notifications](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api_notifications)
+- [Microsoft 365 Message Center](https://learn.microsoft.com/en-us/microsoft-365/admin/manage/message-center)

@@ -1,0 +1,23 @@
+# Copyright (c) Michael Villani
+# SPDX-License-Identifier: MPL-2.0
+
+# Configuration for terraform-plugin-docs
+# https://github.com/hashicorp/terraform-plugin-docs
+
+# Provider information
+provider-name: bcadmincenter
+
+# Rendered provider name (for display)
+rendered-provider-name: Business Central Admin Center
+
+# Rendered website directory
+rendered-website-dir: docs
+
+# Examples directory
+examples-dir: examples
+
+# Templates directory for custom documentation
+templates-dir: templates
+
+# Schema version
+schema-version: 1

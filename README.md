@@ -1,40 +1,135 @@
-# Terraform Provider Scaffolding (Terraform Plugin Framework)
+# Terraform Provider for Business Central Admin Center
 
-_This template repository is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework). The template repository built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk) can be found at [terraform-provider-scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding). See [Which SDK Should I Use?](https://developer.hashicorp.com/terraform/plugin/framework-benefits) in the Terraform documentation for additional information._
+This Terraform provider enables Infrastructure as Code (IaC) management of Microsoft Dynamics 365 Business Central environments through the [Business Central Admin Center API](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api).
 
-This repository is a *template* for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
+## ⚠️ Important Warnings
 
-- A resource and a data source (`internal/provider/`),
-- Examples (`examples/`) and generated documentation (`docs/`),
-- Miscellaneous meta files.
+**This provider manages critical production infrastructure and requires administrator privileges.**
 
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Developer](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework) platform. _Terraform Plugin Framework specific guides are titled accordingly._
+- **Destructive Operations**: This provider will permanently delete environments when Terraform determines it's necessary (e.g., when changing immutable attributes). Always carefully review `terraform plan` output before applying changes.
+- **No Undo**: Environment deletions are permanent and cannot be reversed. Ensure you have proper backups before making changes.
+- **Development Status**: This provider is in active development and has not been extensively tested in production environments. Use at your own risk.
+- **No Warranty**: The authors and contributors are not responsible for any data loss, service interruption, or other issues that may occur from using this provider.
 
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
+**Best Practices**:
+- Always run `terraform plan` and carefully review changes before `terraform apply`
+- Test in non-production environments first
+- Use version control for your Terraform configurations
+- Implement proper backup strategies for critical environments
+- Consider using `-target` flag to limit changes to specific resources when needed
 
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing) so that others can use it.
+## Features
+
+- Manage Business Central production and sandbox environments
+- Configure environment settings and access controls
+- Manage application installations and updates
+- Configure administrative notifications
+- Query environment operations and quotas
 
 ## Requirements
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.24
+- [Go](https://golang.org/doc/install) >= 1.24 (for development)
+- Azure AD application with **AdminCenter.ReadWrite.All** permissions
+- Membership in the **AdminAgents** group for delegated admin access
+
+## Using the Provider
+
+### Authentication
+
+The provider supports multiple authentication methods via the Azure SDK:
+
+1. **Service Principal with Client Secret**
+2. **Service Principal with Workload Identity Credential** (recommended for CI/CD)
+3. **Service Principal with Certificate**
+4. **Managed Identity** (for Azure-hosted environments)
+5. **Azure CLI Authentication** (for local development)
+6. **Device Code Flow** (for interactive scenarios)
+
+### Configuration
+
+#### Using Service Principal with Client Secret
+
+```hcl
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source  = "vllni/bcadmincenter"
+      version = "~> 1.0"
+    }
+  }
+}
+
+provider "bcadmincenter" {
+  client_id     = "00000000-0000-0000-0000-000000000000"
+  client_secret = "your-client-secret"
+  tenant_id     = "00000000-0000-0000-0000-000000000000"
+  environment   = "public" # optional: public, usgovernment, china
+}
+```
+
+#### Using Environment Variables
+
+The provider follows Azure SDK conventions and supports these environment variables:
+
+- `AZURE_CLIENT_ID` - The Client ID (Application ID)
+- `AZURE_CLIENT_SECRET` - The Client Secret
+- `AZURE_TENANT_ID` - The Tenant ID
+- `AZURE_ENVIRONMENT` - The Azure environment (public, usgovernment, china)
+
+#### Using Azure Workload Identity (Recommended for CI/CD)
+
+For Azure Workload Identity in Kubernetes environments:
+
+```hcl
+provider "bcadmincenter" {
+  # Azure Workload Identity uses these environment variables:
+  # AZURE_CLIENT_ID
+  # AZURE_TENANT_ID
+  # AZURE_FEDERATED_TOKEN_FILE - Path to the federated token file
+  # AZURE_AUTHORITY_HOST - Azure Active Directory authority host
+}
+```
+
+The provider will automatically detect and use workload identity credentials when available.
+
+### Example Usage
+
+```hcl
+# Create a sandbox environment
+resource "bc_environment" "sandbox" {
+  name                = "my-sandbox"
+  application_family  = "BusinessCentral"
+  type               = "Sandbox"
+  country_code       = "US"
+  ring_name          = "Production"
+  application_version = "24.0"
+}
+
+# Configure environment settings
+resource "bc_environment_settings" "sandbox_settings" {
+  environment_name = bc_environment.sandbox.name
+  
+  # Add settings configuration here
+}
+```
 
 ## Building The Provider
 
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
+1. Clone the repository:
+```shell
+git clone https://github.com/vllni/terraform-provider-bcadmincenter
+cd terraform-provider-bcadmincenter
+```
 
+2. Build the provider:
 ```shell
 go install
 ```
 
 ## Adding Dependencies
 
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
-
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
+This provider uses [Go modules](https://github.com/golang/go/wiki/Modules):
 
 ```shell
 go get github.com/author/dependency
@@ -43,22 +138,100 @@ go mod tidy
 
 Then commit the changes to `go.mod` and `go.sum`.
 
-## Using the provider
-
-Fill this in for each provider
-
 ## Developing the Provider
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
+### Prerequisites
 
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
+- Go 1.24 or later
+- Terraform 1.0 or later
+- Access to Business Central Admin Center API
+- Azure AD application registration with appropriate permissions
 
-To generate or update documentation, run `make generate`.
+### Local Development
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+To compile the provider locally:
 
-*Note:* Acceptance tests create real resources, and often cost money to run.
+```shell
+go build -o terraform-provider-bcadmincenter
+```
 
+To install locally for testing:
+
+```shell
+mkdir -p ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64
+cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64/
+```
+
+Then use it in your Terraform configuration:
+
+```hcl
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source  = "local/vllni/bcadmincenter"
+      version = "1.0.0"
+    }
+  }
+}
+```
+
+### Testing
+
+Generate or update documentation:
+```shell
+make generate
+```
+
+Run acceptance tests (note: creates real resources):
 ```shell
 make testacc
 ```
+
+### Documentation Development
+
+This provider uses [terraform-plugin-docs](https://github.com/hashicorp/terraform-plugin-docs) for documentation generation.
+
+```shell
+# Generate documentation from templates
+make docs
+
+# Validate documentation compliance
+make validate-docs
+
+# Check if docs are up-to-date
+make docs-check
+
+# Format example files
+terraform fmt -recursive examples/
+```
+
+**Important**: Never edit files in `docs/` directly. Edit templates in `templates/` instead, then run `make docs`.
+
+See the [Documentation Quick Reference](docs/QUICK-REFERENCE.md) for more details.
+
+## Documentation
+
+See the [docs](./docs) directory for detailed documentation on:
+- Resources
+- Data Sources
+- Configuration options
+
+**Documentation Development**:
+- [Documentation Quick Reference](docs/QUICK-REFERENCE.md) - Quick commands and checklist
+- [Compliance Guide](docs/COMPLIANCE.md) - Full validation pipeline documentation
+- [Template Guide](templates/README.md) - How to write documentation templates
+- [Validation Checklist](DOCUMENTATION.md) - Complete documentation requirements
+
+## Contributing
+
+Contributions are welcome! Please see our contributing guidelines.
+
+## License
+
+Mozilla Public License 2.0 - see [LICENSE](LICENSE) for details.
+
+## Support
+
+For issues and questions:
+- [GitHub Issues](https://github.com/vllni/terraform-provider-bcadmincenter/issues)
+- [Business Central Admin Center API Documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api)

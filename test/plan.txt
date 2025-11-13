@@ -1,0 +1,3347 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # bcadmincenter_environment.test[0m will be created
+[0m  [32m+[0m[0m resource "bcadmincenter_environment" "test" {
+      [32m+[0m[0m aad_tenant_id        = (known after apply)
+      [32m+[0m[0m app_insights_key     = (sensitive value)
+      [32m+[0m[0m application_family   = "BusinessCentral"
+      [32m+[0m[0m application_version  = (known after apply)
+      [32m+[0m[0m azure_region         = (known after apply)
+      [32m+[0m[0m country_code         = "DE"
+      [32m+[0m[0m id                   = (known after apply)
+      [32m+[0m[0m name                 = "test-sandbox"
+      [32m+[0m[0m platform_version     = (known after apply)
+      [32m+[0m[0m ring_name            = "Production"
+      [32m+[0m[0m status               = (known after apply)
+      [32m+[0m[0m type                 = "Sandbox"
+      [32m+[0m[0m web_client_login_url = (known after apply)
+      [32m+[0m[0m web_service_url      = (known after apply)
+    }
+
+[1mPlan:[0m 1 to add, 0 to change, 0 to destroy.
+[0m
+Changes to Outputs:
+  [32m+[0m[0m aad_tenant_id          = (known after apply)
+  [32m+[0m[0m available_applications = {
+      [32m+[0m[0m application_families = [
+          [32m+[0m[0m {
+              [32m+[0m[0m countries_ring_details = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "TR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "UZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "DE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SK"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CH"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "LI"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PT"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "HU"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ME"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "RS"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AD"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ES"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GI"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "IE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "HR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PL"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MK"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MD"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "RO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "NL"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CY"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "LU"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MT"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "FR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MC"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AL"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "XK"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "IT"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "VA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SI"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "KZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AT"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "UA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GB"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "IM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "JE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "JM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MX"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "US"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview - Copilot edition"
+                              [32m+[0m[0m name            = "COPILOT"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BF"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BW"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CI"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CV"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "DZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "EG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ER"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ET"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GH"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "KE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ML"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MU"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MW"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "NA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "NG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SC"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ST"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "TD"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "TN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "TZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "UG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ZA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ZM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ZW"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "KR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "FM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "KH"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "LA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MH"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MV"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "NP"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "TH"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "VN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PK"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "JP"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BD"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "LK"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MY"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "HK"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "IL"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "JO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "KW"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "OM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BH"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "LB"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "QA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "YE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "TW"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "IN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "ID"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PH"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "EE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "IS"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "FI"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "LV"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "LT"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "DK"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "FO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GL"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "NO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AU"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AS"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "FJ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GU"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "NC"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PF"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PW"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "VU"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "WS"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "NZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AI"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "AW"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BS"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "BZ"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CL"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CW"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "DM"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "DO"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "EC"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GD"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GT"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "GY"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "HN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "HT"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "KN"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "KY"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "LC"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "MS"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "NI"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PY"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SR"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "SV"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "TC"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "TT"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "UY"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "VC"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "VG"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "VI"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "PE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Default"
+                              [32m+[0m[0m name            = "FAST"
+                              [32m+[0m[0m production_ring = false
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                ]
+              [32m+[0m[0m name                   = "BusinessCentral"
+            },
+          [32m+[0m[0m {
+              [32m+[0m[0m countries_ring_details = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "DE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                        ]
+                    },
+                ]
+              [32m+[0m[0m name                   = "gevis-erp"
+            },
+          [32m+[0m[0m {
+              [32m+[0m[0m countries_ring_details = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CH"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "DE"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                        ]
+                    },
+                ]
+              [32m+[0m[0m name                   = "Infoma"
+            },
+          [32m+[0m[0m {
+              [32m+[0m[0m countries_ring_details = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "US"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                        ]
+                    },
+                ]
+              [32m+[0m[0m name                   = "SerenicNavigator"
+            },
+          [32m+[0m[0m {
+              [32m+[0m[0m countries_ring_details = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "US"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                        ]
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "CA"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Preview"
+                              [32m+[0m[0m name            = "PREVIEW"
+                              [32m+[0m[0m production_ring = false
+                            },
+                        ]
+                    },
+                ]
+              [32m+[0m[0m name                   = "SparkRock365"
+            },
+          [32m+[0m[0m {
+              [32m+[0m[0m countries_ring_details = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m country_code = "US"
+                      [32m+[0m[0m rings        = [
+                          [32m+[0m[0m {
+                              [32m+[0m[0m friendly_name   = "Production"
+                              [32m+[0m[0m name            = "PROD"
+                              [32m+[0m[0m production_ring = true
+                            },
+                        ]
+                    },
+                ]
+              [32m+[0m[0m name                   = "To-Increase-Food"
+            },
+        ]
+      [32m+[0m[0m id                   = "available_applications"
+    }
+  [32m+[0m[0m environment_name       = "test-sandbox"
+  [32m+[0m[0m environment_status     = (known after apply)
+  [32m+[0m[0m web_client_url         = (known after apply)

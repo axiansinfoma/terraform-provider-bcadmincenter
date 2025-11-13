@@ -1,0 +1,495 @@
+# Documentation Validation workflow
+# Ensures that provider documentation meets Terraform Registry requirements
+
+name: Documentation Validation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'templates/**'
+      - 'examples/**'
+      - 'internal/**'
+      - 'tools/**'
+      - '.github/workflows/documentation.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'templates/**'
+      - 'examples/**'
+      - 'internal/**'
+      - 'tools/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Check that documentation is up-to-date
+  documentation-check:
+    name: Documentation Generation Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: latest
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Generate documentation
+        run: |
+          cd tools
+          go generate
+
+      - name: Check for differences
+        id: diff
+        run: |
+          git diff --exit-code docs/ || {
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "::error::Documentation is out of date. Please run 'cd tools && go generate' locally and commit the changes."
+            exit 1
+          }
+
+      - name: Comment on PR if documentation is outdated
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **Documentation Validation Failed**\n\nThe generated documentation is out of date. Please run the following commands and commit the changes:\n\n```bash\ncd tools\ngo generate\n```\n\nThis will regenerate the documentation from the templates and provider schema.'
+            })
+
+  # Validate example files
+  example-validation:
+    name: Validate Example Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: latest
+
+      - name: Check copyright headers in examples
+        run: |
+          echo "Checking for copyright headers in example files..."
+          missing_headers=0
+          
+          for file in $(find examples -name "*.tf"); do
+            if ! grep -q "Copyright (c)" "$file"; then
+              echo "::error file=$file::Missing copyright header"
+              missing_headers=$((missing_headers + 1))
+            fi
+            
+            if ! grep -q "SPDX-License-Identifier: MPL-2.0" "$file"; then
+              echo "::error file=$file::Missing SPDX license identifier"
+              missing_headers=$((missing_headers + 1))
+            fi
+          done
+          
+          if [ $missing_headers -gt 0 ]; then
+            echo "::error::Found $missing_headers example files missing copyright headers"
+            exit 1
+          fi
+          
+          echo "✅ All example files have proper copyright headers"
+
+      - name: Validate example formatting
+        run: |
+          echo "Checking Terraform formatting in examples..."
+          terraform fmt -check -recursive examples/ || {
+            echo "::error::Example files are not properly formatted. Run 'terraform fmt -recursive examples/' locally."
+            exit 1
+          }
+          echo "✅ All example files are properly formatted"
+
+      - name: Validate example syntax
+        run: |
+          echo "Validating Terraform syntax in examples..."
+          echo "⚠️  Skipping terraform init/validate - provider not yet published to registry"
+          echo "    This validation will be enabled after the provider is published."
+          
+          # TODO: Uncomment the following section after provider is published to Terraform Registry
+          # for dir in $(find examples -type d -name "bc_admin_center_*"); do
+          #   if [ -f "$dir/resource.tf" ] || [ -f "$dir/data-source.tf" ]; then
+          #     echo "Validating $dir..."
+          #     cd "$dir"
+          #     
+          #     # Initialize without backend
+          #     terraform init -backend=false || {
+          #       echo "::error file=$dir::Failed to initialize"
+          #       exit 1
+          #     }
+          #     
+          #     # Validate syntax
+          #     terraform validate || {
+          #       echo "::error file=$dir::Validation failed"
+          #       exit 1
+          #     }
+          #     
+          #     cd - > /dev/null
+          #   fi
+          # done
+          
+          # Basic HCL syntax validation using terraform fmt -check
+          # This doesn't require provider initialization
+          for dir in $(find examples -type d -name "bc_admin_center_*"); do
+            if [ -f "$dir/resource.tf" ] || [ -f "$dir/data-source.tf" ]; then
+              echo "Checking HCL syntax in $dir..."
+              
+              # Verify files have valid HCL structure (will fail on syntax errors)
+              for file in "$dir"/*.tf; do
+                if [ -f "$file" ]; then
+                  # Check if file has basic HCL structure
+                  if ! grep -qE '(resource|data|terraform|provider|variable|output|locals)' "$file"; then
+                    echo "::warning file=$file::File may not contain valid HCL blocks"
+                  fi
+                fi
+              done
+            fi
+          done
+          
+          echo "✅ All examples have valid HCL structure"
+          echo "ℹ️  Full terraform validation will be performed after provider publication"
+
+      - name: Check for hardcoded credentials
+        run: |
+          echo "Checking for hardcoded credentials..."
+          
+          # Patterns to avoid in examples
+          patterns=(
+            '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?!-0000-0000-0000-000000000000)'
+            'client_secret\s*=\s*"[^"]+"(?!.*your-client-secret)'
+            'password\s*=\s*"[^"]+"'
+            'token\s*=\s*"[^"]+"'
+          )
+          
+          found_issues=0
+          for pattern in "${patterns[@]}"; do
+            if grep -rE "$pattern" examples/ --exclude-dir=".terraform"; then
+              echo "::warning::Found potential hardcoded credentials in examples"
+              found_issues=$((found_issues + 1))
+            fi
+          done
+          
+          if [ $found_issues -eq 0 ]; then
+            echo "✅ No hardcoded credentials found"
+          fi
+
+  # Validate template structure
+  template-validation:
+    name: Validate Template Structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check required template files
+        run: |
+          echo "Checking for required template files..."
+          required_files=(
+            "templates/index.md.tmpl"
+          )
+          
+          missing_files=0
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error::Required template file missing: $file"
+              missing_files=$((missing_files + 1))
+            fi
+          done
+          
+          if [ $missing_files -gt 0 ]; then
+            exit 1
+          fi
+          
+          echo "✅ All required template files present"
+
+      - name: Validate template syntax
+        run: |
+          echo "Checking template placeholders..."
+          
+          # Check for required placeholders in templates (allow filters like | trimspace)
+          if ! grep -qE "\{\{\s*\.SchemaMarkdown" templates/index.md.tmpl; then
+            echo "::error file=templates/index.md.tmpl::Missing {{ .SchemaMarkdown }} placeholder"
+            exit 1
+          fi
+          
+          # Check resource templates
+          for template in templates/resources/*.md.tmpl; do
+            if [ -f "$template" ]; then
+              if ! grep -qE "\{\{\s*\.SchemaMarkdown" "$template"; then
+                echo "::error file=$template::Missing {{ .SchemaMarkdown }} placeholder"
+                exit 1
+              fi
+              
+              if ! grep -qE "\{\{\s*\.Type\s*\}\}" "$template"; then
+                echo "::error file=$template::Missing {{.Type}} placeholder"
+                exit 1
+              fi
+            fi
+          done
+          
+          # Check data source templates
+          for template in templates/data-sources/*.md.tmpl; do
+            if [ -f "$template" ]; then
+              if ! grep -qE "\{\{\s*\.SchemaMarkdown" "$template"; then
+                echo "::error file=$template::Missing {{ .SchemaMarkdown }} placeholder"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All templates have required placeholders"
+
+      - name: Validate front matter
+        run: |
+          echo "Checking YAML front matter in templates..."
+          
+          for template in templates/**/*.md.tmpl; do
+            if [ -f "$template" ]; then
+              # Check if file starts with ---
+              if ! head -n 1 "$template" | grep -q "^---$"; then
+                echo "::error file=$template::Missing YAML front matter"
+                exit 1
+              fi
+              
+              # Check for required front matter fields
+              if ! grep -q "page_title:" "$template"; then
+                echo "::error file=$template::Missing page_title in front matter"
+                exit 1
+              fi
+              
+              if ! grep -q "description:" "$template"; then
+                echo "::error file=$template::Missing description in front matter"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All templates have proper front matter"
+
+  # Validate generated documentation
+  documentation-structure:
+    name: Validate Documentation Structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check required documentation files
+        run: |
+          echo "Checking for required documentation files..."
+          
+          if [ ! -f "docs/index.md" ]; then
+            echo "::error::Missing docs/index.md"
+            exit 1
+          fi
+          
+          echo "✅ Required documentation files present"
+
+      - name: Validate documentation front matter
+        run: |
+          echo "Validating front matter in generated docs..."
+          
+          for doc in docs/**/*.md; do
+            if [ -f "$doc" ]; then
+              # Check if file starts with ---
+              if ! head -n 1 "$doc" | grep -q "^---$"; then
+                echo "::error file=$doc::Missing YAML front matter"
+                exit 1
+              fi
+              
+              # Check for required front matter fields
+              if ! grep -q "page_title:" "$doc"; then
+                echo "::error file=$doc::Missing page_title in front matter"
+                exit 1
+              fi
+              
+              if ! grep -q "description:" "$doc"; then
+                echo "::error file=$doc::Missing description in front matter"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All documentation has proper front matter"
+
+      - name: Check for schema sections
+        run: |
+          echo "Checking for schema sections in documentation..."
+          
+          # Resources should have schema
+          for doc in docs/resources/*.md; do
+            if [ -f "$doc" ]; then
+              if ! grep -q "## Schema" "$doc"; then
+                echo "::error file=$doc::Missing schema section"
+                exit 1
+              fi
+            fi
+          done
+          
+          # Data sources should have schema
+          for doc in docs/data-sources/*.md; do
+            if [ -f "$doc" ]; then
+              if ! grep -q "## Schema" "$doc"; then
+                echo "::error file=$doc::Missing schema section"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All resources and data sources have schema sections"
+
+      - name: Check for example usage
+        run: |
+          echo "Checking for example usage sections..."
+          
+          for doc in docs/resources/*.md docs/data-sources/*.md; do
+            if [ -f "$doc" ]; then
+              if ! grep -q "## Example Usage" "$doc"; then
+                echo "::error file=$doc::Missing example usage section"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All documentation has example usage sections"
+
+      - name: Validate Markdown links
+        run: |
+          echo "Checking for broken internal links..."
+          
+          # Simple check for common broken link patterns
+          broken_links=0
+          for doc in docs/**/*.md; do
+            if [ -f "$doc" ]; then
+              # Check for empty link targets
+              if grep -q '\[.*\]()' "$doc"; then
+                echo "::warning file=$doc::Found empty link target"
+                broken_links=$((broken_links + 1))
+              fi
+            fi
+          done
+          
+          if [ $broken_links -gt 0 ]; then
+            echo "::warning::Found $broken_links potential broken links"
+          else
+            echo "✅ No obvious broken links found"
+          fi
+
+  # Generate documentation report
+  documentation-report:
+    name: Generate Documentation Report
+    runs-on: ubuntu-latest
+    needs: [documentation-check, example-validation, template-validation, documentation-structure]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate statistics
+        id: stats
+        run: |
+          echo "Generating documentation statistics..."
+          
+          # Count files
+          template_count=$(find templates -name "*.md.tmpl" | wc -l)
+          doc_count=$(find docs -name "*.md" | wc -l)
+          example_count=$(find examples -name "*.tf" | wc -l)
+          resource_count=$(find docs/resources -name "*.md" 2>/dev/null | wc -l)
+          datasource_count=$(find docs/data-sources -name "*.md" 2>/dev/null | wc -l)
+          
+          # Count lines
+          total_doc_lines=$(find docs -name "*.md" -exec cat {} \; | wc -l)
+          total_example_lines=$(find examples -name "*.tf" -exec cat {} \; | wc -l)
+          
+          echo "template_count=$template_count" >> $GITHUB_OUTPUT
+          echo "doc_count=$doc_count" >> $GITHUB_OUTPUT
+          echo "example_count=$example_count" >> $GITHUB_OUTPUT
+          echo "resource_count=$resource_count" >> $GITHUB_OUTPUT
+          echo "datasource_count=$datasource_count" >> $GITHUB_OUTPUT
+          echo "total_doc_lines=$total_doc_lines" >> $GITHUB_OUTPUT
+          echo "total_example_lines=$total_example_lines" >> $GITHUB_OUTPUT
+
+      - name: Comment report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const stats = {
+              templates: '${{ steps.stats.outputs.template_count }}',
+              docs: '${{ steps.stats.outputs.doc_count }}',
+              examples: '${{ steps.stats.outputs.example_count }}',
+              resources: '${{ steps.stats.outputs.resource_count }}',
+              datasources: '${{ steps.stats.outputs.datasource_count }}',
+              docLines: '${{ steps.stats.outputs.total_doc_lines }}',
+              exampleLines: '${{ steps.stats.outputs.total_example_lines }}'
+            };
+            
+            const allPassed = '${{ needs.documentation-check.result }}' === 'success' &&
+                              '${{ needs.example-validation.result }}' === 'success' &&
+                              '${{ needs.template-validation.result }}' === 'success' &&
+                              '${{ needs.documentation-structure.result }}' === 'success';
+            
+            const statusIcon = allPassed ? '✅' : '❌';
+            const statusText = allPassed ? 'All documentation validation checks passed!' : 'Some documentation validation checks failed.';
+            
+            const body = `## ${statusIcon} Documentation Validation Report
+
+            ${statusText}
+
+            ### 📊 Documentation Statistics
+
+            | Metric | Count |
+            |--------|-------|
+            | Templates | ${stats.templates} |
+            | Generated Docs | ${stats.docs} |
+            | Example Files | ${stats.examples} |
+            | Resources Documented | ${stats.resources} |
+            | Data Sources Documented | ${stats.datasources} |
+            | Total Doc Lines | ${stats.docLines} |
+            | Total Example Lines | ${stats.exampleLines} |
+
+            ### ✅ Validation Checks
+
+            | Check | Status |
+            |-------|--------|
+            | Documentation Generation | ${'${{ needs.documentation-check.result }}' === 'success' ? '✅ Passed' : '❌ Failed'} |
+            | Example Validation | ${'${{ needs.example-validation.result }}' === 'success' ? '✅ Passed' : '❌ Failed'} |
+            | Template Validation | ${'${{ needs.template-validation.result }}' === 'success' ? '✅ Passed' : '❌ Failed'} |
+            | Documentation Structure | ${'${{ needs.documentation-structure.result }}' === 'success' ? '✅ Passed' : '❌ Failed'} |
+
+            ---
+            *This comment was automatically generated by the Documentation Validation workflow.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

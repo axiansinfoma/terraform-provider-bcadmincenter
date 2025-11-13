@@ -1,16 +1,31 @@
 ## Related Issue
 
-Fixes # <!-- INSERT ISSUE NUMBER -->
+Fixes #<!-- INSERT ISSUE NUMBER -->
 
 ## Description
 
-In plain English, describe your approach to addressing the issue linked above. For example, if you made a particular design decision, let us know why you chose this path instead of another solution.
+<!-- Describe your changes in detail -->
 
-<!-- heimdall_github_prtemplate:grc-pci_dss-2024-01-05 -->
-## Rollback Plan
+## Type of Change
 
-- [ ] If a change needs to be reverted, we will roll out an update to the code within 7 days.
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
 
-## Changes to Security Controls
+## Testing
 
-Are there any changes to security controls (access controls, encryption, logging) in this pull request? If so, explain.
+<!-- Describe the tests you ran to verify your changes -->
+
+- [ ] Unit tests pass (`go test ./...`)
+- [ ] Acceptance tests pass (if applicable)
+- [ ] Manual testing completed
+
+## Checklist
+
+- [ ] My code follows the style guidelines of this project
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new warnings
+- [ ] I have added tests that prove my fix is effective or that my feature works

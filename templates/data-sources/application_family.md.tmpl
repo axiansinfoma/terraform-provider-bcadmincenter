@@ -1,0 +1,57 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+This data source provides detailed information about a specific application family, including all available countries/regions and their supported rings. Use this when you need information about a single application family rather than listing all available families.
+
+## Example Usage
+
+### Basic Usage
+
+{{tffile "examples/data-sources/bc_admin_center_application_family/data-source.tf"}}
+
+### Using Output in Environment Resource
+
+```terraform
+data "bcadmincenter_application_family" "bc" {
+  name = "BusinessCentral"
+}
+
+# Use the data to find available countries
+output "available_countries" {
+  value = [for country in data.bcadmincenter_application_family.bc.countries_ring_details : country.country_code]
+}
+
+# Create an environment using data from the application family
+resource "bcadmincenter_environment" "example" {
+  name                = "production-env"
+  application_family  = data.bcadmincenter_application_family.bc.name
+  country_code        = data.bcadmincenter_application_family.bc.countries_ring_details[0].country_code
+  ring_name           = data.bcadmincenter_application_family.bc.countries_ring_details[0].rings[0].name
+  type                = "Production"
+  application_version = "24.0"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Use Cases
+
+This data source is useful when you need to:
+
+- Query available countries/regions for a specific application family
+- Find available rings for environment creation
+- Discover production vs. preview rings for a specific country/region
+- Dynamically configure environment resources based on available options
+
+## Related Resources
+
+- [`bcadmincenter_available_applications`](../available_applications.md) - List all available application families
+- [`bcadmincenter_environment`](../../resources/environment.md) - Create and manage Business Central environments

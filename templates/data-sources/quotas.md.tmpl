@@ -1,0 +1,102 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+This data source retrieves environment quota information for the tenant, including limits and current usage for production and sandbox environments, as well as storage capacity. Use this data source for capacity planning and to check available resources before creating new environments.
+
+## Example Usage
+
+### Basic Usage
+
+{{tffile "examples/data-sources/bc_admin_center_quotas/data-source.tf"}}
+
+### Capacity Monitoring
+
+```terraform
+data "bcadmincenter_quotas" "tenant" {}
+
+# Monitor capacity and trigger alerts
+output "capacity_alert" {
+  value = {
+    production_low = data.bcadmincenter_quotas.tenant.production_environments_available < 2
+    sandbox_low    = data.bcadmincenter_quotas.tenant.sandbox_environments_available < 5
+    storage_low    = data.bcadmincenter_quotas.tenant.storage_available_gb < 10
+  }
+}
+
+# Calculate utilization percentages
+output "utilization" {
+  value = {
+    production_pct = (
+      data.bcadmincenter_quotas.tenant.production_environments_allocated /
+      data.bcadmincenter_quotas.tenant.production_environments_quota * 100
+    )
+    sandbox_pct = (
+      data.bcadmincenter_quotas.tenant.sandbox_environments_allocated /
+      data.bcadmincenter_quotas.tenant.sandbox_environments_quota * 100
+    )
+    storage_pct = (
+      data.bcadmincenter_quotas.tenant.storage_allocated_gb /
+      data.bcadmincenter_quotas.tenant.storage_quota_gb * 100
+    )
+  }
+}
+```
+
+### Conditional Resource Creation
+
+```terraform
+data "bcadmincenter_quotas" "tenant" {}
+
+# Only create environment if quota is available
+resource "bcadmincenter_environment" "optional_sandbox" {
+  count = data.bcadmincenter_quotas.tenant.sandbox_environments_available > 0 ? 1 : 0
+
+  name               = "test-environment"
+  application_family = "BusinessCentral"
+  type               = "Sandbox"
+  country_code       = "US"
+  ring_name          = "PROD"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Understanding Quotas
+
+### Environment Quotas
+
+The number of production and sandbox environments you can create depends on your Business Central subscription:
+
+- **Production Environments**: Typically limited based on your license (usually 1-3)
+- **Sandbox Environments**: More generous allocation (typically 3-10+)
+
+### Storage Quotas
+
+Storage quotas are shared across all environments in the tenant:
+
+- Measured in gigabytes (GB)
+- Includes database storage for all environments
+- Automatic backups consume additional quota
+
+### Quota Exceptions
+
+You can temporarily exceed production environment quotas when restoring environments (limited to one extra production environment for 30 days). This exception does not apply to sandbox environments.
+
+## Important Notes
+
+~> **Quota Limits**: Creating resources that exceed available quotas will fail. Always check `*_available` attributes before creating new environments.
+
+~> **Real-time Data**: Quota data reflects current usage but may not account for in-progress operations. Consider adding buffer capacity in automation scripts.
+
+## Related Resources
+
+- [`bcadmincenter_environment`](../resources/environment.md) - Create and manage Business Central environments
+- [`bcadmincenter_environments`](./environments.md) - List all environments (to audit current allocations)
