@@ -8,6 +8,18 @@ description: |-
 
 The Business Central Admin Center provider enables Infrastructure as Code (IaC) management of Microsoft Dynamics 365 Business Central environments through the [Business Central Admin Center API](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api).
 
+## Important Limitations
+
+~> **Warning: Version Updates Not Supported** - This provider **cannot schedule or apply version updates** to environments or apps. Environment version updates (`application_version`) and app updates must be managed through the [Business Central Admin Center portal](https://businesscentral.dynamics.com/?page=1801) or other automation tools. 
+
+Possible automation tools to manage app installations and much more:
+- [Gordon by eos-solutions](https://gordon.eos-solutions.it/)
+- [Business Central Customers Management App by Duilio Tacconi](https://gihtub.com/duiliotacconi/D365BCAdminCenter)
+- [D365BCAdminMCP by Stefano Demiliani](https://github.com/demiliani/D365BCAdminMCP)
+- Official Microsoft BC Admin Center MCP (Announced for January 2026)
+
+-> **Recommended Approach**: Use this provider for **infrastructure provisioning** (creating environments, configuring settings) and use the Business Central Admin Center UI, PowerShell scripts, or the Admin Center API directly for **lifecycle operations** like version updates, which are asynchronous scheduled operations that don't fit Terraform's declarative model.
+
 ## Features
 
 - **Environment Management**: Create, update, and delete Business Central production and sandbox environments

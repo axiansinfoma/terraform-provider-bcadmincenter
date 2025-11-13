@@ -34,12 +34,12 @@ type LocationOption struct {
 
 // CreateEnvironmentRequest represents the request body for creating a new environment.
 type CreateEnvironmentRequest struct {
-	EnvironmentType    string `json:"environmentType"`
-	Name               string `json:"name"`
-	CountryCode        string `json:"countryCode"`
-	RingName           string `json:"ringName,omitempty"`
-	ApplicationVersion string `json:"applicationVersion,omitempty"`
-	AzureRegion        string `json:"azureRegion,omitempty"`
+	EnvironmentType string `json:"environmentType"`
+	Name            string `json:"name"`
+	CountryCode     string `json:"countryCode"`
+	RingName        string `json:"ringName,omitempty"`
+	// ApplicationVersion is NOT included - API automatically assigns based on ring
+	AzureRegion string `json:"azureRegion,omitempty"`
 }
 
 // UpdateEnvironmentRequest represents the request body for updating an environment.
