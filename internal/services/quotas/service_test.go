@@ -37,7 +37,7 @@ func TestService_GetQuotas(t *testing.T) {
 		{
 			name: "successful response",
 			responseBody: QuotasResponse{
-				ProductionEnvironmentsQuota:    3,
+				ProductionEnvironmentsQuota:     3,
 				ProductionEnvironmentsAllocated: 1,
 				SandboxEnvironmentsQuota:        10,
 				SandboxEnvironmentsAllocated:    5,

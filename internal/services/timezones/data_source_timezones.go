@@ -31,8 +31,8 @@ type TimeZonesDataSource struct {
 
 // TimeZonesDataSourceModel describes the data source data model
 type TimeZonesDataSourceModel struct {
-	ID        types.String         `tfsdk:"id"`
-	TimeZones []TimeZoneModel      `tfsdk:"timezones"`
+	ID        types.String    `tfsdk:"id"`
+	TimeZones []TimeZoneModel `tfsdk:"timezones"`
 }
 
 // TimeZoneModel represents a single timezone
