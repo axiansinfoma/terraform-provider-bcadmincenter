@@ -184,7 +184,7 @@ output "environment_urls" {
 
 - `aad_tenant_id` (String) The Azure AD tenant ID for the environment.
 - `app_insights_key` (String, Sensitive) The Application Insights instrumentation key for the environment.
-- `id` (String) The unique identifier for the environment (same as name).
+- `id` (String) The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName})
 - `platform_version` (String) The platform version of the environment.
 - `status` (String) The current status of the environment (e.g., 'Active', 'Creating').
 - `web_client_login_url` (String) The URL for accessing the web client.
@@ -200,11 +200,21 @@ Optional:
 
 ## Import
 
-Business Central environments can be imported using the format `{tenant_id}/{application_family}/{environment_name}`:
+Business Central environments can be imported using their ARM-like resource ID:
 
 ```shell
-terraform import bcadmincenter_environment.example 9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/BusinessCentral/production
+terraform import bcadmincenter_environment.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production"
 ```
+
+The import ID format is:
+```
+/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}
+```
+
+Where:
+- `{tenantId}` - The Azure AD tenant ID
+- `{applicationFamily}` - The application family (e.g., "BusinessCentral")
+- `{environmentName}` - The name of the environment
 
 To find your tenant ID:
 

@@ -25,9 +25,9 @@ func NewService(c *client.Client) *Service {
 	}
 }
 
-// List retrieves all notification recipients
-func (s *Service) List(ctx context.Context) ([]NotificationRecipient, error) {
-	path := "settings/notification/recipients"
+// List retrieves all notification recipients for a specific tenant
+func (s *Service) List(ctx context.Context, tenantID string) ([]NotificationRecipient, error) {
+	path := fmt.Sprintf("applications/%s/settings/notification/recipients", tenantID)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -47,9 +47,9 @@ func (s *Service) List(ctx context.Context) ([]NotificationRecipient, error) {
 	return recipientsResp.Value, nil
 }
 
-// Get retrieves a specific notification recipient by ID
-func (s *Service) Get(ctx context.Context, id string) (*NotificationRecipient, error) {
-	recipients, err := s.List(ctx)
+// Get retrieves a specific notification recipient by ID for a specific tenant
+func (s *Service) Get(ctx context.Context, tenantID, id string) (*NotificationRecipient, error) {
+	recipients, err := s.List(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +63,9 @@ func (s *Service) Get(ctx context.Context, id string) (*NotificationRecipient, e
 	return nil, fmt.Errorf("notification recipient with ID %s not found", id)
 }
 
-// Create creates a new notification recipient
-func (s *Service) Create(ctx context.Context, email, name string) (*NotificationRecipient, error) {
-	path := "settings/notification/recipients"
+// Create creates a new notification recipient for a specific tenant
+func (s *Service) Create(ctx context.Context, tenantID, email, name string) (*NotificationRecipient, error) {
+	path := fmt.Sprintf("applications/%s/settings/notification/recipients", tenantID)
 
 	req := CreateNotificationRecipientRequest{
 		Email: email,
@@ -95,9 +95,9 @@ func (s *Service) Create(ctx context.Context, email, name string) (*Notification
 	return &recipient, nil
 }
 
-// Delete deletes a notification recipient by ID
-func (s *Service) Delete(ctx context.Context, id string) error {
-	path := fmt.Sprintf("settings/notification/recipients/%s", id)
+// Delete deletes a notification recipient by ID for a specific tenant
+func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
+	path := fmt.Sprintf("applications/%s/settings/notification/recipients/%s", tenantID, id)
 
 	resp, err := s.client.Delete(ctx, path)
 	if err != nil {
@@ -112,9 +112,9 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// GetNotificationSettings retrieves the complete notification settings including all recipients
-func (s *Service) GetNotificationSettings(ctx context.Context) (*NotificationSettings, error) {
-	path := "settings/notification"
+// GetNotificationSettings retrieves the complete notification settings including all recipients for a specific tenant
+func (s *Service) GetNotificationSettings(ctx context.Context, tenantID string) (*NotificationSettings, error) {
+	path := fmt.Sprintf("applications/%s/settings/notification", tenantID)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {

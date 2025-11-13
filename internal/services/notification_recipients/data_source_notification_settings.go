@@ -44,7 +44,8 @@ func (d *NotificationSettingsDataSource) Schema(_ context.Context, _ datasource.
 				Computed:    true,
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				Description: "The Azure Active Directory tenant ID",
+				Description: "The Azure Active Directory tenant ID. If not specified, defaults to the provider's configured tenant ID. This value is also returned by the API.",
+				Optional:    true,
 				Computed:    true,
 			},
 			"recipients": schema.ListNestedAttribute{
@@ -91,11 +92,23 @@ func (d *NotificationSettingsDataSource) Configure(_ context.Context, req dataso
 
 // Read refreshes the Terraform state with the latest data
 func (d *NotificationSettingsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state NotificationSettingsDataSourceModel
+	var config NotificationSettingsDataSourceModel
+
+	// Read configuration
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Determine tenant ID to use
+	tenantID := d.client.GetTenantID()
+	if !config.AADTenantID.IsNull() && !config.AADTenantID.IsUnknown() {
+		tenantID = config.AADTenantID.ValueString()
+	}
 
 	// Get notification settings from API
 	svc := NewService(d.client)
-	settings, err := svc.GetNotificationSettings(ctx)
+	settings, err := svc.GetNotificationSettings(ctx, tenantID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Notification Settings",
@@ -105,8 +118,8 @@ func (d *NotificationSettingsDataSource) Read(ctx context.Context, req datasourc
 	}
 
 	// Map response to state
-	state.ID = types.StringValue(settings.AADTenantID)
-	state.AADTenantID = types.StringValue(settings.AADTenantID)
+	config.ID = types.StringValue(settings.AADTenantID)
+	config.AADTenantID = types.StringValue(settings.AADTenantID)
 
 	// Map recipients
 	recipients := make([]NotificationRecipientDataSourceModel, len(settings.Recipients))
@@ -117,9 +130,9 @@ func (d *NotificationSettingsDataSource) Read(ctx context.Context, req datasourc
 			Name:  types.StringValue(recipient.Name),
 		}
 	}
-	state.Recipients = recipients
+	config.Recipients = recipients
 
 	// Save data into Terraform state
-	diags := resp.State.Set(ctx, &state)
+	diags := resp.State.Set(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 }

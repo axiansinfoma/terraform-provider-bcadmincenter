@@ -25,9 +25,10 @@ type CreateNotificationRecipientRequest struct {
 
 // NotificationRecipientResourceModel represents the Terraform resource model
 type NotificationRecipientResourceModel struct {
-	ID    types.String `tfsdk:"id"`
-	Email types.String `tfsdk:"email"`
-	Name  types.String `tfsdk:"name"`
+	ID          types.String `tfsdk:"id"`
+	Email       types.String `tfsdk:"email"`
+	Name        types.String `tfsdk:"name"`
+	AADTenantID types.String `tfsdk:"aad_tenant_id"`
 }
 
 // NotificationSettings represents the complete notification settings for a tenant

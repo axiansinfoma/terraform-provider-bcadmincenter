@@ -79,11 +79,21 @@ resource "bc_admin_center_environment_settings" "minimal" {
 
 ## Import
 
-Environment settings can be imported using the format `applicationFamily/environmentName`:
+Environment settings resources can be imported using their ARM-like resource ID:
 
 ```shell
-terraform import bc_admin_center_environment_settings.example BusinessCentral/production
+terraform import bcadmincenter_environment_settings.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/settings"
 ```
+
+The import ID format is:
+```
+/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings
+```
+
+Where:
+- `{tenantId}` - The Azure AD tenant ID
+- `{applicationFamily}` - The application family (e.g., "BusinessCentral")
+- `{environmentName}` - The name of the environment
 
 After import, you may need to configure optional attributes to match your desired state.
 

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -63,7 +64,7 @@ func (r *EnvironmentSettingsResource) Schema(_ context.Context, _ resource.Schem
 		Description: "Manages Business Central environment settings including update windows, telemetry, security groups, and access controls.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform resource identifier (format: applicationFamily/environmentName)",
+				Description: "ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings)",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -171,8 +172,13 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	// Set the ID
-	plan.ID = types.StringValue(fmt.Sprintf("%s/%s", plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString()))
+	// Set the ID to the ARM-like format
+	tenantID := r.client.GetTenantID()
+	plan.ID = types.StringValue(resourceid.BuildEnvironmentSettingsID(
+		tenantID,
+		plan.ApplicationFamily.ValueString(),
+		plan.EnvironmentName.ValueString(),
+	))
 
 	// Create service
 	svc := NewService(r.client)

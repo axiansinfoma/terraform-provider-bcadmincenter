@@ -216,3 +216,8 @@ func (c *Client) SetAPIVersion(apiVersion string) {
 func (c *Client) SetHTTPClient(httpClient *http.Client) {
 	c.httpClient = httpClient
 }
+
+// GetTenantID returns the configured tenant ID
+func (c *Client) GetTenantID() string {
+	return c.tenantID
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -54,7 +55,7 @@ func (r *EnvironmentSupportContactResource) Schema(_ context.Context, _ resource
 		Description: "Manages the support contact information for a Business Central environment. This is the contact information displayed to users in the Help and Support page.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform resource identifier (format: applicationFamily/environmentName)",
+				Description: "ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact)",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -120,8 +121,13 @@ func (r *EnvironmentSupportContactResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	// Set the ID
-	plan.ID = types.StringValue(fmt.Sprintf("%s/%s", plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString()))
+	// Set the ID to the ARM-like format
+	tenantID := r.client.GetTenantID()
+	plan.ID = types.StringValue(resourceid.BuildEnvironmentSupportContactID(
+		tenantID,
+		plan.ApplicationFamily.ValueString(),
+		plan.EnvironmentName.ValueString(),
+	))
 
 	// Create the support contact
 	svc := NewService(r.client)
@@ -247,8 +253,22 @@ func (r *EnvironmentSupportContactResource) Delete(ctx context.Context, req reso
 
 // ImportState imports the resource state
 func (r *EnvironmentSupportContactResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import using format: applicationFamily/environmentName
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	// Parse the ARM-like ID
+	tenantID, applicationFamily, environmentName, err := resourceid.ParseEnvironmentSupportContactID(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected ARM-like resource ID in format '/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact', got: %s\nError: %s",
+				req.ID, err.Error()),
+		)
+		return
+	}
 
-	// Note: The ID will be parsed and the resource will be read in the Read operation
+	// Set the attributes
+	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
+	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
+	resp.State.SetAttribute(ctx, path.Root("environment_name"), environmentName)
+
+	// Note: We don't set aad_tenant_id as it's not part of the resource schema
+	_ = tenantID
 }

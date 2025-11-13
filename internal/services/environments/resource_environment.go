@@ -6,7 +6,6 @@ package environments
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -73,7 +73,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "The unique identifier for the environment (same as name).",
+				MarkdownDescription: "The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName})",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -485,34 +485,34 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 
 // ImportState imports an existing resource into Terraform state
 func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import by ID in format: tenantId/applicationFamily/environmentName
-	// Example: 9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/BusinessCentral/test-sandbox
-
-	// Split the import ID
-	parts := strings.Split(req.ID, "/")
-	if len(parts) != 3 {
+	// Parse the ARM-like ID
+	tenantID, applicationFamily, environmentName, err := resourceid.ParseEnvironmentID(req.ID)
+	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
-			fmt.Sprintf("Expected import ID in format 'tenantId/applicationFamily/environmentName', got: %s\n"+
-				"Example: 9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/BusinessCentral/test-sandbox", req.ID),
+			fmt.Sprintf("Expected ARM-like resource ID in format '/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}', got: %s\nError: %s",
+				req.ID, err.Error()),
 		)
 		return
 	}
 
-	// We don't store tenant ID in the resource state, but we validate it matches the provider configuration
-	// tenantId := parts[0]
-	applicationFamily := parts[1]
-	environmentName := parts[2]
-
 	// Set the attributes
+	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
 	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
 	resp.State.SetAttribute(ctx, path.Root("name"), environmentName)
-	resp.State.SetAttribute(ctx, path.Root("id"), environmentName)
+	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
 }
 
 // updateModelFromEnvironment updates the Terraform model with data from the API
 func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResourceModel, env *Environment) {
-	model.ID = types.StringValue(env.Name)
+	// Build ARM-like ID using tenant ID from aad_tenant_id field
+	tenantID := env.AADTenantID
+	if tenantID == "" {
+		// Fallback to provider tenant if not available in response
+		tenantID = r.client.GetTenantID()
+	}
+
+	model.ID = types.StringValue(resourceid.BuildEnvironmentID(tenantID, env.ApplicationFamily, env.Name))
 	model.Name = types.StringValue(env.Name)
 	model.ApplicationFamily = types.StringValue(env.ApplicationFamily)
 	model.Type = types.StringValue(env.Type)

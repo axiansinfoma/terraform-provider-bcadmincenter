@@ -104,15 +104,25 @@ resource "bcadmincenter_environment_support_contact" "sandbox" {
 
 ### Read-Only
 
-- `id` (String) Terraform resource identifier (format: applicationFamily/environmentName)
+- `id` (String) ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact)
 
 ## Import
 
-Support contact resources can be imported using the format `applicationFamily/environmentName`:
+Environment support contact resources can be imported using their ARM-like resource ID:
 
 ```shell
-terraform import bcadmincenter_environment_support_contact.example "BusinessCentral/Production"
+terraform import bcadmincenter_environment_support_contact.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/Production/supportContact"
 ```
+
+The import ID format is:
+```
+/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact
+```
+
+Where:
+- `{tenantId}` - The Azure AD tenant ID
+- `{applicationFamily}` - The application family (e.g., "BusinessCentral")
+- `{environmentName}` - The name of the environment
 
 After importing, you can review the current configuration:
 

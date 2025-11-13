@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -47,7 +48,7 @@ func (r *NotificationRecipientResource) Schema(_ context.Context, _ resource.Sch
 			"Up to 100 notification recipients can be configured per tenant.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "The unique identifier of the notification recipient (assigned by the API)",
+				Description: "The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/{recipientId})",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -70,6 +71,15 @@ func (r *NotificationRecipientResource) Schema(_ context.Context, _ resource.Sch
 					stringvalidator.LengthAtLeast(1),
 				},
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"aad_tenant_id": schema.StringAttribute{
+				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. This allows managing notification recipients in different tenants.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -106,7 +116,14 @@ func (r *NotificationRecipientResource) Create(ctx context.Context, req resource
 
 	// Create the notification recipient
 	svc := NewService(r.client)
-	recipient, err := svc.Create(ctx, plan.Email.ValueString(), plan.Name.ValueString())
+
+	// Use aad_tenant_id from plan if provided, otherwise use provider's tenant ID
+	tenantID := r.client.GetTenantID()
+	if !plan.AADTenantID.IsNull() && !plan.AADTenantID.IsUnknown() {
+		tenantID = plan.AADTenantID.ValueString()
+	}
+
+	recipient, err := svc.Create(ctx, tenantID, plan.Email.ValueString(), plan.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Notification Recipient",
@@ -116,9 +133,10 @@ func (r *NotificationRecipientResource) Create(ctx context.Context, req resource
 	}
 
 	// Update the plan with the response
-	plan.ID = types.StringValue(recipient.ID)
+	plan.ID = types.StringValue(resourceid.BuildNotificationRecipientID(tenantID, recipient.ID))
 	plan.Email = types.StringValue(recipient.Email)
 	plan.Name = types.StringValue(recipient.Name)
+	plan.AADTenantID = types.StringValue(tenantID)
 
 	// Save data into Terraform state
 	diags = resp.State.Set(ctx, plan)
@@ -135,7 +153,18 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 	}
 
 	svc := NewService(r.client)
-	recipient, err := svc.Get(ctx, state.ID.ValueString())
+
+	// Parse the ARM-like ID to get tenant ID and recipient ID
+	tenantID, recipientID, err := resourceid.ParseNotificationRecipientID(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Resource ID",
+			fmt.Sprintf("Could not parse notification recipient ID: %s", err.Error()),
+		)
+		return
+	}
+
+	recipient, err := svc.Get(ctx, tenantID, recipientID)
 	if err != nil {
 		// If the recipient is not found, remove it from state
 		resp.Diagnostics.AddWarning(
@@ -149,6 +178,7 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 	// Update the state
 	state.Email = types.StringValue(recipient.Email)
 	state.Name = types.StringValue(recipient.Name)
+	state.AADTenantID = types.StringValue(tenantID)
 
 	// Save updated data into Terraform state
 	diags = resp.State.Set(ctx, &state)
@@ -178,7 +208,18 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 
 	// Delete the notification recipient
 	svc := NewService(r.client)
-	err := svc.Delete(ctx, state.ID.ValueString())
+
+	// Parse the ARM-like ID to get tenant ID and recipient ID
+	tenantID, recipientID, err := resourceid.ParseNotificationRecipientID(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Resource ID",
+			fmt.Sprintf("Could not parse notification recipient ID: %s", err.Error()),
+		)
+		return
+	}
+
+	err = svc.Delete(ctx, tenantID, recipientID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Notification Recipient",
@@ -192,6 +233,21 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 
 // ImportState imports the resource state
 func (r *NotificationRecipientResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import using the recipient ID
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	// Parse the ARM-like ID
+	tenantID, recipientID, err := resourceid.ParseNotificationRecipientID(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected ARM-like resource ID in format '/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/{recipientId}', got: %s\nError: %s",
+				req.ID, err.Error()),
+		)
+		return
+	}
+
+	// Set the ID and tenant ID in state
+	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
+	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
+
+	// Note: The Read method will populate email and name
+	_ = recipientID // Used by Read method via ID parsing
 }

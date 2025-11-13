@@ -222,8 +222,9 @@ func TestUpdateModelFromEnvironment(t *testing.T) {
 				AADTenantID:        "tenant-id-123",
 			},
 			validate: func(t *testing.T, model *EnvironmentResourceModel) {
-				if model.ID.ValueString() != "production" {
-					t.Errorf("ID = %v, want production", model.ID.ValueString())
+				expectedID := "/tenants/tenant-id-123/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production"
+				if model.ID.ValueString() != expectedID {
+					t.Errorf("ID = %v, want %v", model.ID.ValueString(), expectedID)
 				}
 				if model.Name.ValueString() != "production" {
 					t.Errorf("Name = %v, want production", model.Name.ValueString())
@@ -278,8 +279,9 @@ func TestUpdateModelFromEnvironment(t *testing.T) {
 				AADTenantID:       "tenant-id-456",
 			},
 			validate: func(t *testing.T, model *EnvironmentResourceModel) {
-				if model.ID.ValueString() != "sandbox" {
-					t.Errorf("ID = %v, want sandbox", model.ID.ValueString())
+				expectedID := "/tenants/tenant-id-456/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/sandbox"
+				if model.ID.ValueString() != expectedID {
+					t.Errorf("ID = %v, want %v", model.ID.ValueString(), expectedID)
 				}
 				if model.Name.ValueString() != "sandbox" {
 					t.Errorf("Name = %v, want sandbox", model.Name.ValueString())

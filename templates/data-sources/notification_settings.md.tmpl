@@ -93,6 +93,27 @@ check "recipient_limit" {
 }
 ```
 
+### Multi-Tenant Query
+
+```terraform
+# Query notification settings for the provider's default tenant
+data "bcadmincenter_notification_settings" "primary_tenant" {
+}
+
+# Query notification settings for a different tenant
+data "bcadmincenter_notification_settings" "secondary_tenant" {
+  aad_tenant_id = var.secondary_tenant_id
+}
+
+output "tenant_comparison" {
+  value = {
+    primary_count   = length(data.bcadmincenter_notification_settings.primary_tenant.recipients)
+    secondary_count = length(data.bcadmincenter_notification_settings.secondary_tenant.recipients)
+  }
+  description = "Comparison of notification recipients across tenants"
+}
+```
+
 {{ .SchemaMarkdown | trimspace }}
 
 ## Attributes Reference
