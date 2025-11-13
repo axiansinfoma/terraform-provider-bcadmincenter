@@ -6,7 +6,6 @@ name: Documentation Validation
 on:
   pull_request:
     paths:
-      - 'docs/**'
       - 'templates/**'
       - 'examples/**'
       - 'internal/**'
@@ -16,7 +15,6 @@ on:
     branches:
       - main
     paths:
-      - 'docs/**'
       - 'templates/**'
       - 'examples/**'
       - 'internal/**'
@@ -56,26 +54,13 @@ jobs:
           cd tools
           go generate
 
-      - name: Check for differences
-        id: diff
+      - name: Verify documentation generates without errors
         run: |
-          git diff --exit-code docs/ || {
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "::error::Documentation is out of date. Please run 'cd tools && go generate' locally and commit the changes."
+          if [ ! -d "docs" ]; then
+            echo "::error::Documentation generation failed - docs directory not created"
             exit 1
-          }
-
-      - name: Comment on PR if documentation is outdated
-        if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ **Documentation Validation Failed**\n\nThe generated documentation is out of date. Please run the following commands and commit the changes:\n\n```bash\ncd tools\ngo generate\n```\n\nThis will regenerate the documentation from the templates and provider schema.'
-            })
+          fi
+          echo "✅ Documentation generated successfully"
 
   # Validate example files
   example-validation:
@@ -301,6 +286,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: latest
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Generate documentation
+        run: |
+          cd tools
+          go generate
+
       - name: Check required documentation files
         run: |
           echo "Checking for required documentation files..."
@@ -411,6 +416,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: latest
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Generate documentation
+        run: |
+          cd tools
+          go generate
 
       - name: Generate statistics
         id: stats
