@@ -23,6 +23,8 @@ import (
 	environmentsupportcontact "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_support_contact"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/environments"
 	notificationrecipients "github.com/vllni/terraform-provider-bcadmincenter/internal/services/notification_recipients"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/quotas"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/timezones"
 )
 
 // Ensure BCAdminCenterProvider satisfies various provider interfaces.
@@ -171,6 +173,8 @@ func (p *BCAdminCenterProvider) DataSources(ctx context.Context) []func() dataso
 		environments.NewEnvironmentDataSource,
 		environments.NewEnvironmentsDataSource,
 		notificationrecipients.NewNotificationSettingsDataSource,
+		quotas.NewQuotasDataSource,
+		timezones.NewTimeZonesDataSource,
 	}
 }
 
