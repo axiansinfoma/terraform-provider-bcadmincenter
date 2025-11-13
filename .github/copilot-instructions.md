@@ -6,6 +6,8 @@
 
 **DOCUMENTATION IS REQUIRED**: All resources and data sources must have complete documentation templates and examples. Do NOT create separate markdown files to summarize work - only update existing templates or generated docs.
 
+**CONVENTIONAL COMMITS REQUIRED**: All commit messages and pull request titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. This ensures consistent, meaningful commit history and enables automated changelog generation. See the [Conventional Commits Guidelines](#conventional-commits-guidelines) section for details.
+
 ## Project Overview
 
 This repository contains a Terraform provider for managing Microsoft Dynamics 365 Business Central environments through the [Business Central Admin Center API](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api). The provider enables Infrastructure as Code (IaC) for Business Central tenant administration tasks.
@@ -808,13 +810,78 @@ Provider documentation must include:
 
 ## Development Workflow
 
-### 1. Prerequisites
+### 1. Conventional Commits Guidelines
+
+All commit messages and pull request titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+
+#### Commit Message Format
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+#### Commit Types
+
+- **feat**: A new feature (triggers minor version bump)
+- **fix**: A bug fix (triggers patch version bump)
+- **docs**: Documentation only changes
+- **style**: Changes that don't affect code meaning (formatting, missing semicolons, etc.)
+- **refactor**: Code change that neither fixes a bug nor adds a feature
+- **perf**: Code change that improves performance
+- **test**: Adding missing tests or correcting existing tests
+- **build**: Changes that affect the build system or external dependencies
+- **ci**: Changes to CI configuration files and scripts
+- **chore**: Other changes that don't modify src or test files
+- **revert**: Reverts a previous commit
+
+#### Breaking Changes
+
+Breaking changes MUST be indicated by:
+1. A `!` after the type/scope: `feat!: remove support for X`
+2. A `BREAKING CHANGE:` footer in the commit body
+
+#### Examples
+
+```bash
+# Feature addition
+feat(environments): add support for environment tags
+
+# Bug fix
+fix(auth): handle token expiration correctly
+
+# Documentation
+docs: update authentication examples in README
+
+# Breaking change (method 1)
+feat(client)!: change API client interface
+
+# Breaking change (method 2)
+feat(client): change API client interface
+
+BREAKING CHANGE: The client now requires explicit configuration
+```
+
+#### Pull Request Titles
+
+Pull request titles MUST follow the same format as commit messages:
+
+```
+feat: add environment scheduling resource
+fix: correct validation in notification settings
+docs: improve provider configuration examples
+```
+
+### 2. Prerequisites
 - Go 1.21+
 - Terraform 1.0+
 - Access to Business Central Admin Center API
 - Appropriate Azure AD application registration
 
-### 2. Local Development
+### 3. Local Development
 ```bash
 # Clone and build
 git clone https://github.com/your-org/terraform-provider-bcadmincenter
@@ -826,7 +893,7 @@ mkdir -p ~/.terraform.d/plugins/local/provider/bcadmincenter/1.0.0/linux_amd64
 cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/provider/bcadmincenter/1.0.0/linux_amd64/
 ```
 
-### 3. Testing Configuration
+### 4. Testing Configuration
 ```hcl
 terraform {
   required_providers {
@@ -838,7 +905,7 @@ terraform {
 }
 ```
 
-### 4. Running Tests
+### 5. Running Tests
 
 **CRITICAL: Always run tests before committing code.**
 
