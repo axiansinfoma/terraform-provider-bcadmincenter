@@ -22,12 +22,14 @@ The provider supports multiple authentication methods via the Azure SDK for Go, 
 
 ### Supported Authentication Methods
 
-1. **Service Principal with Client Secret** - For automated scenarios
-2. **Service Principal with Workload Identity Credential** - Recommended for CI/CD (Kubernetes, GitHub Actions)
+1. **[Service Principal with Client Secret](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/service-principal-authentication.md)** - For automated scenarios
+2. **[Workload Identity Federation](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-github.md)** - Recommended for CI/CD (GitHub Actions, Azure DevOps)
 3. **Service Principal with Certificate** - For enhanced security
-4. **Managed Identity** - For Azure-hosted environments (VMs, Container Instances, App Service)
-5. **Azure CLI Authentication** - For local development
+4. **[Managed Identity](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/managed-identity-authentication.md)** - For Azure-hosted environments (VMs, Container Instances, App Service)
+5. **[Azure CLI Authentication](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/azure-cli-authentication.md)** - For local development
 6. **Device Code Flow** - For interactive scenarios
+
+-> **Detailed Setup Guides**: For comprehensive step-by-step tutorials on setting up each authentication method, see the [Authentication Tutorials](https://github.com/vllni/terraform-provider-bcadmincenter/tree/main/tutorials) in the GitHub repository.
 
 ### Required Permissions
 
@@ -237,6 +239,18 @@ The following environment variables can be used to configure the provider:
 | `AZURE_FEDERATED_TOKEN_FILE` | Path to federated token file (for workload identity) |
 | `AZURE_AUTHORITY_HOST` | Azure AD authority host URL |
 | `AZURE_CLIENT_ASSERTION` | Client assertion for federated identity credentials |
+
+## Authentication Tutorials
+
+For detailed step-by-step guides on setting up authentication, visit our comprehensive tutorials:
+
+- **[Service Principal with Client Secret](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/service-principal-authentication.md)** - Traditional authentication for automation and CI/CD
+- **[Azure CLI Authentication](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/azure-cli-authentication.md)** - Quick setup for local development
+- **[Managed Identity](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/managed-identity-authentication.md)** - Secure authentication for Azure VMs and containers
+- **[Workload Identity for GitHub Actions](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-github.md)** - OIDC-based authentication for GitHub workflows
+- **[Workload Identity for Azure DevOps](https://github.com/vllni/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-azure-devops.md)** - Federated credentials for Azure Pipelines
+
+Each tutorial includes complete setup instructions, troubleshooting tips, and real-world examples.
 
 ## Additional Resources
 
