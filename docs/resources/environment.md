@@ -23,7 +23,9 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 
 ~> **Warning:** Environment creation is an asynchronous operation that typically takes 15-30 minutes to complete. Ensure your Terraform execution environment can handle long-running operations.
 
-~> **Warning:** Most environment attributes cannot be changed after creation and will force recreation (destroy and recreate) if modified. This includes name, type, country, ring, and application version.
+~> **Warning:** Most environment attributes cannot be changed after creation and will force recreation (destroy and recreate) if modified. This includes name, type, country, ring, and region.
+
+-> **Note:** The `application_version` attribute is read-only and reflects the currently running version of the environment. It cannot be directly set or updated through Terraform. The API automatically assigns the latest available version for the specified `ring_name` during creation. To update an environment to a newer version, use the Business Central Admin Center portal to schedule an update operation.
 
 ~> **Warning:** Deleting a Business Central environment is **permanent and irreversible**. All data, configurations, and customizations will be lost.
 
@@ -77,7 +79,7 @@ output "environment_status" {
 }
 ```
 
-### Sandbox Environment with Specific Version
+### Sandbox Environment on Latest Version
 
 ```terraform
 resource "bcadmincenter_environment" "sandbox" {
@@ -85,14 +87,19 @@ resource "bcadmincenter_environment" "sandbox" {
   application_family  = "BusinessCentral"
   type                = "Sandbox"
   country_code        = "US"
-  ring_name           = "PROD"
-  application_version = "24.0"
+  ring_name           = "PROD"  # Latest production-ready version
   azure_region        = "eastus"
 
   timeouts {
     create = "90m"  # Extended timeout for slower regions
     delete = "60m"
   }
+}
+
+# The application_version will be automatically assigned by the API
+# and can be read from the state after creation
+output "sandbox_version" {
+  value = bcadmincenter_environment.sandbox.application_version
 }
 ```
 
@@ -178,7 +185,6 @@ output "environment_urls" {
 ### Optional
 
 - `application_family` (String) The application family for the environment. Defaults to 'BusinessCentral'. Cannot be changed after creation.
-- `application_version` (String) The specific application version to use. If not specified, the latest version for the ring will be used. Cannot be changed after creation.
 - `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Cannot be changed after creation.
 - `ring_name` (String) The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Cannot be changed after creation.
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
@@ -187,6 +193,7 @@ output "environment_urls" {
 
 - `aad_tenant_id` (String) The Azure AD tenant ID for the environment.
 - `app_insights_key` (String, Sensitive) The Application Insights instrumentation key for the environment.
+- `application_version` (String) The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set. Version updates are managed through the Business Central Admin Center.
 - `id` (String) The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName})
 - `platform_version` (String) The platform version of the environment.
 - `status` (String) The current status of the environment (e.g., 'Active', 'Creating').

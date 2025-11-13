@@ -97,9 +97,6 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
 				},
-				Validators: []validator.String{
-					stringvalidator.OneOf("BusinessCentral"),
-				},
 			},
 			"type": schema.StringAttribute{
 				MarkdownDescription: "The type of environment. Must be either 'Production' or 'Sandbox'. Cannot be changed after creation.",
@@ -132,13 +129,8 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"application_version": schema.StringAttribute{
-				MarkdownDescription: "The specific application version to use. If not specified, the latest version for the ring will be used. Cannot be changed after creation.",
-				Optional:            true,
+				MarkdownDescription: "The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set. Version updates are managed through the Business Central Admin Center.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"azure_region": schema.StringAttribute{
 				MarkdownDescription: "The Azure region where the environment should be created. If not specified, a default region will be used. Cannot be changed after creation.",
@@ -231,12 +223,12 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 
 	// Prepare create request.
 	createReq := &CreateEnvironmentRequest{
-		EnvironmentType:    plan.Type.ValueString(),
-		Name:               plan.Name.ValueString(),
-		CountryCode:        plan.CountryCode.ValueString(),
-		RingName:           plan.RingName.ValueString(), // API expects "PROD", "PREVIEW", "FAST"
-		ApplicationVersion: plan.ApplicationVersion.ValueString(),
-		AzureRegion:        plan.AzureRegion.ValueString(),
+		EnvironmentType: plan.Type.ValueString(),
+		Name:            plan.Name.ValueString(),
+		CountryCode:     plan.CountryCode.ValueString(),
+		RingName:        plan.RingName.ValueString(), // API expects "PROD", "PREVIEW", "FAST"
+		// ApplicationVersion is omitted - API automatically assigns latest version for the ring
+		AzureRegion: plan.AzureRegion.ValueString(),
 	}
 
 	// Create the environment.
