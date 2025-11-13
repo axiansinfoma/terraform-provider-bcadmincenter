@@ -4,12 +4,13 @@
 package authorized_entra_apps
 
 import (
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -69,8 +70,9 @@ func TestService_ListAuthorizedApps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/admin/v2.24/authorizedAadApps" {
-					t.Errorf("unexpected path: %s", r.URL.Path)
+				expectedPath := "/admin/" + constants.DefaultAPIVersion + "/authorizedAadApps"
+				if r.URL.Path != expectedPath {
+					t.Errorf("unexpected path: %s, expected: %s", r.URL.Path, expectedPath)
 				}
 				w.WriteHeader(tt.responseStatus)
 				json.NewEncoder(w).Encode(tt.responseBody)
@@ -263,8 +265,9 @@ func TestService_GetManageableTenants(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/admin/v2.24/authorizedAadApps/manageableTenants" {
-					t.Errorf("unexpected path: %s", r.URL.Path)
+				expectedPath := "/admin/" + constants.DefaultAPIVersion + "/authorizedAadApps/manageableTenants"
+				if r.URL.Path != expectedPath {
+					t.Errorf("unexpected path: %s, expected: %s", r.URL.Path, expectedPath)
 				}
 				w.WriteHeader(tt.responseStatus)
 				json.NewEncoder(w).Encode(tt.responseBody)

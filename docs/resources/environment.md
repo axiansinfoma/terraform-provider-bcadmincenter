@@ -32,6 +32,9 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 ### Basic Production Environment
 
 ```terraform
+# Copyright (c) 2025 Michael Villani
+# SPDX-License-Identifier: MPL-2.0
+
 # Example: Production Environment
 
 terraform {

@@ -210,8 +210,8 @@ jobs:
         run: |
           echo "Checking template placeholders..."
           
-          # Check for required placeholders in templates
-          if ! grep -q "{{ .SchemaMarkdown }}" templates/index.md.tmpl; then
+          # Check for required placeholders in templates (allow filters like | trimspace)
+          if ! grep -qE "\{\{\s*\.SchemaMarkdown" templates/index.md.tmpl; then
             echo "::error file=templates/index.md.tmpl::Missing {{ .SchemaMarkdown }} placeholder"
             exit 1
           fi
@@ -219,12 +219,12 @@ jobs:
           # Check resource templates
           for template in templates/resources/*.md.tmpl; do
             if [ -f "$template" ]; then
-              if ! grep -q "{{ .SchemaMarkdown }}" "$template"; then
+              if ! grep -qE "\{\{\s*\.SchemaMarkdown" "$template"; then
                 echo "::error file=$template::Missing {{ .SchemaMarkdown }} placeholder"
                 exit 1
               fi
               
-              if ! grep -q "{{.Type}}" "$template" && ! grep -q "{{ .Type }}" "$template"; then
+              if ! grep -qE "\{\{\s*\.Type\s*\}\}" "$template"; then
                 echo "::error file=$template::Missing {{.Type}} placeholder"
                 exit 1
               fi
@@ -234,7 +234,7 @@ jobs:
           # Check data source templates
           for template in templates/data-sources/*.md.tmpl; do
             if [ -f "$template" ]; then
-              if ! grep -q "{{ .SchemaMarkdown }}" "$template"; then
+              if ! grep -qE "\{\{\s*\.SchemaMarkdown" "$template"; then
                 echo "::error file=$template::Missing {{ .SchemaMarkdown }} placeholder"
                 exit 1
               fi

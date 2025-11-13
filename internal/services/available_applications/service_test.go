@@ -4,12 +4,13 @@
 package available_applications
 
 import (
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -148,7 +149,7 @@ func TestService_GetAvailableApplications(t *testing.T) {
 			// Create a test server
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Verify the request path
-				expectedPath := "/admin/v2.24/applications/"
+				expectedPath := "/admin/" + constants.DefaultAPIVersion + "/applications/"
 				if r.URL.Path != expectedPath {
 					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 				}
@@ -366,7 +367,7 @@ func TestNewService(t *testing.T) {
 
 // contains checks if a string contains a substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
 // mockTokenCredential implements azcore.TokenCredential for testing
@@ -85,7 +86,7 @@ func TestService_GetTimeZones(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			// Test the method

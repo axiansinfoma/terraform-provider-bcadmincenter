@@ -1,3 +1,6 @@
+# Copyright (c) 2025 Michael Villani
+# SPDX-License-Identifier: MPL-2.0
+
 # Example: Production Environment
 
 terraform {

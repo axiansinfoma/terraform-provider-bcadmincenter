@@ -13,4 +13,4 @@ const DefaultBaseURL = "https://api.businesscentral.dynamics.com"
 const BusinessCentralResourceID = "996def3d-b36c-4153-8607-a6fd3c01b89f"
 
 // DefaultAPIVersion is the default API version to use
-const DefaultAPIVersion = "v2.24"
+const DefaultAPIVersion = "v2.27"
