@@ -117,8 +117,9 @@ func (r *EnvironmentSettingsResource) Schema(_ context.Context, _ resource.Schem
 				Optional:    true,
 			},
 			"access_with_m365_licenses": schema.BoolAttribute{
-				Description: "Whether users can access the environment with Microsoft 365 licenses (requires environment version 21.1+)",
+				Description: "Whether users can access the environment with Microsoft 365 licenses (requires environment version 21.1+). Note: This setting may not be available on all environments.",
 				Optional:    true,
+				Computed:    true,
 			},
 			"app_update_cadence": schema.StringAttribute{
 				Description: "How frequently AppSource apps should be updated. Valid values: 'Default', 'DuringMajorUpgrade', 'DuringMajorMinorUpgrade'",
@@ -298,14 +299,17 @@ func (r *EnvironmentSettingsResource) Read(ctx context.Context, req resource.Rea
 	// Read M365 license access (may not be available on older environments)
 	m365Access, err := svc.GetAccessWithM365Licenses(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
 	if err != nil {
-		// Log but don't fail - feature may not be available
+		// Only warn on actual errors, not when feature is unavailable
 		resp.Diagnostics.AddWarning(
 			"Could not read M365 license access setting",
 			err.Error(),
 		)
-	}
-	if m365Access != nil {
+		state.AccessWithM365Licenses = types.BoolNull()
+	} else if m365Access != nil {
 		state.AccessWithM365Licenses = types.BoolValue(m365Access.Enabled)
+	} else {
+		// Feature not available or not configured - set to null
+		state.AccessWithM365Licenses = types.BoolNull()
 	}
 
 	// Note: AppInsightsKey cannot be read back (write-only)

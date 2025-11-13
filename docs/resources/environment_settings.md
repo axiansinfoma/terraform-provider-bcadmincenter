@@ -131,7 +131,7 @@ resource "bc_admin_center_environment_settings" "minimal" {
 
 ### Optional
 
-- `access_with_m365_licenses` (Boolean) Whether users can access the environment with Microsoft 365 licenses (requires environment version 21.1+)
+- `access_with_m365_licenses` (Boolean) Whether users can access the environment with Microsoft 365 licenses (requires environment version 21.1+). Note: This setting may not be available on all environments.
 - `allowed_partner_tenant_ids` (List of String) List of partner tenant IDs allowed to access the environment. Only used when partner_access_status is 'AllowSelectedPartnerTenants'
 - `app_insights_key` (String, Sensitive) Application Insights connection string or instrumentation key for environment telemetry. Warning: Setting this triggers an automatic environment restart.
 - `app_update_cadence` (String) How frequently AppSource apps should be updated. Valid values: 'Default', 'DuringMajorUpgrade', 'DuringMajorMinorUpgrade'

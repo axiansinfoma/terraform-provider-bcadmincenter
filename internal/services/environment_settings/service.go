@@ -181,14 +181,24 @@ func (s *Service) ClearSecurityGroup(ctx context.Context, applicationFamily, env
 }
 
 // GetAccessWithM365Licenses retrieves whether M365 license access is enabled
+// Returns nil if the setting is not available (404) or not configured
 func (s *Service) GetAccessWithM365Licenses(ctx context.Context, applicationFamily, environmentName string) (*AccessWithM365LicensesResponse, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s/settings/accesswithm365licenses", applicationFamily, environmentName)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
+		// Check if it's a 404 - feature not available on this environment
+		if apiErr, ok := err.(*client.AdminCenterError); ok && apiErr.Code == "ResourceNotFound" {
+			return nil, nil // Return nil, nil to indicate feature not available
+		}
 		return nil, fmt.Errorf("failed to get M365 license access setting: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Handle 204 No Content - setting not configured
+	if resp.StatusCode == http.StatusNoContent {
+		return nil, nil
+	}
 
 	var accessSetting AccessWithM365LicensesResponse
 	if err := json.NewDecoder(resp.Body).Decode(&accessSetting); err != nil {

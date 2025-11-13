@@ -19,6 +19,7 @@ import (
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/available_applications"
 	environmentsettings "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_settings"
+	environmentsupportcontact "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_support_contact"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/environments"
 )
 
@@ -147,6 +148,7 @@ func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource
 	return []func() resource.Resource{
 		environments.NewEnvironmentResource,
 		environmentsettings.NewEnvironmentSettingsResource,
+		environmentsupportcontact.NewEnvironmentSupportContactResource,
 	}
 }
 
