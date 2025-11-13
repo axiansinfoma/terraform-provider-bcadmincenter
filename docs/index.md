@@ -10,11 +10,11 @@ The Business Central Admin Center provider enables Infrastructure as Code (IaC) 
 
 ## Important Limitations
 
-~> **Warning: Version Updates Not Supported** - This provider **cannot schedule or apply version updates** to environments or apps. Environment version updates (`application_version`) and app updates must be managed through the [Business Central Admin Center portal](https://businesscentral.dynamics.com/?page=1801) or other automation tools. 
+~> **Warning: Version Updates Not Supported** - This provider **cannot schedule or apply version updates** to environments or applications. Environment version updates (`application_version`) and application updates must be managed through the [Business Central Admin Center portal](https://businesscentral.dynamics.com/?page=1801) or other automation tools. The provider treats `application_version` as a read-only attribute that reflects the currently running version. Attempting to change versions in Terraform configuration will not trigger updates.
 
-Possible automation tools to manage app installations and much more:
+**Possible automation tools for app installations and lifecycle management:**
 - [Gordon by eos-solutions](https://gordon.eos-solutions.it/)
-- [Business Central Customers Management App by Duilio Tacconi](https://gihtub.com/duiliotacconi/D365BCAdminCenter)
+- [Business Central Customers Management App by Duilio Tacconi](https://github.com/duiliotacconi/D365BCAdminCenter)
 - [D365BCAdminMCP by Stefano Demiliani](https://github.com/demiliani/D365BCAdminMCP)
 - Official Microsoft BC Admin Center MCP (Announced for January 2026)
 
