@@ -920,7 +920,7 @@ Only implement resources for entities that can be managed statefully. Avoid crea
 
 **CRITICAL: Always respect standardized boilerplate formats.**
 
-The project uses golangci-lint with multiple enabled linters. When fixing linting issues:
+The project uses golangci-lint v2.x with multiple enabled linters. When fixing linting issues:
 
 **DO NOT modify standardized boilerplate:**
 - ✅ Copyright headers: `// Copyright (c) 2025 Michael Villani` (no period)
@@ -930,26 +930,25 @@ The project uses golangci-lint with multiple enabled linters. When fixing lintin
 - ✅ Linter directives: `// nolint:lintername` (exact format)
 - ✅ Go directives: `//go:generate`, `//go:embed` (exact format)
 
-**When linter rules conflict with standardized formats:**
-- Configure `.golangci.yml` to exclude the patterns (see `linters-settings.godot.exclude`)
-- NEVER modify standardized boilerplate to satisfy linter rules
-- Document exclusions with comments explaining why
+**Configuration limitations with golangci-lint v2.x:**
+- The `godot` linter (comment period checker) is disabled because v2.x doesn't support excluding patterns
+- Copyright and SPDX headers must not have periods (per SPDX specification)
+- Regular code comments should still end with periods for consistency and readability
 
-**Regular code comments SHOULD end with periods** (per `godot` linter):
-- Function/method documentation comments
-- Inline explanatory comments
-- TODO/FIXME/NOTE comments
-- Package documentation
+**When linter rules conflict with standardized formats:**
+- Disable the linter rather than modifying boilerplate
+- Document the decision in `.golangci.yml`
+- NEVER modify standardized boilerplate to satisfy linter rules
 
 **Running linting:**
 ```bash
 # Run all linters
 golangci-lint run ./...
 
-# Run specific linter
-golangci-lint run --disable-all --enable=godot ./...
+# Verify configuration
+golangci-lint config verify
 
-# Auto-fix safe issues
+# Auto-fix safe issues (when available)
 golangci-lint run --fix ./...
 ```
 
