@@ -24,7 +24,7 @@ This data source retrieves a list of all Business Central environments for a giv
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bc-admin-center"
+      source = "vllni/bcadmincenter"
     }
   }
 }

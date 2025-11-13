@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/vllni/terraform-provider-bc-admin-center/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
 // mockTokenCredential implements azcore.TokenCredential for testing

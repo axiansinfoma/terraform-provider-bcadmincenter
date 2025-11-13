@@ -13,7 +13,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/vllni/terraform-provider-bc-admin-center/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
 // mockTokenCredential is a mock implementation of azcore.TokenCredential for testing
@@ -29,12 +29,12 @@ func (m *mockTokenCredential) GetToken(ctx context.Context, options policy.Token
 
 func TestService_List(t *testing.T) {
 	tests := []struct {
-		name               string
-		applicationFamily  string
-		responseBody       interface{}
-		responseStatus     int
-		wantErr            bool
-		expectedEnvCount   int
+		name              string
+		applicationFamily string
+		responseBody      interface{}
+		responseStatus    int
+		wantErr           bool
+		expectedEnvCount  int
 	}{
 		{
 			name:              "successful response with environments",
@@ -458,6 +458,7 @@ func TestNewService(t *testing.T) {
 
 	if svc == nil {
 		t.Error("NewService() returned nil")
+		return
 	}
 
 	if svc.client == nil {

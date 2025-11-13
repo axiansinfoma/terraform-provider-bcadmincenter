@@ -6,14 +6,14 @@ This directory contains a sample Terraform configuration for testing the BC Admi
 
 1. **Build the provider** (from the repository root):
    ```bash
-   go build -o terraform-provider-bc-admin-center
+   go build -o terraform-provider-bcadmincenter
    ```
 
 2. **Configure dev override** in `~/.terraformrc`:
    ```hcl
    provider_installation {
      dev_overrides {
-       "vllni/bc-admin-center" = "/workspaces/terraform-provider-bc-admin-center"
+       "vllni/bcadmincenter" = "/workspaces/terraform-provider-bcadmincenter"
      }
      direct {}
    }
@@ -90,7 +90,7 @@ terraform plan
 After making changes to the provider:
 ```bash
 # In the repository root
-go build -o terraform-provider-bc-admin-center
+go build -o terraform-provider-bcadmincenter
 
 # In this directory
 terraform plan  # Test your changes immediately

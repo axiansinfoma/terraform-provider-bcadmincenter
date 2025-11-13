@@ -24,7 +24,7 @@ This data source retrieves information about a specific Business Central environ
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bc-admin-center"
+      source = "vllni/bcadmincenter"
     }
   }
 }

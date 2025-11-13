@@ -4,7 +4,7 @@
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bc-admin-center"
+      source = "vllni/bcadmincenter"
     }
   }
 }

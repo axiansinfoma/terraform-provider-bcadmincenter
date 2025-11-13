@@ -42,4 +42,4 @@ test/*.log
 *.winfile eol=crlf
 
 # exclude compiled binary
-/terraform-provider-bc-admin-center
+/terraform-provider-bcadmincenter

@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/vllni/terraform-provider-bc-admin-center/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
 // Service handles environment-related operations for the Business Central Admin Center API
@@ -160,7 +160,11 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 		return fmt.Errorf("failed to check operation status: %w", err)
 	}
 
+	// Log initial operation status
+	fmt.Printf("[DEBUG] Initial operation status: %s (ID: %s)\n", operation.Status, operation.ID)
+
 	if operation.Status == OperationStatusSucceeded {
+		fmt.Printf("[DEBUG] Operation already succeeded\n")
 		return nil
 	}
 	if operation.Status == OperationStatusFailed {
@@ -185,8 +189,12 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 				return fmt.Errorf("failed to check operation status: %w", err)
 			}
 
+			// Log polling status
+			fmt.Printf("[DEBUG] Polling operation status: %s (ID: %s)\n", operation.Status, operation.ID)
+
 			switch operation.Status {
 			case OperationStatusSucceeded:
+				fmt.Printf("[DEBUG] Operation succeeded\n")
 				return nil
 			case OperationStatusFailed:
 				return fmt.Errorf("operation failed: %s", operation.ErrorMessage)

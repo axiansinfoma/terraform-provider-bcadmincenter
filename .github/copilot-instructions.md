@@ -123,7 +123,7 @@ Follow the [Terraform Plugin SDK v2](https://developer.hashicorp.com/terraform/p
 
 ### Project Structure
 ```
-provider-bc-admin-center/
+provider-bcadmincenter/
 ├── .github/
 │   ├── workflows/          # CI/CD workflows
 │   └── instructions.md     # This file
@@ -461,7 +461,7 @@ The provider uses [terraform-plugin-docs](https://github.com/hashicorp/terraform
 
 #### Directory Structure
 ```
-provider-bc-admin-center/
+provider-bcadmincenter/
 ├── docs/                          # Generated documentation (do not edit manually)
 │   ├── index.md                  # Provider overview and configuration
 │   ├── resources/                # Resource documentation
@@ -620,7 +620,7 @@ Example file template:
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bc-admin-center"
+      source = "vllni/bcadmincenter"
     }
   }
 }
@@ -695,13 +695,13 @@ Provider documentation must include:
 ### 2. Local Development
 ```bash
 # Clone and build
-git clone https://github.com/your-org/terraform-provider-bc-admin-center
-cd terraform-provider-bc-admin-center
-go build -o terraform-provider-bc-admin-center
+git clone https://github.com/your-org/terraform-provider-bcadmincenter
+cd terraform-provider-bcadmincenter
+go build -o terraform-provider-bcadmincenter
 
 # Install locally for testing
-mkdir -p ~/.terraform.d/plugins/local/provider/bc-admin-center/1.0.0/linux_amd64
-cp terraform-provider-bc-admin-center ~/.terraform.d/plugins/local/provider/bc-admin-center/1.0.0/linux_amd64/
+mkdir -p ~/.terraform.d/plugins/local/provider/bcadmincenter/1.0.0/linux_amd64
+cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/provider/bcadmincenter/1.0.0/linux_amd64/
 ```
 
 ### 3. Testing Configuration
@@ -709,7 +709,7 @@ cp terraform-provider-bc-admin-center ~/.terraform.d/plugins/local/provider/bc-a
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "local/provider/bc-admin-center"
+      source = "local/provider/bcadmincenter"
       version = "1.0.0"
     }
   }

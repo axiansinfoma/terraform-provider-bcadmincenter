@@ -16,9 +16,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/vllni/terraform-provider-bc-admin-center/internal/client"
-	"github.com/vllni/terraform-provider-bc-admin-center/internal/services/available_applications"
-	"github.com/vllni/terraform-provider-bc-admin-center/internal/services/environments"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/available_applications"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/environments"
 )
 
 // Ensure BCAdminCenterProvider satisfies various provider interfaces.

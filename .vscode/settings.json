@@ -25,11 +25,27 @@
     "azidentity",
     "bcadmincenter",
     "businesscentral",
+    "datasource",
+    "eastus",
     "echoprovider",
+    "github",
+    "hashicorp",
     "innererror",
+    "plainmarkdown",
+    "planmodifier",
+    "prefixlines",
     "providerserver",
+    "stringdefault",
+    "stringplanmodifier",
+    "stringvalidator",
+    "tffile",
+    "tflog",
     "tfprotov",
+    "tfsdk",
+    "thumbsup",
+    "trimspace",
     "Villani",
-    "vllni"
+    "vllni",
+    "westus"
   ]
 }

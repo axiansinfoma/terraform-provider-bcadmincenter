@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/vllni/terraform-provider-bc-admin-center/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -250,6 +250,17 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
+	// Log the operation response for debugging
+	tflog.Debug(ctx, "Create operation response", map[string]interface{}{
+		"operation_id":       operation.ID,
+		"operation_type":     operation.Type,
+		"product_family":     operation.ProductFamily,
+		"application_family": operation.ApplicationFamily,
+		"environment_name":   operation.EnvironmentName,
+		"destination_env":    operation.DestinationEnvironment,
+		"source_env":         operation.SourceEnvironment,
+	})
+
 	// Determine timeout
 	timeout := 60 * time.Minute // default
 	if !plan.Timeouts.IsNull() {
@@ -265,7 +276,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	if appFamily == "" {
 		appFamily = plan.ApplicationFamily.ValueString()
 	}
-	
+
 	envName := operation.EnvironmentName
 	if envName == "" {
 		envName = operation.DestinationEnvironment
@@ -273,7 +284,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	if envName == "" {
 		envName = plan.Name.ValueString()
 	}
-	
+
 	tflog.Debug(ctx, "Waiting for environment creation to complete", map[string]interface{}{
 		"operation_id":       operation.ID,
 		"timeout":            timeout.String(),
@@ -289,21 +300,69 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	// Read the created environment using the same application family
-	env, err := svc.Get(ctx, appFamily, envName)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading created environment",
-			fmt.Sprintf("Could not read environment after creation: %s", err),
-		)
-		return
+	// Log what we're about to use for the Get call
+	tflog.Debug(ctx, "Reading created environment", map[string]interface{}{
+		"application_family": appFamily,
+		"environment_name":   envName,
+	})
+
+	// Wait for the environment to become Active
+	// The operation succeeds when the create request is accepted, but the environment
+	// may still be in "Preparing" status. We need to poll until it's "Active".
+	tflog.Debug(ctx, "Waiting for environment to become Active", map[string]interface{}{
+		"application_family": appFamily,
+		"environment_name":   envName,
+	})
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	envTimeout, envCancel := context.WithTimeout(ctx, timeout)
+	defer envCancel()
+
+	for {
+		env, err := svc.Get(ctx, appFamily, envName)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error reading created environment",
+				fmt.Sprintf("Could not read environment after creation: %s", err),
+			)
+			return
+		}
+
+		tflog.Debug(ctx, "Environment status check", map[string]interface{}{
+			"status": env.Status,
+		})
+
+		if env.Status == "Active" {
+			// Environment is ready, update state and return
+			r.updateModelFromEnvironment(&plan, env)
+			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+			return
+		}
+
+		// Check for failed states
+		if env.Status == "Failed" || env.Status == "Suspended" {
+			resp.Diagnostics.AddError(
+				"Environment creation failed",
+				fmt.Sprintf("Environment entered %s state during creation", env.Status),
+			)
+			return
+		}
+
+		// Wait for next tick or timeout
+		select {
+		case <-envTimeout.Done():
+			resp.Diagnostics.AddError(
+				"Timeout waiting for environment",
+				fmt.Sprintf("Environment did not become Active within %v (current status: %s)", timeout, env.Status),
+			)
+			return
+		case <-ticker.C:
+			// Continue polling
+			continue
+		}
 	}
-
-	// Update state with created environment data
-	r.updateModelFromEnvironment(&plan, env)
-
-	// Set state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 // Read refreshes the Terraform state with the latest data
@@ -399,7 +458,7 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	if appFamily == "" {
 		appFamily = state.ApplicationFamily.ValueString()
 	}
-	
+
 	envName := operation.EnvironmentName
 	if envName == "" {
 		envName = operation.SourceEnvironment
@@ -407,7 +466,7 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	if envName == "" {
 		envName = state.Name.ValueString()
 	}
-	
+
 	tflog.Debug(ctx, "Waiting for environment deletion to complete", map[string]interface{}{
 		"operation_id":       operation.ID,
 		"timeout":            timeout.String(),
@@ -467,16 +526,16 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 	} else {
 		model.WebServiceURL = types.StringNull()
 	}
-	
+
 	if env.AppInsightsKey != "" {
 		model.AppInsightsKey = types.StringValue(env.AppInsightsKey)
 	} else {
 		model.AppInsightsKey = types.StringNull()
 	}
-	
+
 	// Azure region is not returned by the API, so always set to null
 	model.AzureRegion = types.StringNull()
-	
+
 	// Normalize ring name from API response format to Terraform format
 	// API accepts "PROD", "PREVIEW", "FAST" on input but returns "Production", "Preview", "Fast" on output
 	if env.RingName != "" {
@@ -485,13 +544,13 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 	} else {
 		model.RingName = types.StringNull()
 	}
-	
+
 	if env.ApplicationVersion != "" {
 		model.ApplicationVersion = types.StringValue(env.ApplicationVersion)
 	} else {
 		model.ApplicationVersion = types.StringNull()
 	}
-	
+
 	if env.PlatformVersion != "" {
 		model.PlatformVersion = types.StringValue(env.PlatformVersion)
 	} else {

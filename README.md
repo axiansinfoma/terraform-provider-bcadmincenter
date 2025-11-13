@@ -54,7 +54,7 @@ The provider supports multiple authentication methods via the Azure SDK:
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "vllni/bc-admin-center"
+      source  = "vllni/bcadmincenter"
       version = "~> 1.0"
     }
   }
@@ -118,8 +118,8 @@ resource "bc_environment_settings" "sandbox_settings" {
 
 1. Clone the repository:
 ```shell
-git clone https://github.com/vllni/terraform-provider-bc-admin-center
-cd terraform-provider-bc-admin-center
+git clone https://github.com/vllni/terraform-provider-bcadmincenter
+cd terraform-provider-bcadmincenter
 ```
 
 2. Build the provider:
@@ -152,14 +152,14 @@ Then commit the changes to `go.mod` and `go.sum`.
 To compile the provider locally:
 
 ```shell
-go build -o terraform-provider-bc-admin-center
+go build -o terraform-provider-bcadmincenter
 ```
 
 To install locally for testing:
 
 ```shell
-mkdir -p ~/.terraform.d/plugins/local/vllni/bc-admin-center/1.0.0/linux_amd64
-cp terraform-provider-bc-admin-center ~/.terraform.d/plugins/local/vllni/bc-admin-center/1.0.0/linux_amd64/
+mkdir -p ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64
+cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64/
 ```
 
 Then use it in your Terraform configuration:
@@ -168,7 +168,7 @@ Then use it in your Terraform configuration:
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "local/vllni/bc-admin-center"
+      source  = "local/vllni/bcadmincenter"
       version = "1.0.0"
     }
   }
@@ -233,5 +233,5 @@ Mozilla Public License 2.0 - see [LICENSE](LICENSE) for details.
 ## Support
 
 For issues and questions:
-- [GitHub Issues](https://github.com/vllni/terraform-provider-bc-admin-center/issues)
+- [GitHub Issues](https://github.com/vllni/terraform-provider-bcadmincenter/issues)
 - [Business Central Admin Center API Documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api)

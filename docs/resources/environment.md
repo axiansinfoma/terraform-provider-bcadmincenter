@@ -37,7 +37,7 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bc-admin-center"
+      source = "vllni/bcadmincenter"
     }
   }
 }
@@ -82,7 +82,7 @@ resource "bcadmincenter_environment" "sandbox" {
   application_family  = "BusinessCentral"
   type                = "Sandbox"
   country_code        = "US"
-  ring_name           = "Production"
+  ring_name           = "PROD"
   application_version = "24.0"
   azure_region        = "eastus"
 
@@ -148,7 +148,6 @@ resource "bcadmincenter_environment" "environments" {
   application_family = "BusinessCentral"
   type               = each.value.type
   country_code       = "US"
-  ring_name          = "Production"
   azure_region       = each.value.region
 
   timeouts {
@@ -244,6 +243,16 @@ Environment creation involves multiple asynchronous steps:
 4. Final configuration (2-5 minutes)
 
 If creation consistently times out, consider increasing the timeout or checking the Azure region availability.
+
+## Ring Names
+
+The `ring_name` attribute specifies which release ring to use for the environment. Available values:
+
+- `PROD` - Production ring (default) - Most stable, fully tested releases
+- `PREVIEW` - Preview ring - Early access to upcoming features with additional testing
+- `FAST` - Fast ring - Earliest access to new features, less testing
+
+The ring determines which Business Central updates and features are available in the environment. Most organizations should use the `PROD` ring for production environments.
 
 ## Environment Types
 

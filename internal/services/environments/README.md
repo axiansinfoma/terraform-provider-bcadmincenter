@@ -83,13 +83,13 @@ To test the implementation:
 
 1. Build the provider:
    ```bash
-   go build -o terraform-provider-bc-admin-center
+   go build -o terraform-provider-bcadmincenter
    ```
 
 2. Install locally for testing:
    ```bash
-   mkdir -p ~/.terraform.d/plugins/local/vllni/bc-admin-center/1.0.0/linux_amd64
-   cp terraform-provider-bc-admin-center ~/.terraform.d/plugins/local/vllni/bc-admin-center/1.0.0/linux_amd64/
+   mkdir -p ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64
+   cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64/
    ```
 
 3. Create a test configuration using the example above

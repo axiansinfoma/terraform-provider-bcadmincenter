@@ -64,6 +64,22 @@ func TestEnvironmentDataSource_Configure(t *testing.T) {
 	}
 }
 
+func TestEnvironmentDataSource_Configure_WithInvalidType(t *testing.T) {
+	d := &environmentDataSource{}
+
+	// Test with invalid provider data type
+	req := datasource.ConfigureRequest{
+		ProviderData: "invalid-type",
+	}
+	resp := &datasource.ConfigureResponse{}
+
+	d.Configure(context.Background(), req, resp)
+
+	if !resp.Diagnostics.HasError() {
+		t.Error("Configure() with invalid type should return error")
+	}
+}
+
 func TestEnvironmentDataSourceModel(t *testing.T) {
 	// Test that the model struct can be created and populated
 	model := environmentDataSourceModel{
@@ -130,6 +146,22 @@ func TestEnvironmentsDataSource_Configure(t *testing.T) {
 
 	if resp.Diagnostics.HasError() {
 		t.Errorf("Configure() with nil ProviderData should not error: %v", resp.Diagnostics)
+	}
+}
+
+func TestEnvironmentsDataSource_Configure_WithInvalidType(t *testing.T) {
+	d := &environmentsDataSource{}
+
+	// Test with invalid provider data type
+	req := datasource.ConfigureRequest{
+		ProviderData: "invalid-type",
+	}
+	resp := &datasource.ConfigureResponse{}
+
+	d.Configure(context.Background(), req, resp)
+
+	if !resp.Diagnostics.HasError() {
+		t.Error("Configure() with invalid type should return error")
 	}
 }
 

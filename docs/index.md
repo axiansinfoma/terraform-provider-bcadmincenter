@@ -81,7 +81,7 @@ To use this provider, you need:
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bc-admin-center"
+      source = "vllni/bcadmincenter"
     }
   }
 }
@@ -243,8 +243,8 @@ The following environment variables can be used to configure the provider:
 - [Business Central Admin Center API Documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api)
 - [Azure AD Authentication Overview](https://learn.microsoft.com/en-us/azure/active-directory/develop/authentication-scenarios)
 - [Terraform Provider Development](https://developer.hashicorp.com/terraform/plugin)
-- [Provider Source Code](https://github.com/vllni/terraform-provider-bc-admin-center)
+- [Provider Source Code](https://github.com/vllni/terraform-provider-bcadmincenter)
 
 ## Support
 
-For issues, feature requests, or contributions, please visit the [GitHub repository](https://github.com/vllni/terraform-provider-bc-admin-center).
+For issues, feature requests, or contributions, please visit the [GitHub repository](https://github.com/vllni/terraform-provider-bcadmincenter).
