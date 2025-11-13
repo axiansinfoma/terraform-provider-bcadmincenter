@@ -149,8 +149,8 @@ func TestBCAdminCenterProvider_Resources(t *testing.T) {
 
 	resources := p.Resources(context.Background())
 
-	// We should have 3 resources: environment, environment_settings, support_contact
-	expectedCount := 3
+	// We should have 4 resources: environment, environment_settings, support_contact, notification_recipient
+	expectedCount := 4
 	if len(resources) != expectedCount {
 		t.Errorf("Resources() returned %d resources, want %d", len(resources), expectedCount)
 	}
@@ -161,8 +161,8 @@ func TestBCAdminCenterProvider_DataSources(t *testing.T) {
 
 	dataSources := p.DataSources(context.Background())
 
-	// We should have 4 data sources: available_applications, application_family, environment, environments
-	expectedCount := 4
+	// We should have 5 data sources: available_applications, application_family, environment, environments, notification_settings
+	expectedCount := 5
 	if len(dataSources) != expectedCount {
 		t.Errorf("DataSources() returned %d data sources, want %d", len(dataSources), expectedCount)
 	}

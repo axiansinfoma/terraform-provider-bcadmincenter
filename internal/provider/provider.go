@@ -21,6 +21,7 @@ import (
 	environmentsettings "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_settings"
 	environmentsupportcontact "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_support_contact"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/environments"
+	notificationrecipients "github.com/vllni/terraform-provider-bcadmincenter/internal/services/notification_recipients"
 )
 
 // Ensure BCAdminCenterProvider satisfies various provider interfaces.
@@ -149,6 +150,7 @@ func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource
 		environments.NewEnvironmentResource,
 		environmentsettings.NewEnvironmentSettingsResource,
 		environmentsupportcontact.NewEnvironmentSupportContactResource,
+		notificationrecipients.NewNotificationRecipientResource,
 	}
 }
 
@@ -164,6 +166,7 @@ func (p *BCAdminCenterProvider) DataSources(ctx context.Context) []func() dataso
 		available_applications.NewApplicationFamilyDataSource,
 		environments.NewEnvironmentDataSource,
 		environments.NewEnvironmentsDataSource,
+		notificationrecipients.NewNotificationSettingsDataSource,
 	}
 }
 
