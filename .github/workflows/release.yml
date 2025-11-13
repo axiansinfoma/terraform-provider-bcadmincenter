@@ -25,6 +25,16 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: latest
+      - name: Generate documentation
+        run: |
+          cd tools
+          go generate
+          echo "✅ Documentation generated for release"
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
         id: import_gpg

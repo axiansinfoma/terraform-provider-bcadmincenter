@@ -23,7 +23,6 @@ This Terraform provider enables Infrastructure as Code (IaC) management of Micro
 
 - Manage Business Central production and sandbox environments
 - Configure environment settings and access controls
-- Manage application installations and updates
 - Configure administrative notifications
 - Query environment operations and quotas
 

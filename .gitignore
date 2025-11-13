@@ -46,3 +46,6 @@ test/.terraform.tfstate.lock.info
 
 # exclude compiled binary
 /terraform-provider-bcadmincenter
+
+# Generated documentation (generated from templates/ during build/release)
+docs/
