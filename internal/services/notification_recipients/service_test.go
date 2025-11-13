@@ -4,9 +4,9 @@
 package notificationrecipients
 
 import (
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"net/http"
 	"net/http/httptest"
 	"testing"

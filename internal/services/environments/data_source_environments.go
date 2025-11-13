@@ -31,7 +31,7 @@ type environmentsDataSource struct {
 
 // environmentsDataSourceModel maps the data source schema data.
 type environmentsDataSourceModel struct {
-	ApplicationFamily types.String              `tfsdk:"application_family"`
+	ApplicationFamily types.String               `tfsdk:"application_family"`
 	Environments      []environmentListItemModel `tfsdk:"environments"`
 }
 

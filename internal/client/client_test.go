@@ -3,12 +3,11 @@
 
 package client
 
-
 import (
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"net/http"
 	"net/http/httptest"
 	"testing"
