@@ -130,10 +130,14 @@ provider-bcadmincenter/
 ├── docs/                   # Provider documentation
 ├── examples/               # Usage examples
 ├── internal/
+│   ├── constants/         # Shared constants (ProviderNamespace, API version, etc.)
 │   ├── provider/          # Main provider implementation
 │   ├── client/            # Business Central Admin Center API client
 │   ├── services/          # Service-specific implementations
 │   │   ├── environments/
+│   │   │   ├── resourceid.go      # Environment-specific resource ID functions
+│   │   │   ├── resourceid_test.go
+│   │   │   └── ...
 │   │   ├── applications/
 │   │   ├── notifications/
 │   │   └── settings/
@@ -144,6 +148,37 @@ provider-bcadmincenter/
 ├── main.go               # Provider entry point
 └── README.md
 ```
+
+## Shared Constants Package
+
+The `internal/constants` package provides centralized constants used across the provider:
+
+```go
+package constants
+
+// ProviderNamespace for Business Central Admin Center resources
+const ProviderNamespace = "Microsoft.Dynamics365.BusinessCentral"
+
+// DefaultBaseURL is the default Business Central Admin Center API endpoint
+const DefaultBaseURL = "https://api.businesscentral.dynamics.com"
+
+// BusinessCentralResourceID is the Azure AD resource ID for Business Central
+const BusinessCentralResourceID = "996def3d-b36c-4153-8607-a6fd3c01b89f"
+
+// DefaultAPIVersion is the default API version to use
+const DefaultAPIVersion = "v2.24"
+```
+
+**When to use constants:**
+- Use `constants.ProviderNamespace` in resource ID functions
+- Use `constants.DefaultAPIVersion` in tests and client initialization
+- Use `constants.DefaultBaseURL` when configuring clients
+- Use `constants.BusinessCentralResourceID` for authentication scopes
+
+**When NOT to use constants:**
+- Business logic values (e.g., environment types, application families)
+- User-provided configuration values
+- Dynamic or computed values
 
 ### Key Implementation Guidelines
 
@@ -323,44 +358,58 @@ All resources in this provider use an ARM-like resource ID format to support mul
 
 **Implementation Guidelines:**
 
-1. **Use the `resourceid` Package**: All resource ID building and parsing logic is centralized in `internal/resourceid/resourceid.go`
+1. **Decentralized Resource IDs**: Each service package manages its own resource ID functions in a local `resourceid.go` file within the service directory (e.g., `internal/services/environments/resourceid.go`).
    
-2. **Builder Functions**: Use the appropriate builder function to create resource IDs:
-   ```go
-   import "github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
-   
-   // In resource Create/Read methods
-   id := resourceid.BuildEnvironmentID(tenantID, applicationFamily, environmentName)
-   resp.State.Set(ctx, &data)
-   ```
+2. **Shared Constants**: Common constants are centralized in `internal/constants/constants.go`:
+   - `ProviderNamespace` - The provider namespace for all resources
+   - `DefaultAPIVersion` - The default API version
+   - `DefaultBaseURL` - The base API endpoint
+   - `BusinessCentralResourceID` - Azure AD resource ID for authentication
 
-3. **Parser Functions**: Use the appropriate parser function in ImportState and Read methods:
+3. **Builder Functions**: Each service implements its own builder function to create resource IDs:
    ```go
-   // In resource ImportState method
-   tenantID, applicationFamily, environmentName, err := resourceid.ParseEnvironmentID(req.ID)
-   if err != nil {
-       resp.Diagnostics.AddError("Invalid Import ID", err.Error())
-       return
+   import "github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
+   
+   // In service's resourceid.go
+   func BuildEnvironmentID(tenantID, applicationFamily, environmentName string) string {
+       return fmt.Sprintf("/tenants/%s/providers/%s/applications/%s/environments/%s",
+           tenantID, constants.ProviderNamespace, applicationFamily, environmentName)
    }
    ```
 
-4. **Multi-Tenant Support**: All resources support an optional `aad_tenant_id` attribute that:
+4. **Parser Functions**: Each service implements its own parser function:
+   ```go
+   // In service's resourceid.go
+   func ParseEnvironmentID(id string) (string, string, string, error) {
+       parts := strings.Split(strings.TrimPrefix(id, "/"), "/")
+       
+       if len(parts) != 8 {
+           return "", "", "", fmt.Errorf("invalid environment ID format...")
+       }
+       
+       // Validation logic using constants.ProviderNamespace
+       
+       return parts[1], parts[5], parts[7], nil
+   }
+   ```
+
+5. **Multi-Tenant Support**: All resources support an optional `aad_tenant_id` attribute that:
    - Defaults to the provider's configured tenant ID if not specified
    - Allows managing resources in different tenants when explicitly set
    - Is included in the resource ID for proper multi-tenant isolation
 
-5. **Testing Resource IDs**: When adding new resource types:
-   - Add builder and parser functions to `internal/resourceid/resourceid.go`
-   - Add comprehensive tests to `internal/resourceid/resourceid_test.go`
+6. **Testing Resource IDs**: When adding new resource types:
+   - Add `resourceid.go` and `resourceid_test.go` in the service package
    - Include tests for: valid IDs, invalid formats, wrong providers, missing parts, and round-trip conversions
+   - Import `internal/constants` package for shared constants
 
 **Example Resource Implementation:**
 ```go
 func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
     // ... create resource via API ...
     
-    // Build ARM-like resource ID
-    data.ID = types.StringValue(resourceid.BuildEnvironmentID(
+    // Build ARM-like resource ID using local function
+    data.ID = types.StringValue(BuildEnvironmentID(
         data.AADTenantID.ValueString(),
         data.ApplicationFamily.ValueString(),
         data.Name.ValueString(),
@@ -370,8 +419,8 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 }
 
 func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-    // Parse ARM-like resource ID
-    tenantID, appFamily, envName, err := resourceid.ParseEnvironmentID(req.ID)
+    // Parse ARM-like resource ID using local function
+    tenantID, appFamily, envName, err := ParseEnvironmentID(req.ID)
     if err != nil {
         resp.Diagnostics.AddError("Invalid Import ID", err.Error())
         return
@@ -450,7 +499,7 @@ func TestService_MethodName(t *testing.T) {
             c := &client.Client{}
             c.SetCredential(mockCred)
             c.SetBaseURL(server.URL)
-            c.SetAPIVersion("v2.24")
+            c.SetAPIVersion(constants.DefaultAPIVersion)
             c.SetHTTPClient(&http.Client{})
 
             // Test the method

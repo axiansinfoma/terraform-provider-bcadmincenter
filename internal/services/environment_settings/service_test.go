@@ -4,6 +4,7 @@
 package environmentsettings
 
 import (
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -79,7 +80,7 @@ func TestService_GetUpdateSettings(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -149,7 +150,7 @@ func TestService_SetUpdateSettings(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -205,7 +206,7 @@ func TestService_GetSecurityGroup(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -258,7 +259,7 @@ func TestService_SetAppInsightsKey(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -311,7 +312,7 @@ func TestService_GetAccessWithM365Licenses(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)

@@ -14,17 +14,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-)
 
-const (
-	// DefaultBaseURL is the default Business Central Admin Center API endpoint
-	DefaultBaseURL = "https://api.businesscentral.dynamics.com"
-
-	// BusinessCentralResourceID is the Azure AD resource ID for Business Central
-	BusinessCentralResourceID = "996def3d-b36c-4153-8607-a6fd3c01b89f"
-
-	// DefaultAPIVersion is the default API version to use
-	DefaultAPIVersion = "v2.24"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 )
 
 // Client represents a Business Central Admin Center API client
@@ -97,12 +88,12 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 
 	baseURL := config.BaseURL
 	if baseURL == "" {
-		baseURL = DefaultBaseURL
+		baseURL = constants.DefaultBaseURL
 	}
 
 	apiVersion := config.APIVersion
 	if apiVersion == "" {
-		apiVersion = DefaultAPIVersion
+		apiVersion = constants.DefaultAPIVersion
 	}
 
 	client := &Client{
@@ -121,7 +112,7 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 // GetToken retrieves an access token for the Business Central Admin Center API
 func (c *Client) GetToken(ctx context.Context) (string, error) {
 	token, err := c.credential.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{fmt.Sprintf("%s/.default", BusinessCentralResourceID)},
+		Scopes: []string{fmt.Sprintf("%s/.default", constants.BusinessCentralResourceID)},
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to get token: %w", err)

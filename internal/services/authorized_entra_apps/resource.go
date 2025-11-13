@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 var (
@@ -129,7 +128,7 @@ func (r *AuthorizedEntraAppResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	// Set resource ID
-	plan.ID = types.StringValue(resourceid.BuildAuthorizedEntraAppID(tenantID, app.AppID))
+	plan.ID = types.StringValue(BuildAuthorizedEntraAppID(tenantID, app.AppID))
 	plan.IsAdminConsentGranted = types.BoolValue(app.IsAdminConsentGranted)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -205,7 +204,7 @@ func (r *AuthorizedEntraAppResource) Delete(ctx context.Context, req resource.De
 // ImportState imports the resource into Terraform state
 func (r *AuthorizedEntraAppResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Parse the resource ID
-	tenantID, appID, err := resourceid.ParseAuthorizedEntraAppID(req.ID)
+	tenantID, appID, err := ParseAuthorizedEntraAppID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",

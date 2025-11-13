@@ -4,6 +4,7 @@
 package authorized_entra_apps
 
 import (
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -80,7 +81,7 @@ func TestService_ListAuthorizedApps(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -150,7 +151,7 @@ func TestService_AuthorizeApp(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -209,7 +210,7 @@ func TestService_RemoveAuthorizedApp(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -274,7 +275,7 @@ func TestService_GetManageableTenants(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)

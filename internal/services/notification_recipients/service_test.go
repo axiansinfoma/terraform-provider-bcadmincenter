@@ -4,6 +4,7 @@
 package notificationrecipients
 
 import (
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -86,7 +87,7 @@ func TestService_List(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -162,7 +163,7 @@ func TestService_Get(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -246,7 +247,7 @@ func TestService_Create(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -316,7 +317,7 @@ func TestService_Delete(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
@@ -393,7 +394,7 @@ func TestService_GetNotificationSettings(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)

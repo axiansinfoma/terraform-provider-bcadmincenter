@@ -3,7 +3,9 @@
 
 package client
 
+
 import (
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
 	"errors"
@@ -115,11 +117,11 @@ func TestNewClient(t *testing.T) {
 			}
 
 			// Check defaults
-			if tt.config.BaseURL == "" && client.baseURL != DefaultBaseURL {
-				t.Errorf("Client baseURL = %v, want %v", client.baseURL, DefaultBaseURL)
+			if tt.config.BaseURL == "" && client.baseURL != constants.DefaultBaseURL {
+				t.Errorf("Client baseURL = %v, want %v", client.baseURL, constants.DefaultBaseURL)
 			}
-			if tt.config.APIVersion == "" && client.apiVersion != DefaultAPIVersion {
-				t.Errorf("Client apiVersion = %v, want %v", client.apiVersion, DefaultAPIVersion)
+			if tt.config.APIVersion == "" && client.apiVersion != constants.DefaultAPIVersion {
+				t.Errorf("Client apiVersion = %v, want %v", client.apiVersion, constants.DefaultAPIVersion)
 			}
 			if client.tenantID != tt.config.TenantID {
 				t.Errorf("Client tenantID = %v, want %v", client.tenantID, tt.config.TenantID)
@@ -255,7 +257,7 @@ func TestClient_DoRequest(t *testing.T) {
 				}
 
 				// Verify request path contains API version and path
-				expectedPath := "/admin/" + DefaultAPIVersion + "/" + tt.path
+				expectedPath := "/admin/" + constants.DefaultAPIVersion + "/" + tt.path
 				if r.URL.Path != expectedPath {
 					t.Errorf("Request path = %v, want %v", r.URL.Path, expectedPath)
 				}
@@ -272,7 +274,7 @@ func TestClient_DoRequest(t *testing.T) {
 				},
 				httpClient: server.Client(),
 				baseURL:    server.URL,
-				apiVersion: DefaultAPIVersion,
+				apiVersion: constants.DefaultAPIVersion,
 			}
 
 			resp, err := client.DoRequest(context.Background(), tt.method, tt.path, nil)
@@ -342,7 +344,7 @@ func TestClient_HTTPMethods(t *testing.T) {
 				credential: &mockTokenCredential{token: "test-token"},
 				httpClient: server.Client(),
 				baseURL:    server.URL,
-				apiVersion: DefaultAPIVersion,
+				apiVersion: constants.DefaultAPIVersion,
 			}
 
 			resp, err := tt.methodFunc(client, context.Background(), "test")
@@ -402,7 +404,7 @@ func TestClient_ContextCancellation(t *testing.T) {
 		credential: &mockTokenCredential{token: "test-token"},
 		httpClient: server.Client(),
 		baseURL:    server.URL,
-		apiVersion: DefaultAPIVersion,
+		apiVersion: constants.DefaultAPIVersion,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

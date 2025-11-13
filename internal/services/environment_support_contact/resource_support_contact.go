@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -123,7 +122,7 @@ func (r *EnvironmentSupportContactResource) Create(ctx context.Context, req reso
 
 	// Set the ID to the ARM-like format
 	tenantID := r.client.GetTenantID()
-	plan.ID = types.StringValue(resourceid.BuildEnvironmentSupportContactID(
+	plan.ID = types.StringValue(BuildEnvironmentSupportContactID(
 		tenantID,
 		plan.ApplicationFamily.ValueString(),
 		plan.EnvironmentName.ValueString(),
@@ -254,7 +253,7 @@ func (r *EnvironmentSupportContactResource) Delete(ctx context.Context, req reso
 // ImportState imports the resource state
 func (r *EnvironmentSupportContactResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Parse the ARM-like ID
-	tenantID, applicationFamily, environmentName, err := resourceid.ParseEnvironmentSupportContactID(req.ID)
+	tenantID, applicationFamily, environmentName, err := ParseEnvironmentSupportContactID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",

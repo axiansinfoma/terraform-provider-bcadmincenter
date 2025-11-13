@@ -4,6 +4,7 @@
 package available_applications
 
 import (
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -168,7 +169,7 @@ func TestService_GetAvailableApplications(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			// Create service
@@ -310,7 +311,7 @@ func TestService_GetApplicationFamily(t *testing.T) {
 			c := &client.Client{}
 			c.SetCredential(mockCred)
 			c.SetBaseURL(server.URL)
-			c.SetAPIVersion("v2.24")
+			c.SetAPIVersion(constants.DefaultAPIVersion)
 			c.SetHTTPClient(&http.Client{})
 
 			// Create service

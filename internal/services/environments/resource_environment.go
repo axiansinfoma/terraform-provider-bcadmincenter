@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -486,7 +485,7 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 // ImportState imports an existing resource into Terraform state
 func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Parse the ARM-like ID
-	tenantID, applicationFamily, environmentName, err := resourceid.ParseEnvironmentID(req.ID)
+	tenantID, applicationFamily, environmentName, err := ParseEnvironmentID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
@@ -512,7 +511,7 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 		tenantID = r.client.GetTenantID()
 	}
 
-	model.ID = types.StringValue(resourceid.BuildEnvironmentID(tenantID, env.ApplicationFamily, env.Name))
+	model.ID = types.StringValue(BuildEnvironmentID(tenantID, env.ApplicationFamily, env.Name))
 	model.Name = types.StringValue(env.Name)
 	model.ApplicationFamily = types.StringValue(env.ApplicationFamily)
 	model.Type = types.StringValue(env.Type)

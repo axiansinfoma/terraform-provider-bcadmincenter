@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -133,12 +132,10 @@ func (r *NotificationRecipientResource) Create(ctx context.Context, req resource
 	}
 
 	// Update the plan with the response
-	plan.ID = types.StringValue(resourceid.BuildNotificationRecipientID(tenantID, recipient.ID))
+	plan.ID = types.StringValue(BuildNotificationRecipientID(tenantID, recipient.ID))
 	plan.Email = types.StringValue(recipient.Email)
 	plan.Name = types.StringValue(recipient.Name)
-	plan.AADTenantID = types.StringValue(tenantID)
-
-	// Save data into Terraform state
+	plan.AADTenantID = types.StringValue(tenantID) // Save data into Terraform state
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 }
@@ -155,7 +152,7 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 	svc := NewService(r.client)
 
 	// Parse the ARM-like ID to get tenant ID and recipient ID
-	tenantID, recipientID, err := resourceid.ParseNotificationRecipientID(state.ID.ValueString())
+	tenantID, recipientID, err := ParseNotificationRecipientID(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Resource ID",
@@ -210,7 +207,7 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 	svc := NewService(r.client)
 
 	// Parse the ARM-like ID to get tenant ID and recipient ID
-	tenantID, recipientID, err := resourceid.ParseNotificationRecipientID(state.ID.ValueString())
+	tenantID, recipientID, err := ParseNotificationRecipientID(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Resource ID",
@@ -218,7 +215,6 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 		)
 		return
 	}
-
 	err = svc.Delete(ctx, tenantID, recipientID)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -234,7 +230,7 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 // ImportState imports the resource state
 func (r *NotificationRecipientResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Parse the ARM-like ID
-	tenantID, recipientID, err := resourceid.ParseNotificationRecipientID(req.ID)
+	tenantID, recipientID, err := ParseNotificationRecipientID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",

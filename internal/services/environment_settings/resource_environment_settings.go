@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/resourceid"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -174,7 +173,7 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 
 	// Set the ID to the ARM-like format
 	tenantID := r.client.GetTenantID()
-	plan.ID = types.StringValue(resourceid.BuildEnvironmentSettingsID(
+	plan.ID = types.StringValue(BuildEnvironmentSettingsID(
 		tenantID,
 		plan.ApplicationFamily.ValueString(),
 		plan.EnvironmentName.ValueString(),
