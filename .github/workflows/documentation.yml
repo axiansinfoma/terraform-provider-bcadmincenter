@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -69,7 +69,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -190,7 +190,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
 
       - name: Check required template files
         run: |
@@ -284,7 +284,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -415,7 +415,7 @@ jobs:
     if: always()
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
 
       - name: Setup Go
         uses: actions/setup-go@v6
