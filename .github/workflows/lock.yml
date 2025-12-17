@@ -10,6 +10,9 @@ jobs:
   lock:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.2.0
+        with:
+          node-version: '24'
       # NOTE: When TSCCR updates the GitHub action version, update the template workflow file to avoid drift:
       # https://github.com/hashicorp/terraform-devex-repos/blob/main/modules/repo/workflows/lock.tftpl
       - uses: dessant/lock-threads@7266a7ce5c1df01b1c6db85bf8cd86c737dadbe7 # v6.0.0
