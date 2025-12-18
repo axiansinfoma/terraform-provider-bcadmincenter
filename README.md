@@ -24,11 +24,11 @@ This Terraform provider enables Infrastructure as Code (IaC) management of Micro
 - Manage Business Central production and sandbox environments
 - Configure environment settings and access controls
 - Configure administrative notifications
-- Query environment operations and quotas
+- Monitor environment quotas
 
 ## Requirements
 
-- [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.13
 - [Go](https://golang.org/doc/install) >= 1.24 (for development)
 - Azure AD application with **AdminCenter.ReadWrite.All** permissions
 - Membership in the **AdminAgents** group for delegated admin access
@@ -40,7 +40,7 @@ This Terraform provider enables Infrastructure as Code (IaC) management of Micro
 The provider supports multiple authentication methods via the Azure SDK:
 
 1. **Service Principal with Client Secret**
-2. **Service Principal with Workload Identity Credential** (recommended for CI/CD)
+2. **Service Principal with Workload Identity Federation** (recommended for CI/CD - authenticates via OIDC against an Azure AD app registration with federated credentials)
 3. **Service Principal with Certificate**
 4. **Managed Identity** (for Azure-hosted environments)
 5. **Azure CLI Authentication** (for local development)
@@ -79,7 +79,9 @@ The provider follows Azure SDK conventions and supports these environment variab
 
 #### Using Azure Workload Identity (Recommended for CI/CD)
 
-For Azure Workload Identity in Kubernetes environments:
+Azure Workload Identity allows authentication via OIDC against an Azure AD app registration that has a federated credential. This is the recommended approach for CI/CD pipelines (GitHub Actions, Azure DevOps) as it eliminates the need to manage long-lived secrets.
+
+For Azure Workload Identity in Kubernetes environments or CI/CD:
 
 ```hcl
 provider "bcadmincenter" {
@@ -98,12 +100,17 @@ The provider will automatically detect and use workload identity credentials whe
 ```hcl
 # Create a sandbox environment
 resource "bc_environment" "sandbox" {
-  name                = "my-sandbox"
-  application_family  = "BusinessCentral"
+  name               = "my-sandbox"
+  application_family = "BusinessCentral"
   type               = "Sandbox"
   country_code       = "US"
   ring_name          = "Production"
-  application_version = "24.0"
+  azure_region       = "westus2"
+}
+
+# The application_version is read-only and assigned by the API
+output "sandbox_version" {
+  value = bc_environment.sandbox.application_version
 }
 
 # Configure environment settings
@@ -205,22 +212,19 @@ make docs-check
 terraform fmt -recursive examples/
 ```
 
-**Important**: Never edit files in `docs/` directly. Edit templates in `templates/` instead, then run `make docs`.
+**Important**: Documentation in the `docs/` directory is automatically generated during the release pipeline. For documentation changes, edit templates in `templates/` and example files in `examples/`. The documentation is generated from these sources during release.
 
 See the [Documentation Quick Reference](docs/QUICK-REFERENCE.md) for more details.
 
 ## Documentation
 
-See the [docs](./docs) directory for detailed documentation on:
-- Resources
-- Data Sources
-- Configuration options
+Published documentation for the latest release is available on the [Terraform Registry](https://registry.terraform.io/providers/vllni/bcadmincenter/latest/docs).
 
 **Documentation Development**:
-- [Documentation Quick Reference](docs/QUICK-REFERENCE.md) - Quick commands and checklist
-- [Compliance Guide](docs/COMPLIANCE.md) - Full validation pipeline documentation
+- Edit templates in `templates/` directory
+- Update example files in `examples/` directory
+- Documentation is generated during release pipeline
 - [Template Guide](templates/README.md) - How to write documentation templates
-- [Validation Checklist](DOCUMENTATION.md) - Complete documentation requirements
 
 ## Contributing
 

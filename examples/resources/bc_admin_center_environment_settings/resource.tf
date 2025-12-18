@@ -30,12 +30,12 @@ resource "bc_admin_center_environment_settings" "production" {
 
 # Reference an environment resource
 resource "bc_admin_center_environment" "sandbox" {
-  name                = "sandbox-1"
-  application_family  = "BusinessCentral"
-  type                = "Sandbox"
-  country_code        = "US"
-  ring_name           = "Production"
-  application_version = "25.0"
+  name               = "sandbox-1"
+  application_family = "BusinessCentral"
+  type               = "Sandbox"
+  country_code       = "US"
+  ring_name          = "Production"
+  azure_region       = "eastus"
 }
 
 resource "bc_admin_center_environment_settings" "sandbox" {

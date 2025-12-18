@@ -30,12 +30,12 @@ data "bcadmincenter_environment" "existing" {
 resource "bcadmincenter_environment" "new_sandbox" {
   count = data.bcadmincenter_environment.existing.type == "Production" ? 1 : 0
 
-  application_family  = "BusinessCentral"
-  name                = "${data.bcadmincenter_environment.existing.name}-sandbox"
-  type                = "Sandbox"
-  country_code        = data.bcadmincenter_environment.existing.country_code
-  ring_name           = data.bcadmincenter_environment.existing.ring_name
-  application_version = data.bcadmincenter_environment.existing.application_version
+  application_family = "BusinessCentral"
+  name               = "${data.bcadmincenter_environment.existing.name}-sandbox"
+  type               = "Sandbox"
+  country_code       = data.bcadmincenter_environment.existing.country_code
+  ring_name          = data.bcadmincenter_environment.existing.ring_name
+  azure_region       = data.bcadmincenter_environment.existing.azure_region
 }
 ```
 
@@ -73,12 +73,12 @@ data "bcadmincenter_environment" "template" {
 }
 
 resource "bcadmincenter_environment" "replica" {
-  application_family  = data.bcadmincenter_environment.template.application_family
-  name                = "replica-env"
-  type                = "Sandbox"
-  country_code        = data.bcadmincenter_environment.template.country_code
-  ring_name           = data.bcadmincenter_environment.template.ring_name
-  application_version = data.bcadmincenter_environment.template.application_version
+  application_family = data.bcadmincenter_environment.template.application_family
+  name               = "replica-env"
+  type               = "Sandbox"
+  country_code       = data.bcadmincenter_environment.template.country_code
+  ring_name          = data.bcadmincenter_environment.template.ring_name
+  azure_region       = data.bcadmincenter_environment.template.azure_region
 }
 ```
 

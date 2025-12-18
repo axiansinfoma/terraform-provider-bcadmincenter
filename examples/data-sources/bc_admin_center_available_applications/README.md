@@ -46,8 +46,11 @@ resource "bcadmincenter_environment" "prod" {
     [for ring in country.rings : ring.name if ring.production_ring][0]
     if country.country_code == "US"
   ][0]
-  
-  application_version = "24.0"
+}
+
+# application_version is read-only and assigned by the API based on ring_name
+output "prod_version" {
+  value = bcadmincenter_environment.prod.application_version
 }
 ```
 

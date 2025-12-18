@@ -14,20 +14,24 @@ resource "bcadmincenter_environment" "production" {
 }
 ```
 
-### Sandbox Environment with Specific Version
+### Sandbox Environment with Production Ring
 ```terraform
 resource "bcadmincenter_environment" "dev" {
-  name                = "development"
-  application_family  = "BusinessCentral"
-  type                = "Sandbox"
-  country_code        = "US"
-  ring_name           = "Production"
-  application_version = "24.0"
-  azure_region        = "eastus"
+  name               = "development"
+  application_family = "BusinessCentral"
+  type               = "Sandbox"
+  country_code       = "US"
+  ring_name          = "Production"
+  azure_region       = "eastus"
 
   timeouts {
     create = "90m"
   }
+}
+
+# application_version is read-only and assigned by the API based on ring_name
+output "dev_version" {
+  value = bcadmincenter_environment.dev.application_version
 }
 ```
 

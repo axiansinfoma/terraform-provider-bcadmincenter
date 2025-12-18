@@ -31,12 +31,17 @@ output "available_countries" {
 
 # Create an environment using data from the application family
 resource "bcadmincenter_environment" "example" {
-  name                = "production-env"
-  application_family  = data.bcadmincenter_application_family.bc.name
-  country_code        = data.bcadmincenter_application_family.bc.countries_ring_details[0].country_code
-  ring_name           = data.bcadmincenter_application_family.bc.countries_ring_details[0].rings[0].name
-  type                = "Production"
-  application_version = "24.0"
+  name               = "production-env"
+  application_family = data.bcadmincenter_application_family.bc.name
+  country_code       = data.bcadmincenter_application_family.bc.countries_ring_details[0].country_code
+  ring_name          = data.bcadmincenter_application_family.bc.countries_ring_details[0].rings[0].name
+  type               = "Production"
+  azure_region       = "westus2"
+}
+
+# application_version is read-only and assigned by the API
+output "example_version" {
+  value = bcadmincenter_environment.example.application_version
 }
 ```
 
