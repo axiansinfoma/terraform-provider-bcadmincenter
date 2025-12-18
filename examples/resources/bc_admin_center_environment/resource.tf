@@ -41,3 +41,8 @@ output "environment_status" {
   value       = bcadmincenter_environment.production.status
   description = "The current status of the environment"
 }
+
+output "application_version" {
+  value       = bcadmincenter_environment.production.application_version
+  description = "The application version running in the environment (read-only, assigned by the API)"
+}
