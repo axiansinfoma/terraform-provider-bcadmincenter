@@ -80,7 +80,10 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 		}
 	} else {
 		// Otherwise, use DefaultAzureCredential for other auth methods.
-		credential, err = azidentity.NewDefaultAzureCredential(nil)
+		// Pass the tenant ID to ensure it's used for Azure CLI, Azure Developer CLI, and workload identity.
+		credential, err = azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{
+			TenantID: config.TenantID,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create default credential: %w", err)
 		}
