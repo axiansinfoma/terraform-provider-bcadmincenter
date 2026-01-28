@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) Michael Villani
+# Copyright Michael Villani 2025, 0
 # SPDX-License-Identifier: MPL-2.0
 
 
