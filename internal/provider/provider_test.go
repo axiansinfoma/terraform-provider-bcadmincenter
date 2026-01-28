@@ -305,31 +305,31 @@ func TestGetConfigValue(t *testing.T) {
 func TestTenantIDFlowToClient(t *testing.T) {
 	// This test verifies that tenant ID from AZURE_TENANT_ID environment variable
 	// is properly used for both authentication and resources (via client.GetTenantID()).
-	
+
 	// Set environment variables
 	expectedTenantID := "00000000-0000-0000-0000-111111111111"
 	t.Setenv("AZURE_TENANT_ID", expectedTenantID)
 	t.Setenv("AZURE_CLIENT_ID", "00000000-0000-0000-0000-222222222222")
 	t.Setenv("AZURE_CLIENT_SECRET", "test-secret-value")
-	
+
 	// Simulate what the provider Configure method does
 	tenantID := getConfigValue(types.StringNull(), "AZURE_TENANT_ID")
 	clientID := getConfigValue(types.StringNull(), "AZURE_CLIENT_ID")
 	clientSecret := getConfigValue(types.StringNull(), "AZURE_CLIENT_SECRET")
-	
+
 	// Verify values are read from environment
 	if tenantID != expectedTenantID {
 		t.Errorf("tenantID = %v, want %v", tenantID, expectedTenantID)
 	}
-	
+
 	if clientID == "" {
 		t.Error("clientID should not be empty")
 	}
-	
+
 	if clientSecret == "" {
 		t.Error("clientSecret should not be empty")
 	}
-	
+
 	t.Logf("✓ Tenant ID correctly read from AZURE_TENANT_ID: %s", tenantID)
 	t.Logf("✓ This tenant ID will be used for both authentication and resource IDs via client.GetTenantID()")
 }
