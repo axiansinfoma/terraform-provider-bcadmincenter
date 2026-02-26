@@ -53,6 +53,7 @@ func TestBCAdminCenterProvider_Schema(t *testing.T) {
 		"tenant_id",
 		"environment",
 		"auxiliary_tenant_ids",
+		"base_url",
 	}
 
 	for _, attrName := range requiredAttrs {

@@ -41,6 +41,11 @@ test/tfplan
 test/plan.txt
 test/.terraform.tfstate.lock.info
 
+# Terraform test framework artifacts
+tests/.terraform/
+tests/.terraform.lock.hcl
+tests/.terraform.tfstate.lock.info
+
 # Keep windows files with windows line endings
 *.winfile eol=crlf
 

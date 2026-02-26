@@ -35,6 +35,19 @@ type Config struct {
 	Environment  string
 	BaseURL      string
 	APIVersion   string
+	// AccessToken is a static token used for testing to bypass Azure AD authentication.
+	// This should only be set in test environments.
+	AccessToken string
+}
+
+// staticTokenCredential is a token credential that returns a static pre-obtained token.
+// It is intended for use in tests only.
+type staticTokenCredential struct {
+	token string
+}
+
+func (s *staticTokenCredential) GetToken(_ context.Context, _ policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	return azcore.AccessToken{Token: s.token}, nil
 }
 
 // AdminCenterError represents an error response from the Business Central Admin Center API.
@@ -67,8 +80,10 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	var credential azcore.TokenCredential
 	var err error
 
-	// If ClientID and ClientSecret are provided, use ClientSecretCredential.
-	if config.ClientID != "" && config.ClientSecret != "" {
+	// If a static access token is provided (for testing only), use it directly.
+	if config.AccessToken != "" {
+		credential = &staticTokenCredential{token: config.AccessToken}
+	} else if config.ClientID != "" && config.ClientSecret != "" {
 		credential, err = azidentity.NewClientSecretCredential(
 			config.TenantID,
 			config.ClientID,
