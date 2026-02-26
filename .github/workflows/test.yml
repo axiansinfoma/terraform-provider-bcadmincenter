@@ -10,8 +10,6 @@ on:
   push:
     paths-ignore:
       - 'README.md'
-    branches:
-      - main
 
 # Testing only needs permissions to read the repository contents.
 permissions:
@@ -24,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # v6.0.1
-      - uses: actions/setup-go@3a0c2c82458cbb45a3cbfeeb2b91ce8f85420560 # v6.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -39,8 +37,8 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # v6.0.1
-      - uses: actions/setup-go@3a0c2c82458cbb45a3cbfeeb2b91ce8f85420560 # v6.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -56,20 +54,20 @@ jobs:
 
   # Run acceptance tests in a matrix with Terraform CLI versions
   test:
-    name: Terraform Provider Acceptance Tests
+    name: 'Acceptance Tests: Terraform ${{ matrix.terraform }}'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        # list whatever Terraform versions here you would like to support
+        # Terraform versions
         terraform:
           - '1.13.*'
-
+          - '1.14.*'
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # v6.0.1
-      - uses: actions/setup-go@3a0c2c82458cbb45a3cbfeeb2b91ce8f85420560 # v6.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version-file: 'go.mod'
           cache: true
