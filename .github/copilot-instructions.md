@@ -736,7 +736,7 @@ All example files must:
 
 Example file template:
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # [Brief description of what this example demonstrates]
@@ -990,7 +990,7 @@ Only implement resources for entities that can be managed statefully. Avoid crea
 The project uses golangci-lint v2.x with multiple enabled linters. When fixing linting issues:
 
 **DO NOT modify standardized boilerplate:**
-- ✅ Copyright headers: `// Copyright (c) 2025 Michael Villani` (no period)
+- ✅ Copyright headers: `// Copyright (c) 2025 Axians Infoma GmbH` (no period)
 - ✅ SPDX identifiers: `// SPDX-License-Identifier: MPL-2.0` (no period)
 - ✅ Build tags: `// +build` or `//go:build` directives (exact format required)
 - ✅ Generated code markers: `// Code generated ... DO NOT EDIT` (exact format)
