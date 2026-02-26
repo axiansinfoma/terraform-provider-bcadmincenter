@@ -9,12 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/utils"
 )
 
 // Service handles environment-related operations for the Business Central Admin Center API.
@@ -83,7 +83,7 @@ func (s *Service) Create(ctx context.Context, applicationFamily string, req *Cre
 
 	// The API returns a 202 Accepted with an operation in the response.
 	if resp.StatusCode != http.StatusAccepted {
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
 	}
 
 	var operation Operation
@@ -106,7 +106,7 @@ func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName
 
 	// The API returns a 202 Accepted with an operation in the response.
 	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusNoContent {
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
 	}
 
 	// If 204 No Content, the environment was already deleted or doesn't exist.
@@ -223,12 +223,4 @@ func isEnvironmentNotFoundError(err error) bool {
 	}
 
 	return strings.Contains(err.Error(), "EnvironmentNotFound")
-}
-
-func readResponseBody(body io.Reader) string {
-	bodyBytes, err := io.ReadAll(body)
-	if err != nil {
-		return fmt.Sprintf("failed to read response body: %v", err)
-	}
-	return string(bodyBytes)
 }

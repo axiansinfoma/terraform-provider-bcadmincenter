@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/utils"
 )
 
 // Service handles support contact operations for the Business Central Admin Center API.
@@ -80,7 +80,7 @@ func (s *Service) Set(ctx context.Context, applicationFamily, environmentName st
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
 	}
 
 	var updatedContact SupportContact
@@ -89,12 +89,4 @@ func (s *Service) Set(ctx context.Context, applicationFamily, environmentName st
 	}
 
 	return &updatedContact, nil
-}
-
-func readResponseBody(body io.Reader) string {
-	bodyBytes, err := io.ReadAll(body)
-	if err != nil {
-		return fmt.Sprintf("failed to read response body: %v", err)
-	}
-	return string(bodyBytes)
 }
