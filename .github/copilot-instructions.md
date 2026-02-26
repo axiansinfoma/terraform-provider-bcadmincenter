@@ -6,6 +6,8 @@
 
 **DOCUMENTATION IS REQUIRED**: All resources and data sources must have complete documentation templates and examples. Do NOT create separate markdown files to summarize work - only update existing templates or generated docs.
 
+**RUN `make generate` AFTER CHANGES**: After making code, schema, examples, templates, or documentation changes, you MUST run `make generate` before considering work complete or opening a pull request. This keeps generated documentation and related artifacts up to date.
+
 **CONVENTIONAL COMMITS REQUIRED**: All commit messages and pull request titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. This ensures consistent, meaningful commit history and enables automated changelog generation. See the [Conventional Commits Guidelines](#conventional-commits-guidelines) section for details.
 
 ## Project Overview
@@ -623,8 +625,7 @@ provider-bcadmincenter/
 
 3. **Generate Documentation**: Run the documentation generator
    ```bash
-   cd tools
-   go generate
+    make generate
    ```
    This will:
    - Extract schema from provider code
@@ -760,7 +761,7 @@ provider "bcadmincenter" {
 
 Before submitting documentation:
 
-1. **Generate docs**: `cd tools && go generate`
+1. **Generate docs**: `make generate`
 2. **Review output**: Check for warnings or errors
 3. **Validate examples**: Run `terraform fmt -recursive examples/`
 4. **Check links**: Ensure all links are valid
@@ -773,7 +774,7 @@ When adding new resources or data sources:
 
 1. Create template file in `templates/resources/` or `templates/data-sources/`
 2. Add example file in `examples/resources/` or `examples/data-sources/`
-3. Run documentation generator
+3. Run `make generate`
 4. Commit both templates and generated docs
 5. Update main README.md with new capabilities
 
@@ -931,6 +932,7 @@ go tool cover -html=coverage.out
 - [ ] Data source/resource tests verify Metadata, Schema, and Configure
 - [ ] Provider tests updated with new resource/data source counts
 - [ ] No test files are missing for new implementations
+- [ ] Run `make generate` and include generated documentation/artifact updates
 
 ## Resource Design Principles
 

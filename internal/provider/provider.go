@@ -47,6 +47,7 @@ type BCAdminCenterProviderModel struct {
 	TenantID           types.String `tfsdk:"tenant_id"`
 	Environment        types.String `tfsdk:"environment"`
 	AuxiliaryTenantIDs types.List   `tfsdk:"auxiliary_tenant_ids"`
+	BaseURL            types.String `tfsdk:"base_url"`
 }
 
 func (p *BCAdminCenterProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -80,6 +81,10 @@ func (p *BCAdminCenterProvider) Schema(ctx context.Context, req provider.SchemaR
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
+			"base_url": schema.StringAttribute{
+				MarkdownDescription: "Override the base URL for the Business Central Admin Center API. Can also be set via BCADMINCENTER_BASE_URL environment variable. Primarily used for testing.",
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -98,6 +103,9 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 	clientSecret := getConfigValue(data.ClientSecret, "AZURE_CLIENT_SECRET")
 	tenantID := getConfigValue(data.TenantID, "AZURE_TENANT_ID")
 	environment := getConfigValue(data.Environment, "AZURE_ENVIRONMENT")
+	baseURL := getConfigValue(data.BaseURL, "BCADMINCENTER_BASE_URL")
+	// accessToken allows bypassing Azure AD authentication for testing purposes.
+	accessToken := os.Getenv("BCADMINCENTER_TEST_TOKEN")
 
 	// Validate required configuration.
 	if tenantID == "" {
@@ -124,6 +132,8 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 		ClientSecret: clientSecret,
 		TenantID:     tenantID,
 		Environment:  environment,
+		BaseURL:      baseURL,
+		AccessToken:  accessToken,
 	}
 
 	bcClient, err := client.NewClient(ctx, config)

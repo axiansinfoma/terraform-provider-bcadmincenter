@@ -52,7 +52,7 @@ jobs:
           git diff --compact-summary --exit-code || \
             (echo; echo "Unexpected difference in directories after code generation. Run 'make generate' command and commit."; exit 1)
 
-  # Run acceptance tests in a matrix with Terraform CLI versions
+  # Run unit and acceptance tests with mock HTTP server in a matrix with Terraform CLI versions
   test:
     name: 'Acceptance Tests: Terraform ${{ matrix.terraform }}'
     needs: build
@@ -76,7 +76,36 @@ jobs:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
       - run: go mod download
-      - env:
-          TF_ACC: "1"
-        run: go test -v -cover ./internal/provider/
+      - name: Run unit tests
+        run: go test -v -cover -timeout=120s ./...
+      - name: Run provider acceptance tests with mock server
+        run: go test -v -cover -timeout=120s -run TestAcc ./internal/provider/
+        timeout-minutes: 10
+
+  # Run Terraform test framework tests using mock_provider in a matrix with Terraform CLI versions
+  terraform-test:
+    name: 'Terraform Tests: Terraform ${{ matrix.terraform }}'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Terraform versions (mock_provider support was introduced in Terraform 1.7+,
+        # both versions below meet this requirement)
+        terraform:
+          - '1.13.*'
+          - '1.14.*'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+      - name: Initialize Terraform tests
+        working-directory: tests
+        run: terraform init
+      - name: Run Terraform tests
+        working-directory: tests
+        run: terraform test
         timeout-minutes: 10
