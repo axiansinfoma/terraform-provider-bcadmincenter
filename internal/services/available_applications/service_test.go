@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
@@ -337,7 +338,7 @@ func TestService_GetApplicationFamily(t *testing.T) {
 
 			if tt.wantErr {
 				if tt.errContains != "" && err != nil {
-					if !contains(err.Error(), tt.errContains) {
+					if !strings.Contains(err.Error(), tt.errContains) {
 						t.Errorf("GetApplicationFamily() error = %v, want error containing %v", err, tt.errContains)
 					}
 				}
@@ -371,19 +372,4 @@ func TestNewService(t *testing.T) {
 	if svc.client != c {
 		t.Error("NewService() did not set client correctly")
 	}
-}
-
-// contains checks if a string contains a substring.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))
-}
-
-func stringContains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

@@ -6,6 +6,7 @@ package environmentsupportcontact
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"net/http"
 	"net/http/httptest"
@@ -181,6 +182,39 @@ func TestService_Set(t *testing.T) {
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestIsNotFoundError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "contains 404",
+			err:  errors.New("request failed with status 404"),
+			want: true,
+		},
+		{
+			name: "does not contain 404",
+			err:  errors.New("request failed with status 500"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isNotFoundError(tt.err)
+			if got != tt.want {
+				t.Errorf("isNotFoundError() = %v, want %v", got, tt.want)
 			}
 		})
 	}

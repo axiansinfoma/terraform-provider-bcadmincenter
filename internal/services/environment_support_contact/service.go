@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
@@ -55,22 +56,7 @@ func isNotFoundError(err error) bool {
 	}
 	// Check if error message contains "404".
 	errMsg := err.Error()
-	return contains(errMsg, "404")
-}
-
-// contains checks if a string contains a substring.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexOfSubstring(s, substr) >= 0)
-}
-
-// indexOfSubstring returns the index of the first instance of substr in s, or -1 if substr is not present in s.
-func indexOfSubstring(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+	return strings.Contains(errMsg, "404")
 }
 
 // Set updates the support contact information for an environment.
@@ -89,7 +75,10 @@ func (s *Service) Set(ctx context.Context, applicationFamily, environmentName st
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+		}
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
