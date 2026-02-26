@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
@@ -81,7 +83,10 @@ func (s *Service) Create(ctx context.Context, applicationFamily string, req *Cre
 
 	// The API returns a 202 Accepted with an operation in the response.
 	if resp.StatusCode != http.StatusAccepted {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+		}
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
@@ -105,7 +110,10 @@ func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName
 
 	// The API returns a 202 Accepted with an operation in the response.
 	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusNoContent {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+		}
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
@@ -161,10 +169,13 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 	}
 
 	// Log initial operation status.
-	fmt.Printf("[DEBUG] Initial operation status: %s (ID: %s)\n", operation.Status, operation.ID)
+	tflog.Debug(ctx, "Initial operation status", map[string]interface{}{
+		"status": operation.Status,
+		"id":     operation.ID,
+	})
 
 	if operation.Status == OperationStatusSucceeded {
-		fmt.Printf("[DEBUG] Operation already succeeded\n")
+		tflog.Debug(ctx, "Operation already succeeded")
 		return nil
 	}
 	if operation.Status == OperationStatusFailed {
@@ -190,11 +201,14 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 			}
 
 			// Log polling status.
-			fmt.Printf("[DEBUG] Polling operation status: %s (ID: %s)\n", operation.Status, operation.ID)
+			tflog.Debug(ctx, "Polling operation status", map[string]interface{}{
+				"status": operation.Status,
+				"id":     operation.ID,
+			})
 
 			switch operation.Status {
 			case OperationStatusSucceeded:
-				fmt.Printf("[DEBUG] Operation succeeded\n")
+				tflog.Debug(ctx, "Operation succeeded")
 				return nil
 			case OperationStatusFailed:
 				return fmt.Errorf("operation failed: %s", operation.ErrorMessage)
@@ -218,20 +232,5 @@ func isEnvironmentNotFoundError(err error) bool {
 	}
 	// Check if the error message contains "EnvironmentNotFound".
 	errMsg := err.Error()
-	return contains(errMsg, "EnvironmentNotFound")
-}
-
-// contains checks if a string contains a substring.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexOfSubstring(s, substr) >= 0)
-}
-
-// indexOfSubstring returns the index of the first instance of substr in s, or -1 if substr is not present in s.
-func indexOfSubstring(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+	return strings.Contains(errMsg, "EnvironmentNotFound")
 }
