@@ -10,11 +10,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 )
 
 // mockTokenCredential implements azcore.TokenCredential for testing.

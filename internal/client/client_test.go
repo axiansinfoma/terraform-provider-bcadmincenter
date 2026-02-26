@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 	"net/http"
 	"net/http/httptest"
 	"testing"

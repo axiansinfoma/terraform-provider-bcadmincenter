@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/utils"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 )
 
 // Service handles support contact operations for the Business Central Admin Center API.

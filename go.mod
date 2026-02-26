@@ -1,4 +1,4 @@
-module github.com/vllni/terraform-provider-bcadmincenter
+module github.com/axiansinfoma/terraform-provider-bcadmincenter
 
 go 1.24.0
 

@@ -365,7 +365,7 @@ All resources in this provider use an ARM-like resource ID format to support mul
 
 3. **Builder Functions**: Each service implements its own builder function to create resource IDs:
    ```go
-   import "github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
+   import "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
    
    // In service's resourceid.go
    func BuildEnvironmentID(tenantID, applicationFamily, environmentName string) string {
@@ -744,7 +744,7 @@ Example file template:
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

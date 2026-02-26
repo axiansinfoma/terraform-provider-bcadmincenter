@@ -97,7 +97,7 @@ cat > main.tf <<EOF
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "vllni/bcadmincenter"
+      source  = "axiansinfoma/bcadmincenter"
       version = "~> 1.0"
     }
   }
@@ -232,7 +232,7 @@ provider "bcadmincenter" {
 
 - Check the specific tutorial for troubleshooting steps
 - Review the [provider documentation](../docs/index.md)
-- Open an issue on [GitHub](https://github.com/vllni/terraform-provider-bcadmincenter/issues)
+- Open an issue on [GitHub](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues)
 
 ## Additional Resources
 
@@ -257,7 +257,7 @@ provider "bcadmincenter" {
 
 ## Contributing
 
-If you find issues with these tutorials or have suggestions for improvements, please open an issue or pull request on our [GitHub repository](https://github.com/vllni/terraform-provider-bcadmincenter).
+If you find issues with these tutorials or have suggestions for improvements, please open an issue or pull request on our [GitHub repository](https://github.com/axiansinfoma/terraform-provider-bcadmincenter).
 
 ## License
 
