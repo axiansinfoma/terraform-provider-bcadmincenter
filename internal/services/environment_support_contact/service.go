@@ -7,11 +7,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
+	"strings"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/vllni/terraform-provider-bcadmincenter/internal/utils"
 )
 
 // Service handles support contact operations for the Business Central Admin Center API.
@@ -53,24 +55,13 @@ func isNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Check if error message contains "404".
-	errMsg := err.Error()
-	return contains(errMsg, "404")
-}
 
-// contains checks if a string contains a substring.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexOfSubstring(s, substr) >= 0)
-}
-
-// indexOfSubstring returns the index of the first instance of substr in s, or -1 if substr is not present in s.
-func indexOfSubstring(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
+	var apiErr *client.AdminCenterError
+	if errors.As(err, &apiErr) {
+		return apiErr.Code == "ResourceNotFound" || apiErr.Code == "EnvironmentNotFound"
 	}
-	return -1
+
+	return strings.Contains(err.Error(), "404")
 }
 
 // Set updates the support contact information for an environment.
@@ -89,8 +80,7 @@ func (s *Service) Set(ctx context.Context, applicationFamily, environmentName st
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
 	}
 
 	var updatedContact SupportContact

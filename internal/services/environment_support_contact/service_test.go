@@ -6,6 +6,7 @@ package environmentsupportcontact
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"net/http"
 	"net/http/httptest"
@@ -181,6 +182,57 @@ func TestService_Set(t *testing.T) {
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestIsNotFoundError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "resource not found code",
+			err: &client.AdminCenterError{
+				Code:    "ResourceNotFound",
+				Message: "not found",
+			},
+			want: true,
+		},
+		{
+			name: "wrapped environment not found code",
+			err: fmt.Errorf("wrapped: %w", &client.AdminCenterError{
+				Code:    "EnvironmentNotFound",
+				Message: "not found",
+			}),
+			want: true,
+		},
+		{
+			name: "fallback 404 message",
+			err:  fmt.Errorf("API returned status 404: Not Found"),
+			want: true,
+		},
+		{
+			name: "different error",
+			err: &client.AdminCenterError{
+				Code:    "ValidationError",
+				Message: "bad request",
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isNotFoundError(tt.err); got != tt.want {
+				t.Errorf("isNotFoundError() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -6,6 +6,7 @@ package environments
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
 	"net/http"
 	"net/http/httptest"
@@ -488,5 +489,56 @@ func TestNewService(t *testing.T) {
 
 	if svc.client == nil {
 		t.Error("NewService() returned service with nil client")
+	}
+}
+
+func TestIsEnvironmentNotFoundError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "admin center error code",
+			err: &client.AdminCenterError{
+				Code:    "EnvironmentNotFound",
+				Message: "environment missing",
+			},
+			want: true,
+		},
+		{
+			name: "wrapped admin center error code",
+			err: fmt.Errorf("wrapped: %w", &client.AdminCenterError{
+				Code:    "EnvironmentNotFound",
+				Message: "environment missing",
+			}),
+			want: true,
+		},
+		{
+			name: "fallback message match",
+			err:  fmt.Errorf("request failed: EnvironmentNotFound"),
+			want: true,
+		},
+		{
+			name: "different error",
+			err: &client.AdminCenterError{
+				Code:    "ResourceNotFound",
+				Message: "resource missing",
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isEnvironmentNotFoundError(tt.err); got != tt.want {
+				t.Errorf("isEnvironmentNotFoundError() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
