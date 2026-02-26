@@ -21,7 +21,7 @@ This data source retrieves the catalog of available Business Central application
 ### Basic Usage
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # Query available applications, countries, and rings
@@ -29,7 +29,7 @@ This data source retrieves the catalog of available Business Central application
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

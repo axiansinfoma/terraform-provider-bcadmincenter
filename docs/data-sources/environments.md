@@ -16,7 +16,7 @@ This data source retrieves a list of all Business Central environments for a giv
 ### Basic Example
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # List all Business Central environments for a given application family
@@ -24,7 +24,7 @@ This data source retrieves a list of all Business Central environments for a giv
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

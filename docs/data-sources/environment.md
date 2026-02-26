@@ -16,7 +16,7 @@ This data source retrieves information about a specific Business Central environ
 ### Basic Example
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # Get information about a specific Business Central environment
@@ -24,7 +24,7 @@ This data source retrieves information about a specific Business Central environ
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

@@ -16,7 +16,7 @@ This data source retrieves environment quota information for the tenant, includi
 ### Basic Usage
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # Query tenant environment quotas
@@ -24,7 +24,7 @@ This data source retrieves environment quota information for the tenant, includi
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

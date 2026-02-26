@@ -29,7 +29,7 @@ Manages Business Central environment settings including update windows, Applicat
 ### Basic Update Window Configuration
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # Basic environment settings with update window configuration
@@ -37,7 +37,7 @@ Manages Business Central environment settings including update windows, Applicat
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

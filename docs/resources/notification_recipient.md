@@ -26,7 +26,7 @@ Notification recipients receive emails about environment lifecycle events from t
 ### Basic Notification Recipient
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # Configure a notification recipient for the tenant
@@ -34,7 +34,7 @@ Notification recipients receive emails about environment lifecycle events from t
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

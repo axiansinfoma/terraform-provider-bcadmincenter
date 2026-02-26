@@ -34,7 +34,7 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 ### Basic Production Environment
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # Example: Production Environment
@@ -42,7 +42,7 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

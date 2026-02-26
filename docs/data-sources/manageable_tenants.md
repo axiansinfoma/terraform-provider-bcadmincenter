@@ -29,7 +29,7 @@ This enables apps to dynamically discover their authorized tenants without hardc
 ### List All Manageable Tenants
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # Example: Get Manageable Tenants for App
@@ -38,7 +38,7 @@ This enables apps to dynamically discover their authorized tenants without hardc
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

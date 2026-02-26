@@ -32,7 +32,7 @@ To fully enable a Microsoft Entra app to call the Admin Center API:
 ### Basic Authorization
 
 ```terraform
-# Copyright (c) 2025 Michael Villani
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 # Example: Authorize a Microsoft Entra App
@@ -40,7 +40,7 @@ To fully enable a Microsoft Entra app to call the Admin Center API:
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }
