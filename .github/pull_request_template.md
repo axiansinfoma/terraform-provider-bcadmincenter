@@ -25,6 +25,7 @@ Fixes #<!-- INSERT ISSUE NUMBER -->
 
 - [ ] My code follows the style guidelines of this project
 - [ ] I have performed a self-review of my own code
+- [ ] All commits in this PR are signed and verified (or have been recreated as signed commits)
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have made corresponding changes to the documentation
 - [ ] My changes generate no new warnings

@@ -230,6 +230,17 @@ Published documentation for the latest release is available on the [Terraform Re
 
 Contributions are welcome! Please see our contributing guidelines.
 
+### Verified Commit Signatures
+
+This repository may enforce branch protection that requires verified commit signatures.
+If a commit is authored by an automation environment without access to your signing key
+(for example, some Copilot coding sessions), GitHub can mark the commit as unverified
+and block merging.
+
+To unblock merges when this rule is enabled, recreate the commits locally using a
+configured signing key and push the signed commits (for example, with signed
+cherry-picks).
+
 ## License
 
 Mozilla Public License 2.0 - see [LICENSE](LICENSE) for details.
