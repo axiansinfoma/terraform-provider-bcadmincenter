@@ -108,8 +108,7 @@ func (s *Service) SetAppInsightsKey(ctx context.Context, applicationFamily, envi
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
 	}
 
 	return nil
@@ -155,8 +154,7 @@ func (s *Service) SetSecurityGroup(ctx context.Context, applicationFamily, envir
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
 	}
 
 	return nil
@@ -173,8 +171,7 @@ func (s *Service) ClearSecurityGroup(ctx context.Context, applicationFamily, env
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
 	}
 
 	return nil
@@ -225,8 +222,7 @@ func (s *Service) SetAccessWithM365Licenses(ctx context.Context, applicationFami
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
 	}
 
 	return nil
@@ -249,8 +245,7 @@ func (s *Service) SetAppUpdateCadence(ctx context.Context, applicationFamily, en
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
 	}
 
 	return nil
@@ -290,9 +285,16 @@ func (s *Service) SetPartnerAccess(ctx context.Context, applicationFamily, envir
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
 	}
 
 	return nil
+}
+
+func readResponseBody(body io.Reader) string {
+	bodyBytes, err := io.ReadAll(body)
+	if err != nil {
+		return fmt.Sprintf("failed to read response body: %v", err)
+	}
+	return string(bodyBytes)
 }

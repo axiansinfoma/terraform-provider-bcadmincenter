@@ -7,9 +7,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
@@ -81,8 +83,7 @@ func (s *Service) Create(ctx context.Context, applicationFamily string, req *Cre
 
 	// The API returns a 202 Accepted with an operation in the response.
 	if resp.StatusCode != http.StatusAccepted {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
 	}
 
 	var operation Operation
@@ -105,8 +106,7 @@ func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName
 
 	// The API returns a 202 Accepted with an operation in the response.
 	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusNoContent {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, readResponseBody(resp.Body))
 	}
 
 	// If 204 No Content, the environment was already deleted or doesn't exist.
@@ -216,22 +216,19 @@ func isEnvironmentNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Check if the error message contains "EnvironmentNotFound".
-	errMsg := err.Error()
-	return contains(errMsg, "EnvironmentNotFound")
-}
 
-// contains checks if a string contains a substring.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexOfSubstring(s, substr) >= 0)
-}
-
-// indexOfSubstring returns the index of the first instance of substr in s, or -1 if substr is not present in s.
-func indexOfSubstring(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
+	var apiErr *client.AdminCenterError
+	if errors.As(err, &apiErr) {
+		return apiErr.Code == "EnvironmentNotFound"
 	}
-	return -1
+
+	return strings.Contains(err.Error(), "EnvironmentNotFound")
+}
+
+func readResponseBody(body io.Reader) string {
+	bodyBytes, err := io.ReadAll(body)
+	if err != nil {
+		return fmt.Sprintf("failed to read response body: %v", err)
+	}
+	return string(bodyBytes)
 }
