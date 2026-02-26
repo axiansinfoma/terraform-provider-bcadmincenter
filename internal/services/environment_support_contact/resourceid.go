@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Michael Villani
+// Copyright (c) 2025 Axians Infoma GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 package environmentsupportcontact
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 )
 
 // BuildEnvironmentSupportContactID creates an ARM-like resource ID for environment support contact.

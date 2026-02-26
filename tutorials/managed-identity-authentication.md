@@ -150,7 +150,7 @@ On the Azure resource, create your Terraform configuration:
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "vllni/bcadmincenter"
+      source  = "axiansinfoma/bcadmincenter"
       version = "~> 1.0"
     }
   }

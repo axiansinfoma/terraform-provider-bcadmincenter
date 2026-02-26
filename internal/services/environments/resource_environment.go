@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Michael Villani
+// Copyright (c) 2025 Axians Infoma GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 package environments
@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 )
 
 // Ensure the implementation satisfies the expected interfaces.

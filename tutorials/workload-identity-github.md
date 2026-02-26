@@ -226,7 +226,7 @@ terraform {
   
   required_providers {
     bcadmincenter = {
-      source  = "vllni/bcadmincenter"
+      source  = "axiansinfoma/bcadmincenter"
       version = "~> 1.0"
     }
   }

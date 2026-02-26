@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Michael Villani
+// Copyright (c) 2025 Axians Infoma GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 package environmentsettings
@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/utils"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 )
 
 // Service handles environment settings operations for the Business Central Admin Center API.

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Michael Villani
+// Copyright (c) 2025 Axians Infoma GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 package client
@@ -15,7 +15,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/constants"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 )
 
 // Client represents a Business Central Admin Center API client.

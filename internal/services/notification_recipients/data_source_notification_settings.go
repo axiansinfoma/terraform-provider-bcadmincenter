@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Michael Villani
+// Copyright (c) 2025 Axians Infoma GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 package notificationrecipients
@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.

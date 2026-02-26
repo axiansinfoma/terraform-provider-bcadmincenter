@@ -171,7 +171,7 @@ resource "bcadmincenter_support_contact" "contacts" {
 
 ## Dependencies
 
-- `github.com/vllni/terraform-provider-bcadmincenter/internal/client` - HTTP client wrapper
+- `github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client` - HTTP client wrapper
 - `github.com/hashicorp/terraform-plugin-framework` - Terraform plugin framework
 
 ## Related Services

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Michael Villani
+// Copyright (c) 2025 Axians Infoma GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 package provider
@@ -16,15 +16,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/client"
-	authorizedentraapps "github.com/vllni/terraform-provider-bcadmincenter/internal/services/authorized_entra_apps"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/available_applications"
-	environmentsettings "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_settings"
-	environmentsupportcontact "github.com/vllni/terraform-provider-bcadmincenter/internal/services/environment_support_contact"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/environments"
-	notificationrecipients "github.com/vllni/terraform-provider-bcadmincenter/internal/services/notification_recipients"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/quotas"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/services/timezones"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	authorizedentraapps "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/authorized_entra_apps"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/available_applications"
+	environmentsettings "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_settings"
+	environmentsupportcontact "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_support_contact"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environments"
+	notificationrecipients "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/notification_recipients"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/quotas"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/timezones"
 )
 
 // Ensure BCAdminCenterProvider satisfies various provider interfaces.

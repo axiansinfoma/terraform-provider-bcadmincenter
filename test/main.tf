@@ -1,11 +1,11 @@
-# Copyright Michael Villani 2025, 2026, 0
+# Copyright Axians Infoma GmbH 2025, 2026, 0
 # SPDX-License-Identifier: MPL-2.0
 
 # Example test configuration
 terraform {
   required_providers {
     bcadmincenter = {
-      source = "vllni/bcadmincenter"
+      source = "axiansinfoma/bcadmincenter"
     }
   }
 }

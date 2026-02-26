@@ -88,8 +88,8 @@ To test the implementation:
 
 2. Install locally for testing:
    ```bash
-   mkdir -p ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64
-   cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64/
+   mkdir -p ~/.terraform.d/plugins/local/axiansinfoma/bcadmincenter/1.0.0/linux_amd64
+   cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/axiansinfoma/bcadmincenter/1.0.0/linux_amd64/
    ```
 
 3. Create a test configuration using the example above

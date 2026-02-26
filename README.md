@@ -54,7 +54,7 @@ The provider supports multiple authentication methods via the Azure SDK:
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "vllni/bcadmincenter"
+      source  = "axiansinfoma/bcadmincenter"
       version = "~> 1.0"
     }
   }
@@ -125,7 +125,7 @@ resource "bc_environment_settings" "sandbox_settings" {
 
 1. Clone the repository:
 ```shell
-git clone https://github.com/vllni/terraform-provider-bcadmincenter
+git clone https://github.com/axiansinfoma/terraform-provider-bcadmincenter
 cd terraform-provider-bcadmincenter
 ```
 
@@ -165,8 +165,8 @@ go build -o terraform-provider-bcadmincenter
 To install locally for testing:
 
 ```shell
-mkdir -p ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64
-cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/vllni/bcadmincenter/1.0.0/linux_amd64/
+mkdir -p ~/.terraform.d/plugins/local/axiansinfoma/bcadmincenter/1.0.0/linux_amd64
+cp terraform-provider-bcadmincenter ~/.terraform.d/plugins/local/axiansinfoma/bcadmincenter/1.0.0/linux_amd64/
 ```
 
 Then use it in your Terraform configuration:
@@ -175,7 +175,7 @@ Then use it in your Terraform configuration:
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "local/vllni/bcadmincenter"
+      source  = "local/axiansinfoma/bcadmincenter"
       version = "1.0.0"
     }
   }
@@ -218,7 +218,7 @@ See the [Documentation Quick Reference](docs/QUICK-REFERENCE.md) for more detail
 
 ## Documentation
 
-Published documentation for the latest release is available on the [Terraform Registry](https://registry.terraform.io/providers/vllni/bcadmincenter/latest/docs).
+Published documentation for the latest release is available on the [Terraform Registry](https://registry.terraform.io/providers/axiansinfoma/bcadmincenter/latest/docs).
 
 **Documentation Development**:
 - Edit templates in `templates/` directory
@@ -237,5 +237,5 @@ Mozilla Public License 2.0 - see [LICENSE](LICENSE) for details.
 ## Support
 
 For issues and questions:
-- [GitHub Issues](https://github.com/vllni/terraform-provider-bcadmincenter/issues)
+- [GitHub Issues](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues)
 - [Business Central Admin Center API Documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api)

@@ -75,7 +75,7 @@ Create a Terraform configuration that uses Azure CLI authentication:
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "vllni/bcadmincenter"
+      source  = "axiansinfoma/bcadmincenter"
       version = "~> 1.0"
     }
   }

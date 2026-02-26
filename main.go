@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Michael Villani
+// Copyright (c) 2025 Axians Infoma GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 package main
@@ -8,8 +8,8 @@ import (
 	"flag"
 	"log"
 
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/vllni/terraform-provider-bcadmincenter/internal/provider"
 )
 
 var (
@@ -28,7 +28,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/vllni/bcadmincenter",
+		Address: "registry.terraform.io/axiansinfoma/bcadmincenter",
 		Debug:   debug,
 	}
 

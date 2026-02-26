@@ -99,7 +99,7 @@ Create a Terraform configuration file with the provider settings:
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "vllni/bcadmincenter"
+      source  = "axiansinfoma/bcadmincenter"
       version = "~> 1.0"
     }
   }
@@ -128,7 +128,7 @@ Then use a simplified provider configuration:
 terraform {
   required_providers {
     bcadmincenter = {
-      source  = "vllni/bcadmincenter"
+      source  = "axiansinfoma/bcadmincenter"
       version = "~> 1.0"
     }
   }

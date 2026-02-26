@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright Michael Villani 2025, 2026, 0
+# Copyright Axians Infoma GmbH 2025, 2026, 0
 # SPDX-License-Identifier: MPL-2.0
 
 
@@ -36,7 +36,7 @@ echo "📝 To enable local testing, add this to $TERRAFORMRC:"
 echo ""
 echo "provider_installation {"
 echo "  dev_overrides {"
-echo "    \"vllni/bcadmincenter\" = \"$(pwd)\""
+echo "    \"axiansinfoma/bcadmincenter\" = \"$(pwd)\""
 echo "  }"
 echo "  direct {}"
 echo "}"
@@ -57,7 +57,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 # BC Admin Center Provider - Development Override
 provider_installation {
   dev_overrides {
-    "vllni/bcadmincenter" = "$(pwd)"
+    "axiansinfoma/bcadmincenter" = "$(pwd)"
   }
   direct {}
 }

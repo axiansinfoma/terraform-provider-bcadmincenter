@@ -30,7 +30,7 @@ This directory contains comprehensive test configurations for all resources and 
    ```hcl
    provider_installation {
      dev_overrides {
-       "vllni/bcadmincenter" = "/workspaces/terraform-provider-bcadmincenter"
+       "axiansinfoma/bcadmincenter" = "/workspaces/terraform-provider-bcadmincenter"
      }
      direct {}
    }
