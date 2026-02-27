@@ -117,12 +117,12 @@ resource "bcadmincenter_notification_recipient" "secondary_admin" {
 
 ### Required
 
-- `email` (String) The email address of the notification recipient. Must be a valid email address.
-- `name` (String) The full name of the notification recipient
+- `email` (String) The email address of the notification recipient. Must be a valid email address. Changing this forces a new Business Central Notification Recipient to be created.
+- `name` (String) The full name of the notification recipient. Changing this forces a new Business Central Notification Recipient to be created.
 
 ### Optional
 
-- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. This allows managing notification recipients in different tenants.
+- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. Changing this forces a new Business Central Notification Recipient to be created.
 
 ### Read-Only
 

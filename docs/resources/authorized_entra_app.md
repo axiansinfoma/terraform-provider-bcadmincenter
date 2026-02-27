@@ -105,11 +105,11 @@ resource "bcadmincenter_authorized_entra_app" "deployment_app" {
 
 ### Required
 
-- `app_id` (String) The application (client) ID of the Microsoft Entra app to authorize.
+- `app_id` (String) The application (client) ID of the Microsoft Entra app to authorize. Changing this forces a new Business Central Authorized Entra App to be created.
 
 ### Optional
 
-- `aad_tenant_id` (String) The Azure AD tenant ID. Defaults to the provider's configured tenant ID.
+- `aad_tenant_id` (String) The Azure AD tenant ID. Defaults to the provider's configured tenant ID. Changing this forces a new Business Central Authorized Entra App to be created.
 
 ### Read-Only
 

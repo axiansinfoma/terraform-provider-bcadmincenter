@@ -93,9 +93,9 @@ resource "bcadmincenter_environment_support_contact" "sandbox" {
 
 ### Required
 
-- `application_family` (String) Family of the environment's application (e.g., 'BusinessCentral')
+- `application_family` (String) The application family of the environment (e.g., 'BusinessCentral'). Changing this forces a new Business Central Environment Support Contact to be created.
 - `email` (String) The email address of the support contact
-- `environment_name` (String) Name of the environment
+- `environment_name` (String) The name of the environment. Changing this forces a new Business Central Environment Support Contact to be created.
 - `name` (String) The name of the support contact (displayed to users)
 
 ### Optional
