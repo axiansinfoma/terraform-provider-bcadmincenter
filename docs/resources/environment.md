@@ -217,8 +217,10 @@ Optional:
 
 Business Central environments can be imported using their ARM-like resource ID:
 
+-> **Note:** The tenant ID `00000000-0000-0000-0000-000000000000` used in the example below is a placeholder. Replace it with your actual Azure AD tenant ID.
+
 ```shell
-terraform import bcadmincenter_environment.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production"
+terraform import bcadmincenter_environment.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production"
 ```
 
 The import ID format is:
