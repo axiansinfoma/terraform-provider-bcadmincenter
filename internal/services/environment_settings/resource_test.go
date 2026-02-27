@@ -44,6 +44,7 @@ func TestEnvironmentSettingsResource_Schema(t *testing.T) {
 
 	// Verify optional settings exist.
 	optionalAttrs := []string{
+		"aad_tenant_id",
 		"update_window_start_time",
 		"update_window_end_time",
 		"update_window_timezone",

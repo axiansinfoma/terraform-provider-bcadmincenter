@@ -15,6 +15,9 @@ resource "bc_admin_center_environment_settings" "production" {
   application_family = "BusinessCentral"
   environment_name   = "production"
 
+  # Optional: specify the Azure AD tenant ID (defaults to the provider's configured tenant_id)
+  # aad_tenant_id = "00000000-0000-0000-0000-000000000000"
+
   # Configure update window (must be at least 6 hours)
   update_window_start_time = "22:00" # 10 PM
   update_window_end_time   = "06:00" # 6 AM
@@ -41,6 +44,9 @@ resource "bc_admin_center_environment" "sandbox" {
 resource "bc_admin_center_environment_settings" "sandbox" {
   application_family = bc_admin_center_environment.sandbox.application_family
   environment_name   = bc_admin_center_environment.sandbox.name
+
+  # Optional: specify the Azure AD tenant ID (defaults to the provider's configured tenant_id)
+  # aad_tenant_id = "00000000-0000-0000-0000-000000000000"
 
   update_window_start_time = "20:00"
   update_window_end_time   = "04:00"

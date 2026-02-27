@@ -21,6 +21,9 @@ resource "bcadmincenter_environment_support_contact" "example" {
   application_family = "BusinessCentral"
   environment_name   = "Production"
 
+  # Optional: specify the Azure AD tenant ID (defaults to the provider's configured tenant_id)
+  # aad_tenant_id = "00000000-0000-0000-0000-000000000000"
+
   name  = "IT Support Team"
   email = "support@example.com"
   url   = "https://support.example.com"

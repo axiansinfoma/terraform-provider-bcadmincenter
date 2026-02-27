@@ -227,7 +227,7 @@ After environment creation, Terraform exports these computed attributes:
 - `web_service_url` - Base URL for web service endpoints
 - `app_insights_key` - Application Insights instrumentation key (marked sensitive)
 - `platform_version` - The platform version running in the environment
-- `aad_tenant_id` - Azure AD tenant ID associated with the environment
+- `aad_tenant_id` - Azure AD tenant ID associated with the environment (optional; if specified, overrides the value read from the API response)
 
 These can be used in outputs or other resources:
 

@@ -163,8 +163,12 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:            true,
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Azure AD tenant ID for the environment.",
+				MarkdownDescription: "The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.",
+				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"timeouts": schema.SingleNestedAttribute{
 				MarkdownDescription: "Timeout configuration for the resource operations.",
