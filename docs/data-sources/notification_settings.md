@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_notification_settings - bcadmincenter"
-subcategory: ""
+subcategory: "Settings"
 description: |-
   Retrieves the complete notification settings for the Business Central tenant, including the Azure AD tenant ID and all configured notification recipients. This data source provides read-only access to the tenant-wide notification configuration.
 ---

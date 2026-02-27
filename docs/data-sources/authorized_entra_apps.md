@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_authorized_entra_apps - bcadmincenter"
-subcategory: ""
+subcategory: "Settings"
 description: |-
   Retrieves a list of all Microsoft Entra apps authorized to call the Business Central Admin Center API.
 ---

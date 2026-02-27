@@ -1,6 +1,6 @@
 ---
 page_title: "Resource bcadmincenter_environment_support_contact - bcadmincenter"
-subcategory: ""
+subcategory: "Environment"
 description: |-
   Manages the support contact information for a Business Central environment. This is the contact information displayed to users in the Help and Support page.
 ---

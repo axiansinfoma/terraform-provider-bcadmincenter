@@ -1,6 +1,6 @@
 ---
 page_title: "Resource bcadmincenter_notification_recipient - bcadmincenter"
-subcategory: ""
+subcategory: "Settings"
 description: |-
   Manages a notification recipient for the Business Central tenant. Notification recipients receive emails about environment lifecycle events such as update availability, successful updates, update failures, and extension validations. Up to 100 notification recipients can be configured per tenant.
 ---

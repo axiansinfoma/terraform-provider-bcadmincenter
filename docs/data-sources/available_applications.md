@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_available_applications - bcadmincenter"
-subcategory: ""
+subcategory: "Environment"
 description: |-
   Retrieves the list of available application families with their countries/regions and rings. Use this data source to discover what values can be used for environment creation.
 ---

@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_quotas - bcadmincenter"
-subcategory: ""
+subcategory: "Settings"
 description: |-
   Retrieves environment quotas and capacity information for the tenant, including production and sandbox environment limits and storage capacity.
 ---
