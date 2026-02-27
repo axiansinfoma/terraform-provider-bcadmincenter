@@ -163,8 +163,12 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:            true,
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Azure AD tenant ID for the environment.",
+				MarkdownDescription: "The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.",
+				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"timeouts": schema.SingleNestedAttribute{
 				MarkdownDescription: "Timeout configuration for the resource operations.",
@@ -218,8 +222,12 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		"type":               plan.Type.ValueString(),
 	})
 
-	// Create environment service.
-	svc := NewService(r.client)
+	// Create environment service, targeting the specified tenant if aad_tenant_id is set.
+	tenantID := r.client.GetTenantID()
+	if !plan.AADTenantID.IsNull() && !plan.AADTenantID.IsUnknown() {
+		tenantID = plan.AADTenantID.ValueString()
+	}
+	svc := NewService(r.client.ForTenant(tenantID))
 
 	// Prepare create request.
 	createReq := &CreateEnvironmentRequest{
@@ -369,8 +377,8 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		"application_family": state.ApplicationFamily.ValueString(),
 	})
 
-	// Create environment service.
-	svc := NewService(r.client)
+	// Create environment service, targeting the tenant from state.
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
 	// Get the environment.
 	env, err := svc.Get(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString())
@@ -414,8 +422,8 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 		"application_family": state.ApplicationFamily.ValueString(),
 	})
 
-	// Create environment service.
-	svc := NewService(r.client)
+	// Create environment service, targeting the tenant from state.
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
 	// Delete the environment.
 	operation, err := svc.Delete(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString())

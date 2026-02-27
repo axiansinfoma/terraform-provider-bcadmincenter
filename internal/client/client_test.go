@@ -418,3 +418,79 @@ func TestClient_ContextCancellation(t *testing.T) {
 		t.Error("Expected error with cancelled context, got nil")
 	}
 }
+
+func TestClient_ForTenant(t *testing.T) {
+	base := &Client{
+		credential: &mockTokenCredential{token: "test-token"},
+		httpClient: &http.Client{},
+		baseURL:    "https://api.example.com",
+		tenantID:   "original-tenant-id",
+		apiVersion: constants.DefaultAPIVersion,
+	}
+
+	t.Run("same tenant returns original client", func(t *testing.T) {
+		result := base.ForTenant("original-tenant-id")
+		if result != base {
+			t.Error("ForTenant() with same tenant ID should return the original client")
+		}
+	})
+
+	t.Run("empty tenant returns original client", func(t *testing.T) {
+		result := base.ForTenant("")
+		if result != base {
+			t.Error("ForTenant() with empty tenant ID should return the original client")
+		}
+	})
+
+	t.Run("different tenant returns new client", func(t *testing.T) {
+		result := base.ForTenant("other-tenant-id")
+		if result == base {
+			t.Error("ForTenant() with different tenant ID should return a new client")
+		}
+		if result.GetTenantID() != "other-tenant-id" {
+			t.Errorf("ForTenant() tenant ID = %s, want other-tenant-id", result.GetTenantID())
+		}
+		if result.baseURL != base.baseURL {
+			t.Errorf("ForTenant() baseURL = %s, want %s", result.baseURL, base.baseURL)
+		}
+		if result.apiVersion != base.apiVersion {
+			t.Errorf("ForTenant() apiVersion = %s, want %s", result.apiVersion, base.apiVersion)
+		}
+		if result.httpClient != base.httpClient {
+			t.Error("ForTenant() should reuse the same HTTP client")
+		}
+	})
+
+	t.Run("per-tenant credential overrides tenant ID in token request", func(t *testing.T) {
+		capturedTenantID := ""
+		capturingCred := &capturingTokenCredential{
+			onGetToken: func(opts policy.TokenRequestOptions) {
+				capturedTenantID = opts.TenantID
+			},
+		}
+		base2 := &Client{
+			credential: capturingCred,
+			httpClient: &http.Client{},
+			baseURL:    "https://api.example.com",
+			tenantID:   "original-tenant",
+			apiVersion: constants.DefaultAPIVersion,
+		}
+		forked := base2.ForTenant("other-tenant")
+		_, _ = forked.GetToken(context.Background())
+		if capturedTenantID != "other-tenant" {
+			t.Errorf("per-tenant credential passed TenantID = %s, want other-tenant", capturedTenantID)
+		}
+	})
+}
+
+// capturingTokenCredential captures TokenRequestOptions for test assertions.
+type capturingTokenCredential struct {
+	onGetToken func(policy.TokenRequestOptions)
+}
+
+func (c *capturingTokenCredential) GetToken(_ context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	if c.onGetToken != nil {
+		c.onGetToken(opts)
+	}
+	return azcore.AccessToken{Token: "captured-token"}, nil
+}

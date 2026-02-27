@@ -23,6 +23,7 @@ Manages Business Central environment settings including update windows, Applicat
 - **M365 License Access:** Requires environment version 21.1 or later.
 - **Partner Access:** Only internal global administrators can modify partner access settings.
 - **Settings Persistence:** Deleting this resource from Terraform state does not reset settings to defaults; they remain as configured.
+- **Tenant Selection:** The `aad_tenant_id` argument selects the Azure AD tenant. If omitted, it defaults to the provider's configured `tenant_id`.
 
 ## Example Usage
 

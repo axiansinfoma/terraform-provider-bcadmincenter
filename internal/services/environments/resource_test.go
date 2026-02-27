@@ -44,7 +44,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 	}
 
 	// Verify optional attributes exist.
-	optionalAttrs := []string{"application_family", "ring_name", "application_version", "azure_region"}
+	optionalAttrs := []string{"application_family", "ring_name", "application_version", "azure_region", "aad_tenant_id"}
 	for _, attr := range optionalAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
 			t.Errorf("Schema missing optional attribute: %s", attr)
@@ -52,7 +52,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 	}
 
 	// Verify computed attributes exist.
-	computedAttrs := []string{"id", "status", "web_client_login_url", "web_service_url", "app_insights_key", "platform_version", "aad_tenant_id"}
+	computedAttrs := []string{"id", "status", "web_client_login_url", "web_service_url", "app_insights_key", "platform_version"}
 	for _, attr := range computedAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
 			t.Errorf("Schema missing computed attribute: %s", attr)

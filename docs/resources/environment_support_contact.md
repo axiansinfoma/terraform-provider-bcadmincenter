@@ -17,6 +17,8 @@ The support contact information is displayed to users in the **Help and Support*
 
 -> **Note:** The support contact is environment-specific. Each environment can have its own support contact configuration.
 
+-> **Note:** Use the `aad_tenant_id` argument to specify which Azure AD tenant this resource belongs to. If omitted, it defaults to the provider's configured `tenant_id`.
+
 ## Example Usage
 
 ### Basic Support Contact
@@ -44,6 +46,9 @@ provider "bcadmincenter" {
 resource "bcadmincenter_environment_support_contact" "example" {
   application_family = "BusinessCentral"
   environment_name   = "Production"
+
+  # Optional: specify the Azure AD tenant ID (defaults to the provider's configured tenant_id)
+  # aad_tenant_id = "00000000-0000-0000-0000-000000000000"
 
   name  = "IT Support Team"
   email = "support@example.com"
@@ -100,6 +105,7 @@ resource "bcadmincenter_environment_support_contact" "sandbox" {
 
 ### Optional
 
+- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.
 - `url` (String) A URL for additional support information such as a support website or portal
 
 ### Read-Only

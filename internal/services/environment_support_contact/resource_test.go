@@ -43,7 +43,7 @@ func TestEnvironmentSupportContactResource_Schema(t *testing.T) {
 	}
 
 	// Verify optional attributes exist.
-	optionalAttrs := []string{"url"}
+	optionalAttrs := []string{"url", "aad_tenant_id"}
 	for _, attr := range optionalAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
 			t.Errorf("Schema missing optional attribute: %s", attr)

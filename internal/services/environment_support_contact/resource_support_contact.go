@@ -36,6 +36,7 @@ type EnvironmentSupportContactResource struct {
 // EnvironmentSupportContactResourceModel maps the resource schema data.
 type EnvironmentSupportContactResourceModel struct {
 	ID                types.String `tfsdk:"id"`
+	AADTenantID       types.String `tfsdk:"aad_tenant_id"`
 	ApplicationFamily types.String `tfsdk:"application_family"`
 	EnvironmentName   types.String `tfsdk:"environment_name"`
 	Name              types.String `tfsdk:"name"`
@@ -55,6 +56,14 @@ func (r *EnvironmentSupportContactResource) Schema(_ context.Context, _ resource
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/supportContact)",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"aad_tenant_id": schema.StringAttribute{
+				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.",
+				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -122,14 +131,18 @@ func (r *EnvironmentSupportContactResource) Create(ctx context.Context, req reso
 
 	// Set the ID to the ARM-like format.
 	tenantID := r.client.GetTenantID()
+	if !plan.AADTenantID.IsNull() && !plan.AADTenantID.IsUnknown() {
+		tenantID = plan.AADTenantID.ValueString()
+	}
+	plan.AADTenantID = types.StringValue(tenantID)
 	plan.ID = types.StringValue(BuildEnvironmentSupportContactID(
 		tenantID,
 		plan.ApplicationFamily.ValueString(),
 		plan.EnvironmentName.ValueString(),
 	))
 
-	// Create the support contact.
-	svc := NewService(r.client)
+	// Create the support contact using the tenant-specific client.
+	svc := NewService(r.client.ForTenant(tenantID))
 	contact := &SupportContact{
 		Name:  plan.Name.ValueString(),
 		Email: plan.Email.ValueString(),
@@ -164,7 +177,7 @@ func (r *EnvironmentSupportContactResource) Read(ctx context.Context, req resour
 		return
 	}
 
-	svc := NewService(r.client)
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 	contact, err := svc.Get(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -199,8 +212,15 @@ func (r *EnvironmentSupportContactResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	// Update the support contact.
-	svc := NewService(r.client)
+	var state EnvironmentSupportContactResourceModel
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Update the support contact using the tenant-specific client.
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 	contact := &SupportContact{
 		Name:  plan.Name.ValueString(),
 		Email: plan.Email.ValueString(),
@@ -265,9 +285,7 @@ func (r *EnvironmentSupportContactResource) ImportState(ctx context.Context, req
 
 	// Set the attributes.
 	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
+	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
 	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
 	resp.State.SetAttribute(ctx, path.Root("environment_name"), environmentName)
-
-	// Note: We don't set aad_tenant_id as it's not part of the resource schema.
-	_ = tenantID
 }

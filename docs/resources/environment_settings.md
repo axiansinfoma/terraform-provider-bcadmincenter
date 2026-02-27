@@ -23,6 +23,7 @@ Manages Business Central environment settings including update windows, Applicat
 - **M365 License Access:** Requires environment version 21.1 or later.
 - **Partner Access:** Only internal global administrators can modify partner access settings.
 - **Settings Persistence:** Deleting this resource from Terraform state does not reset settings to defaults; they remain as configured.
+- **Tenant Selection:** The `aad_tenant_id` argument selects the Azure AD tenant. If omitted, it defaults to the provider's configured `tenant_id`.
 
 ## Example Usage
 
@@ -45,6 +46,9 @@ terraform {
 resource "bc_admin_center_environment_settings" "production" {
   application_family = "BusinessCentral"
   environment_name   = "production"
+
+  # Optional: specify the Azure AD tenant ID (defaults to the provider's configured tenant_id)
+  # aad_tenant_id = "00000000-0000-0000-0000-000000000000"
 
   # Configure update window (must be at least 6 hours)
   update_window_start_time = "22:00" # 10 PM
@@ -72,6 +76,9 @@ resource "bc_admin_center_environment" "sandbox" {
 resource "bc_admin_center_environment_settings" "sandbox" {
   application_family = bc_admin_center_environment.sandbox.application_family
   environment_name   = bc_admin_center_environment.sandbox.name
+
+  # Optional: specify the Azure AD tenant ID (defaults to the provider's configured tenant_id)
+  # aad_tenant_id = "00000000-0000-0000-0000-000000000000"
 
   update_window_start_time = "20:00"
   update_window_end_time   = "04:00"
@@ -140,6 +147,7 @@ resource "bc_admin_center_environment_settings" "minimal" {
 
 ### Optional
 
+- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.
 - `access_with_m365_licenses` (Boolean) Whether users can access the environment with Microsoft 365 licenses (requires environment version 21.1+). Note: This setting may not be available on all environments.
 - `allowed_partner_tenant_ids` (List of String) List of partner tenant IDs allowed to access the environment. Only used when partner_access_status is 'AllowSelectedPartnerTenants'
 - `app_insights_key` (String, Sensitive) Application Insights connection string or instrumentation key for environment telemetry. Warning: Setting this triggers an automatic environment restart.

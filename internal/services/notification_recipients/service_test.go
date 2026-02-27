@@ -95,7 +95,7 @@ func TestService_List(t *testing.T) {
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
-			result, err := svc.List(context.Background(), "00000000-0000-0000-0000-000000000000")
+			result, err := svc.List(context.Background())
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
@@ -175,7 +175,7 @@ func TestService_Get(t *testing.T) {
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
-			result, err := svc.Get(context.Background(), "00000000-0000-0000-0000-000000000000", tt.recipientID)
+			result, err := svc.Get(context.Background(), tt.recipientID)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
@@ -263,7 +263,7 @@ func TestService_Create(t *testing.T) {
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
-			result, err := svc.Create(context.Background(), "00000000-0000-0000-0000-000000000000", tt.email, tt.recipientName)
+			result, err := svc.Create(context.Background(), tt.email, tt.recipientName)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
@@ -333,7 +333,7 @@ func TestService_Delete(t *testing.T) {
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
-			err := svc.Delete(context.Background(), "00000000-0000-0000-0000-000000000000", tt.recipientID)
+			err := svc.Delete(context.Background(), tt.recipientID)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
@@ -414,7 +414,7 @@ func TestService_GetNotificationSettings(t *testing.T) {
 			c.SetHTTPClient(&http.Client{})
 
 			svc := NewService(c)
-			result, err := svc.GetNotificationSettings(context.Background(), "00000000-0000-0000-0000-000000000000")
+			result, err := svc.GetNotificationSettings(context.Background())
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)

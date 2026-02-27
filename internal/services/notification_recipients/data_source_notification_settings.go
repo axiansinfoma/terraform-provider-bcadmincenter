@@ -106,9 +106,9 @@ func (d *NotificationSettingsDataSource) Read(ctx context.Context, req datasourc
 		tenantID = config.AADTenantID.ValueString()
 	}
 
-	// Get notification settings from API.
-	svc := NewService(d.client)
-	settings, err := svc.GetNotificationSettings(ctx, tenantID)
+	// Get notification settings from API using the tenant-specific client.
+	svc := NewService(d.client.ForTenant(tenantID))
+	settings, err := svc.GetNotificationSettings(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Notification Settings",

@@ -189,6 +189,7 @@ output "environment_urls" {
 
 ### Optional
 
+- `aad_tenant_id` (String) The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.
 - `application_family` (String) The application family for the environment. Defaults to 'BusinessCentral'. Changing this forces a new Business Central Environment to be created.
 - `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.
 - `ring_name` (String) The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Changing this forces a new Business Central Environment to be created.
@@ -196,7 +197,6 @@ output "environment_urls" {
 
 ### Read-Only
 
-- `aad_tenant_id` (String) The Azure AD tenant ID for the environment.
 - `app_insights_key` (String, Sensitive) The Application Insights instrumentation key for the environment.
 - `application_version` (String) The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set. Version updates are managed through the Business Central Admin Center.
 - `id` (String) The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName})
@@ -312,7 +312,7 @@ After environment creation, Terraform exports these computed attributes:
 - `web_service_url` - Base URL for web service endpoints
 - `app_insights_key` - Application Insights instrumentation key (marked sensitive)
 - `platform_version` - The platform version running in the environment
-- `aad_tenant_id` - Azure AD tenant ID associated with the environment
+- `aad_tenant_id` - Azure AD tenant ID associated with the environment (optional; if specified, overrides the value read from the API response)
 
 These can be used in outputs or other resources:
 

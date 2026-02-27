@@ -174,15 +174,12 @@ func newMockServer(t *testing.T) *httptest.Server {
 			handleTimezones(w)
 		case r.URL.Path == apiBase+"applications/BusinessCentral/environments":
 			handleEnvironments(w, r)
-		case strings.HasPrefix(r.URL.Path, apiBase+"applications/") &&
-			strings.HasSuffix(r.URL.Path, "/settings/notification/recipients"):
+		case r.URL.Path == apiBase+"settings/notification/recipients":
 			handleNotificationRecipients(w, r)
-		case strings.HasPrefix(r.URL.Path, apiBase+"applications/") &&
-			strings.Contains(r.URL.Path, "/settings/notification/recipients/"):
-			// Individual recipient operations (GET by ID or DELETE)
+		case strings.HasPrefix(r.URL.Path, apiBase+"settings/notification/recipients/"):
+			// Individual recipient operations (DELETE by ID)
 			handleNotificationRecipients(w, r)
-		case strings.HasPrefix(r.URL.Path, apiBase+"applications/") &&
-			strings.HasSuffix(r.URL.Path, "/settings/notification"):
+		case r.URL.Path == apiBase+"settings/notification":
 			handleNotificationSettings(w)
 		default:
 			t.Logf("Mock server: unhandled path %s %s", r.Method, r.URL.Path)

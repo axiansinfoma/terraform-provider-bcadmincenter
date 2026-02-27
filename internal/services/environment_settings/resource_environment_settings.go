@@ -39,6 +39,7 @@ type EnvironmentSettingsResource struct {
 // EnvironmentSettingsResourceModel maps the resource schema data.
 type EnvironmentSettingsResourceModel struct {
 	ID                      types.String `tfsdk:"id"`
+	AADTenantID             types.String `tfsdk:"aad_tenant_id"`
 	ApplicationFamily       types.String `tfsdk:"application_family"`
 	EnvironmentName         types.String `tfsdk:"environment_name"`
 	UpdateWindowStartTime   types.String `tfsdk:"update_window_start_time"`
@@ -64,6 +65,14 @@ func (r *EnvironmentSettingsResource) Schema(_ context.Context, _ resource.Schem
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings)",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"aad_tenant_id": schema.StringAttribute{
+				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.",
+				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -173,14 +182,18 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 
 	// Set the ID to the ARM-like format.
 	tenantID := r.client.GetTenantID()
+	if !plan.AADTenantID.IsNull() && !plan.AADTenantID.IsUnknown() {
+		tenantID = plan.AADTenantID.ValueString()
+	}
+	plan.AADTenantID = types.StringValue(tenantID)
 	plan.ID = types.StringValue(BuildEnvironmentSettingsID(
 		tenantID,
 		plan.ApplicationFamily.ValueString(),
 		plan.EnvironmentName.ValueString(),
 	))
 
-	// Create service.
-	svc := NewService(r.client)
+	// Create service using the tenant-specific client so API calls target the correct tenant.
+	svc := NewService(r.client.ForTenant(tenantID))
 
 	// Apply update window settings if provided.
 	if !plan.UpdateWindowStartTime.IsNull() || !plan.UpdateWindowEndTime.IsNull() || !plan.UpdateWindowTimeZone.IsNull() {
@@ -262,7 +275,7 @@ func (r *EnvironmentSettingsResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	svc := NewService(r.client)
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
 	// Read update settings.
 	updateSettings, err := svc.GetUpdateSettings(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
@@ -342,7 +355,7 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	svc := NewService(r.client)
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
 	// Update window settings if changed.
 	if !plan.UpdateWindowStartTime.Equal(state.UpdateWindowStartTime) ||
@@ -453,11 +466,21 @@ func (r *EnvironmentSettingsResource) Delete(ctx context.Context, req resource.D
 
 // ImportState imports the resource state.
 func (r *EnvironmentSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import using format: applicationFamily/environmentName.
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	// Parse the ARM-like ID.
+	tenantID, applicationFamily, environmentName, err := ParseEnvironmentSettingsID(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected ARM-like resource ID in format '/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/settings', got: %s\nError: %s",
+				req.ID, err.Error()),
+		)
+		return
+	}
 
-	// Parse the ID to set application_family and environment_name.
-	// This will be handled in the Read operation.
+	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
+	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
+	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
+	resp.State.SetAttribute(ctx, path.Root("environment_name"), environmentName)
 }
 
 // Helper functions.
