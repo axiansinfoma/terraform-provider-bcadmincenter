@@ -111,7 +111,7 @@ resource "bcadmincenter_environment_support_contact" "sandbox" {
 Environment support contact resources can be imported using their ARM-like resource ID:
 
 ```shell
-terraform import bcadmincenter_environment_support_contact.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/Production/supportContact"
+terraform import bcadmincenter_environment_support_contact.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/Production/supportContact"
 ```
 
 The import ID format is:

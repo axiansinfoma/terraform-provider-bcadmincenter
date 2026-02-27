@@ -133,7 +133,7 @@ resource "bcadmincenter_notification_recipient" "secondary_admin" {
 Notification recipient resources can be imported using their ARM-like resource ID:
 
 ```shell
-terraform import bcadmincenter_notification_recipient.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/550e8400-e29b-41d4-a716-446655440000"
+terraform import bcadmincenter_notification_recipient.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/550e8400-e29b-41d4-a716-446655440000"
 ```
 
 The import ID format is:
