@@ -192,8 +192,8 @@ func (r *EnvironmentSettingsResource) Create(ctx context.Context, req resource.C
 		plan.EnvironmentName.ValueString(),
 	))
 
-	// Create service.
-	svc := NewService(r.client)
+	// Create service using the tenant-specific client so API calls target the correct tenant.
+	svc := NewService(r.client.ForTenant(tenantID))
 
 	// Apply update window settings if provided.
 	if !plan.UpdateWindowStartTime.IsNull() || !plan.UpdateWindowEndTime.IsNull() || !plan.UpdateWindowTimeZone.IsNull() {
@@ -275,7 +275,7 @@ func (r *EnvironmentSettingsResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	svc := NewService(r.client)
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
 	// Read update settings.
 	updateSettings, err := svc.GetUpdateSettings(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
@@ -355,7 +355,7 @@ func (r *EnvironmentSettingsResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	svc := NewService(r.client)
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
 	// Update window settings if changed.
 	if !plan.UpdateWindowStartTime.Equal(state.UpdateWindowStartTime) ||

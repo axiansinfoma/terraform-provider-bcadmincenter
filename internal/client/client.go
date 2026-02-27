@@ -88,7 +88,9 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 			config.TenantID,
 			config.ClientID,
 			config.ClientSecret,
-			nil,
+			&azidentity.ClientSecretCredentialOptions{
+				AdditionallyAllowedTenants: []string{"*"},
+			},
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create client secret credential: %w", err)
@@ -97,7 +99,8 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 		// Otherwise, use DefaultAzureCredential for other auth methods.
 		// Pass the tenant ID to ensure it's used for Azure CLI, Azure Developer CLI, and workload identity.
 		credential, err = azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{
-			TenantID: config.TenantID,
+			TenantID:                   config.TenantID,
+			AdditionallyAllowedTenants: []string{"*"},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create default credential: %w", err)
@@ -229,4 +232,35 @@ func (c *Client) SetHTTPClient(httpClient *http.Client) {
 // GetTenantID returns the configured tenant ID.
 func (c *Client) GetTenantID() string {
 	return c.tenantID
+}
+
+// ForTenant returns a new Client that authenticates against the specified tenant.
+// When aad_tenant_id is set to a tenant other than the provider's configured tenant_id,
+// use this method to ensure API calls are directed to the correct tenant.
+// The underlying credential must support multi-tenant access (AdditionallyAllowedTenants).
+func (c *Client) ForTenant(tenantID string) *Client {
+	if tenantID == "" || tenantID == c.tenantID {
+		return c
+	}
+	return &Client{
+		credential: &tenantOverrideCredential{
+			base:     c.credential,
+			tenantID: tenantID,
+		},
+		httpClient: c.httpClient,
+		baseURL:    c.baseURL,
+		tenantID:   tenantID,
+		apiVersion: c.apiVersion,
+	}
+}
+
+// tenantOverrideCredential wraps an azcore.TokenCredential to request tokens for a specific tenant.
+type tenantOverrideCredential struct {
+	base     azcore.TokenCredential
+	tenantID string
+}
+
+func (t *tenantOverrideCredential) GetToken(ctx context.Context, options policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	options.TenantID = t.tenantID
+	return t.base.GetToken(ctx, options)
 }

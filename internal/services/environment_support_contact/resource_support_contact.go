@@ -141,8 +141,8 @@ func (r *EnvironmentSupportContactResource) Create(ctx context.Context, req reso
 		plan.EnvironmentName.ValueString(),
 	))
 
-	// Create the support contact.
-	svc := NewService(r.client)
+	// Create the support contact using the tenant-specific client.
+	svc := NewService(r.client.ForTenant(tenantID))
 	contact := &SupportContact{
 		Name:  plan.Name.ValueString(),
 		Email: plan.Email.ValueString(),
@@ -177,7 +177,7 @@ func (r *EnvironmentSupportContactResource) Read(ctx context.Context, req resour
 		return
 	}
 
-	svc := NewService(r.client)
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 	contact, err := svc.Get(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -212,8 +212,15 @@ func (r *EnvironmentSupportContactResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	// Update the support contact.
-	svc := NewService(r.client)
+	var state EnvironmentSupportContactResourceModel
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Update the support contact using the tenant-specific client.
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 	contact := &SupportContact{
 		Name:  plan.Name.ValueString(),
 		Email: plan.Email.ValueString(),
