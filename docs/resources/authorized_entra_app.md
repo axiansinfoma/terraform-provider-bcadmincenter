@@ -1,6 +1,6 @@
 ---
 page_title: "Resource bcadmincenter_authorized_entra_app - bcadmincenter"
-subcategory: ""
+subcategory: "Settings"
 description: |-
   Manages authorization of a Microsoft Entra app to call the Business Central Admin Center API. Note: This does not grant admin consent or assign permission sets in environments.
 ---

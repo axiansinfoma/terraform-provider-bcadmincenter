@@ -1,6 +1,6 @@
 ---
 page_title: "Resource bcadmincenter_environment - bcadmincenter"
-subcategory: ""
+subcategory: "Environment"
 description: |-
   Manages a Business Central environment in the Admin Center.
   This resource creates and manages Business Central environments (Production or Sandbox). Environment creation is an asynchronous operation that can take several minutes to complete.

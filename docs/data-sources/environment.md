@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_environment - bcadmincenter"
-subcategory: ""
+subcategory: "Environment"
 description: |-
   Retrieves information about a specific Business Central environment.
 ---

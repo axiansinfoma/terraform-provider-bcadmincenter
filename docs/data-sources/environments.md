@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_environments - bcadmincenter"
-subcategory: ""
+subcategory: "Environment"
 description: |-
   Retrieves a list of all Business Central environments for a given application family.
 ---

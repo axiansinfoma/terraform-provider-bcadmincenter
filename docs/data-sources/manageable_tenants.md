@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_manageable_tenants - bcadmincenter"
-subcategory: ""
+subcategory: "Settings"
 description: |-
   Retrieves a list of Microsoft Entra tenants that the authenticating app can manage. Note: This data source can only be used when authenticated as an app (service principal), not with user authentication.
 ---

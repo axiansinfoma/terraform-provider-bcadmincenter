@@ -1,6 +1,6 @@
 ---
 page_title: "Resource bcadmincenter_environment_settings - bcadmincenter"
-subcategory: ""
+subcategory: "Environment"
 description: |-
   Manages Business Central environment settings including update windows, telemetry, security groups, and access controls.
 ---

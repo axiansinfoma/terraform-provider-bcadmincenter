@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_timezones - bcadmincenter"
-subcategory: ""
+subcategory: "Settings"
 description: |-
   Retrieves the list of valid time zone identifiers that can be used for environment update window settings.
 ---

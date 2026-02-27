@@ -1,6 +1,6 @@
 ---
 page_title: "Data Source bcadmincenter_application_family - bcadmincenter"
-subcategory: ""
+subcategory: "Environment"
 description: |-
   Retrieves information about a specific application family including available countries/regions and rings. Use this data source to get detailed information for a single application family.
 ---
