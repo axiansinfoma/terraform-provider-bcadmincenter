@@ -29,18 +29,9 @@ The Business Central Admin Center provider enables Infrastructure as Code (IaC) 
 
 ## Authentication
 
-The provider supports multiple authentication methods via the Azure SDK for Go, following the same patterns as the AzureRM provider:
+The provider supports multiple authentication methods via the Azure SDK for Go, following the same patterns as the AzureRM provider.
 
-### Supported Authentication Methods
-
-1. **[Service Principal with Client Secret](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/service-principal-authentication.md)** - For automated scenarios
-2. **[Workload Identity Federation](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-github.md)** - Recommended for CI/CD (authenticates via OIDC against an Azure AD app registration with federated credentials)
-3. **Service Principal with Certificate** - For enhanced security
-4. **[Managed Identity](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/managed-identity-authentication.md)** - For Azure-hosted environments (VMs, Container Instances, App Service)
-5. **[Azure CLI Authentication](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/azure-cli-authentication.md)** - For local development
-6. **Device Code Flow** - For interactive scenarios
-
--> **Detailed Setup Guides**: For comprehensive step-by-step tutorials on setting up each authentication method, see the [Authentication Tutorials](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/tree/main/tutorials) in the GitHub repository.
+-> **Step-by-step guides**: For comprehensive tutorials on setting up each authentication method, see the [Authentication Tutorials](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/tree/main/tutorials).
 
 ### Required Permissions
 
@@ -50,46 +41,35 @@ To use this provider, you need:
 - Membership in the **AdminAgents** group for delegated admin access to Business Central tenants
 - Appropriate Azure AD tenant access
 
-### Setting Up Authentication
+### Setting Up an Azure AD Application
 
-#### Azure AD Application Registration
+Before authenticating, register an application in Azure AD and grant it the required permissions:
 
-1. Register an application in Azure AD:
-   ```bash
-   az ad app create --display-name "Terraform BC Admin Center"
-   ```
+```bash
+# 1. Create the application
+APP_ID=$(az ad app create --display-name "Terraform BC Admin Center" --query appId --output tsv)
 
-2. Create a service principal:
-   ```bash
-   az ad sp create --id <application-id>
-   ```
+# 2. Create a service principal
+az ad sp create --id $APP_ID
 
-3. Grant the required API permissions:
-   ```bash
-   # Add the AdminCenter.ReadWrite.All permission
-   az ad app permission add --id <application-id> \
-     --api 996def3d-b36c-4153-8607-a6fd3c01b89f \
-     --api-permissions 2e3cf0a5-be71-42b6-8b82-6f50da52005d=Role
-   
-   # Grant admin consent
-   az ad app permission grant --id <application-id> \
-     --api 996def3d-b36c-4153-8607-a6fd3c01b89f
-   ```
+# 3. Grant AdminCenter.ReadWrite.All permission and consent
+BC_API="996def3d-b36c-4153-8607-a6fd3c01b89f"
+az ad app permission add --id $APP_ID \
+  --api $BC_API \
+  --api-permissions 2e3cf0a5-be71-42b6-8b82-6f50da52005d=Role
+az ad app permission admin-consent --id $APP_ID
+```
 
-4. Create a client secret:
-   ```bash
-   az ad app credential reset --id <application-id>
-   ```
-
-5. Add the service principal to the AdminAgents group in your Business Central Admin Center
-
-## Example Usage
+Then add the service principal to the **AdminAgents** group in the [Business Central Admin Center](https://businesscentral.dynamics.com/admin).
 
 ### Service Principal with Client Secret
 
 ```terraform
 # Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
+
+# Service Principal with Client Secret authentication.
+# Recommended for automated pipelines where Azure CLI or workload identity are not available.
 
 terraform {
   required_providers {
@@ -99,179 +79,144 @@ terraform {
   }
 }
 
-# Example 1: Service Principal with Client Secret (explicit configuration)
 provider "bcadmincenter" {
   client_id     = "00000000-0000-0000-0000-000000000000"
   client_secret = "your-client-secret"
   tenant_id     = "00000000-0000-0000-0000-000000000000"
-
-  # Optional: Override default settings
-  environment = "public" # public, usgovernment, china
 }
-
-# Example 2: Using environment variables for authentication
-# The provider automatically reads from these environment variables if not set in configuration:
-# - AZURE_CLIENT_ID       -> provider.client_id
-# - AZURE_CLIENT_SECRET   -> provider.client_secret
-# - AZURE_TENANT_ID       -> provider.tenant_id
-# - AZURE_ENVIRONMENT     -> provider.environment
-#
-# Export the variables in your shell:
-#   export AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
-#   export AZURE_CLIENT_SECRET="your-client-secret"
-#   export AZURE_TENANT_ID="00000000-0000-0000-0000-000000000000"
-#   export AZURE_ENVIRONMENT="public"  # optional, defaults to "public"
-#
-# Then use an empty provider block:
-# provider "bcadmincenter" {
-#   # All configuration will be automatically picked up from environment variables
-# }
-
-# Example 3: Mixed configuration (provider config takes precedence)
-# You can mix environment variables and explicit configuration.
-# Values set in the provider block always take precedence over environment variables.
-#
-# export AZURE_TENANT_ID="00000000-0000-0000-0000-000000000001"
-# export AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000002"
-# export AZURE_CLIENT_SECRET="env-secret"
-#
-# provider "bcadmincenter" {
-#   tenant_id = "00000000-0000-0000-0000-000000000003"  # This overrides AZURE_TENANT_ID
-#   # client_id and client_secret will be read from environment variables
-# }
-
-# Example 4: Azure CLI Authentication (for local development)
-# When client_id and client_secret are not provided, the provider uses DefaultAzureCredential
-# which tries multiple authentication methods in this order:
-# 1. Environment variables (AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID)
-# 2. Workload Identity (if running in Azure Kubernetes Service)
-# 3. Managed Identity (if running on Azure VM/Container/App Service)
-# 4. Azure CLI (az login)
-# 5. Azure Developer CLI (azd auth login)
-#
-# For local development with Azure CLI:
-#   az login --tenant 00000000-0000-0000-0000-000000000000
-#
-# provider "bcadmincenter" {
-#   tenant_id = "00000000-0000-0000-0000-000000000000"
-#   # Authentication will be obtained from Azure CLI
-# }
-
-# Example 5: Azure Workload Identity (Recommended for CI/CD in Kubernetes)
-# When running in a Kubernetes cluster with Azure Workload Identity enabled,
-# the following environment variables are automatically set by the workload identity webhook:
-# - AZURE_CLIENT_ID
-# - AZURE_TENANT_ID
-# - AZURE_FEDERATED_TOKEN_FILE
-# - AZURE_AUTHORITY_HOST
-#
-# The provider automatically detects and uses these credentials via DefaultAzureCredential.
-# provider "bcadmincenter" {
-#   # Provider automatically detects and uses workload identity credentials from environment
-# }
-
-# Example 6: Azure Managed Identity (for Azure VMs, Container Instances, App Service)
-# When running on Azure infrastructure with managed identity enabled,
-# DefaultAzureCredential automatically detects and uses the managed identity.
-#
-# provider "bcadmincenter" {
-#   tenant_id = "00000000-0000-0000-0000-000000000000"
-#   # Authentication will use the system-assigned or user-assigned managed identity
-# }
 ```
 
-### Using Environment Variables
+### Environment Variables
 
-The provider supports the following environment variables (following Azure conventions):
+Set credentials as environment variables and leave the provider block empty:
 
 ```bash
 export AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
-export AZURE_CLIENT_SECRET="client-secret-value"
+export AZURE_CLIENT_SECRET="your-client-secret"
 export AZURE_TENANT_ID="00000000-0000-0000-0000-000000000000"
 ```
 
-When these are set, you can use a simplified provider configuration:
-
 ```terraform
+# Copyright (c) 2025 Axians Infoma GmbH
+# SPDX-License-Identifier: MPL-2.0
+
+# Authentication via environment variables.
+# Set the following variables in your shell before running Terraform:
+#
+#   export AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
+#   export AZURE_CLIENT_SECRET="your-client-secret"
+#   export AZURE_TENANT_ID="00000000-0000-0000-0000-000000000000"
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "axiansinfoma/bcadmincenter"
+    }
+  }
+}
+
 provider "bcadmincenter" {
-  # Authentication will use environment variables
+  # All configuration is picked up automatically from the environment variables above.
 }
 ```
 
-### Azure CLI Authentication (Local Development)
+### Azure CLI (Local Development)
 
-For local development, you can authenticate using the Azure CLI:
+Authenticate with `az login` and configure the provider to use the cached credentials:
 
 ```bash
-az login
+az login --tenant 00000000-0000-0000-0000-000000000000
 ```
-
-Then use the provider without explicit credentials:
 
 ```terraform
+# Copyright (c) 2025 Axians Infoma GmbH
+# SPDX-License-Identifier: MPL-2.0
+
+# Azure CLI authentication – recommended for local development.
+# Log in before running Terraform:
+#
+#   az login --tenant 00000000-0000-0000-0000-000000000000
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "axiansinfoma/bcadmincenter"
+    }
+  }
+}
+
 provider "bcadmincenter" {
   tenant_id = "00000000-0000-0000-0000-000000000000"
-  # Client credentials will be obtained from Azure CLI
+  use_cli   = true
 }
 ```
+
+See the full [Azure CLI authentication tutorial](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/azure-cli-authentication.md) for complete setup instructions.
 
 ### Managed Identity (Azure-Hosted)
 
-When running on Azure compute resources with managed identity enabled:
+When Terraform runs on Azure compute (VM, Container Instance, App Service) with a managed identity:
 
 ```terraform
+# Copyright (c) 2025 Axians Infoma GmbH
+# SPDX-License-Identifier: MPL-2.0
+
+# Managed Identity authentication – for Terraform running on Azure compute
+# (VMs, Container Instances, App Service) with a system-assigned or
+# user-assigned managed identity enabled.
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "axiansinfoma/bcadmincenter"
+    }
+  }
+}
+
 provider "bcadmincenter" {
-  use_msi   = true
   tenant_id = "00000000-0000-0000-0000-000000000000"
+  use_msi   = true
+
+  # Uncomment to use a specific user-assigned managed identity:
+  # client_id = "00000000-0000-0000-0000-000000000000"
 }
 ```
 
-### Workload Identity (Kubernetes/CI-CD)
+See the full [Managed Identity tutorial](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/managed-identity-authentication.md).
 
-For Kubernetes workloads using Azure Workload Identity:
+### Workload Identity (CI/CD)
+
+The recommended method for GitHub Actions, Azure DevOps, and Kubernetes workloads:
 
 ```terraform
+# Copyright (c) 2025 Axians Infoma GmbH
+# SPDX-License-Identifier: MPL-2.0
+
+# Workload Identity (OIDC) authentication – recommended for CI/CD pipelines
+# on GitHub Actions, Azure DevOps, and Kubernetes with Azure Workload Identity.
+#
+# The following environment variables must be set by your CI/CD platform:
+#   AZURE_CLIENT_ID            – application (client) ID
+#   AZURE_TENANT_ID            – Azure AD tenant ID
+#   AZURE_FEDERATED_TOKEN_FILE – path to the OIDC token file
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "axiansinfoma/bcadmincenter"
+    }
+  }
+}
+
 provider "bcadmincenter" {
-  use_oidc  = true
   tenant_id = "00000000-0000-0000-0000-000000000000"
   client_id = "00000000-0000-0000-0000-000000000000"
+  use_oidc  = true
 }
 ```
 
-Environment variables for workload identity:
-- `AZURE_FEDERATED_TOKEN_FILE` - Path to the federated token file
-- `AZURE_AUTHORITY_HOST` - Azure Active Directory authority host
-- `AZURE_CLIENT_ID` - Client ID of the user-assigned managed identity
-
-## Multi-Tenant Scenarios
-
-If you need to manage environments across multiple Business Central tenants, use provider aliases:
-
-```terraform
-provider "bcadmincenter" {
-  alias     = "tenant1"
-  client_id = var.client_id
-  tenant_id = var.tenant1_id
-}
-
-provider "bcadmincenter" {
-  alias     = "tenant2"
-  client_id = var.client_id
-  tenant_id = var.tenant2_id
-}
-
-resource "bcadmincenter_environment" "tenant1_prod" {
-  provider = bcadmincenter.tenant1
-  name     = "production"
-  # ... other configuration
-}
-
-resource "bcadmincenter_environment" "tenant2_prod" {
-  provider = bcadmincenter.tenant2
-  name     = "production"
-  # ... other configuration
-}
-```
+- [Workload Identity for GitHub Actions tutorial](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-github.md)
+- [Workload Identity for Azure DevOps tutorial](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-azure-devops.md)
 
 <!-- schema generated by tfplugindocs -->
 ## Schema
@@ -299,29 +244,19 @@ The following environment variables can be used to configure the provider:
 | `AZURE_AUTHORITY_HOST` | Azure AD authority host URL |
 | `AZURE_CLIENT_ASSERTION` | Client assertion for federated identity credentials |
 
-## Authentication Tutorials
+## Tutorials
 
-For detailed step-by-step guides on setting up authentication, visit our comprehensive tutorials:
+End-to-end guides for common use cases:
 
-- **[Service Principal with Client Secret](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/service-principal-authentication.md)** - Traditional authentication for automation and CI/CD
-- **[Azure CLI Authentication](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/azure-cli-authentication.md)** - Quick setup for local development
-- **[Managed Identity](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/managed-identity-authentication.md)** - Secure authentication for Azure VMs and containers
-- **[Workload Identity for GitHub Actions](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-github.md)** - OIDC-based authentication for GitHub workflows
-- **[Workload Identity for Azure DevOps](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-azure-devops.md)** - Federated credentials for Azure Pipelines
-
-Each tutorial includes complete setup instructions, troubleshooting tips, and real-world examples.
-
-<!-- schema generated by tfplugindocs -->
-## Schema
-
-### Optional
-
-- `auxiliary_tenant_ids` (List of String) List of auxiliary tenant IDs for multi-tenant scenarios.
-- `base_url` (String) Override the base URL for the Business Central Admin Center API. Can also be set via BCADMINCENTER_BASE_URL environment variable. Primarily used for testing.
-- `client_id` (String) The Client ID (Application ID) for Azure AD authentication. Can also be set via AZURE_CLIENT_ID environment variable.
-- `client_secret` (String, Sensitive) The Client Secret for Azure AD authentication. Can also be set via AZURE_CLIENT_SECRET environment variable.
-- `environment` (String) The Azure environment to use (public, usgovernment, china). Defaults to 'public'. Can also be set via AZURE_ENVIRONMENT environment variable.
-- `tenant_id` (String) The Tenant ID for Azure AD authentication. Can also be set via AZURE_TENANT_ID environment variable.
+| Tutorial | Description |
+|----------|-------------|
+| [Provision an Environment](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/full-environment-tutorial.md) | Step-by-step guide to provision a Business Central environment, reading ring and country information from data sources |
+| [Multi-Tenant Management](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/multi-tenant-management.md) | Manage environments across multiple Business Central tenants using iteration and import workflows |
+| [Service Principal](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/service-principal-authentication.md) | Set up service principal authentication with a client secret |
+| [Azure CLI](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/azure-cli-authentication.md) | Quick setup for local development using Azure CLI |
+| [Managed Identity](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/managed-identity-authentication.md) | Secure authentication for Azure VMs and containers |
+| [Workload Identity – GitHub Actions](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-github.md) | OIDC-based authentication for GitHub workflows |
+| [Workload Identity – Azure DevOps](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-azure-devops.md) | Federated credentials for Azure Pipelines |
 
 ## Additional Resources
 

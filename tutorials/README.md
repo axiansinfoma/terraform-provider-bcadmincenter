@@ -1,38 +1,52 @@
 # Business Central Admin Center Provider - Tutorials
 
-This directory contains comprehensive tutorials for setting up and using the Business Central Admin Center Terraform Provider with different authentication methods.
+This directory contains comprehensive tutorials for setting up and using the Business Central Admin Center Terraform Provider.
 
 ## Available Tutorials
+
+### End-to-End Use-Case Tutorials
+
+These tutorials guide you through common real-world scenarios from start to finish:
+
+1. **[Provisioning a Business Central Environment](./full-environment-tutorial.md)**
+   - Best for: First-time users, teams setting up a new tenant
+   - Difficulty: Easy
+   - Topics: Data source discovery, environment creation, settings, support contact, import
+
+2. **[Multi-Tenant Management](./multi-tenant-management.md)**
+   - Best for: Partners or ISVs managing Business Central across multiple customer tenants
+   - Difficulty: Medium
+   - Topics: `manageable_tenants` data source, `for_each` iteration, provider aliases, import workflow
 
 ### Authentication Tutorials
 
 These tutorials guide you through setting up authentication for different scenarios:
 
-1. **[Service Principal with Client Secret](./service-principal-authentication.md)**
+3. **[Service Principal with Client Secret](./service-principal-authentication.md)**
    - Best for: Automated scenarios, CI/CD pipelines (traditional approach)
    - Difficulty: Easy
    - Setup time: ~15 minutes
    - Security level: Medium (requires secret management)
 
-2. **[Azure CLI Authentication](./azure-cli-authentication.md)**
+4. **[Azure CLI Authentication](./azure-cli-authentication.md)**
    - Best for: Local development, interactive scenarios
    - Difficulty: Easy
    - Setup time: ~5 minutes
    - Security level: High (no stored credentials)
 
-3. **[Managed Identity](./managed-identity-authentication.md)**
+5. **[Managed Identity](./managed-identity-authentication.md)**
    - Best for: Azure-hosted Terraform runners (VMs, Container Instances, App Service)
    - Difficulty: Medium
    - Setup time: ~20 minutes
    - Security level: High (no credential management)
 
-4. **[Workload Identity for GitHub Actions](./workload-identity-github.md)**
+6. **[Workload Identity for GitHub Actions](./workload-identity-github.md)**
    - Best for: GitHub Actions workflows
    - Difficulty: Medium
    - Setup time: ~25 minutes
    - Security level: Very High (OIDC-based, no secrets)
 
-5. **[Workload Identity for Azure DevOps](./workload-identity-azure-devops.md)**
+7. **[Workload Identity for Azure DevOps](./workload-identity-azure-devops.md)**
    - Best for: Azure DevOps pipelines
    - Difficulty: Medium
    - Setup time: ~25 minutes
