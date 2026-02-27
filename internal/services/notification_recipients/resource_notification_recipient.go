@@ -54,7 +54,7 @@ func (r *NotificationRecipientResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"email": schema.StringAttribute{
-				Description: "The email address of the notification recipient. Must be a valid email address.",
+				Description: "The email address of the notification recipient. Must be a valid email address. Changing this forces a new Business Central Notification Recipient to be created.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -64,7 +64,7 @@ func (r *NotificationRecipientResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "The full name of the notification recipient",
+				Description: "The full name of the notification recipient. Changing this forces a new Business Central Notification Recipient to be created.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -74,7 +74,7 @@ func (r *NotificationRecipientResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. This allows managing notification recipients in different tenants.",
+				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. Changing this forces a new Business Central Notification Recipient to be created.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{

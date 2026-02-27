@@ -142,8 +142,8 @@ resource "bc_admin_center_environment_settings" "minimal" {
 
 ### Required
 
-- `application_family` (String) Family of the environment's application (e.g., 'BusinessCentral')
-- `environment_name` (String) Name of the environment
+- `application_family` (String) The application family of the environment (e.g., 'BusinessCentral'). Changing this forces a new Business Central Environment Settings to be created.
+- `environment_name` (String) The name of the environment. Changing this forces a new Business Central Environment Settings to be created.
 
 ### Optional
 
@@ -167,7 +167,7 @@ resource "bc_admin_center_environment_settings" "minimal" {
 Environment settings resources can be imported using their ARM-like resource ID:
 
 ```shell
-terraform import bcadmincenter_environment_settings.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/settings"
+terraform import bcadmincenter_environment_settings.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/settings"
 ```
 
 The import ID format is:

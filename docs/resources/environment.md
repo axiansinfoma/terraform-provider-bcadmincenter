@@ -183,16 +183,16 @@ output "environment_urls" {
 
 ### Required
 
-- `country_code` (String) The country/region code for the environment (e.g., 'US', 'GB', 'DK'). Cannot be changed after creation.
-- `name` (String) The name of the environment. Must be between 1 and 30 characters. Cannot be changed after creation.
-- `type` (String) The type of environment. Must be either 'Production' or 'Sandbox'. Cannot be changed after creation.
+- `country_code` (String) The country/region code for the environment (e.g., 'US', 'GB', 'DK'). Changing this forces a new Business Central Environment to be created.
+- `name` (String) The name of the environment. Must be between 1 and 30 characters. Changing this forces a new Business Central Environment to be created.
+- `type` (String) The type of environment. Must be either 'Production' or 'Sandbox'. Changing this forces a new Business Central Environment to be created.
 
 ### Optional
 
 - `aad_tenant_id` (String) The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.
-- `application_family` (String) The application family for the environment. Defaults to 'BusinessCentral'. Cannot be changed after creation.
-- `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Cannot be changed after creation.
-- `ring_name` (String) The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Cannot be changed after creation.
+- `application_family` (String) The application family for the environment. Defaults to 'BusinessCentral'. Changing this forces a new Business Central Environment to be created.
+- `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.
+- `ring_name` (String) The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Changing this forces a new Business Central Environment to be created.
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
 
 ### Read-Only
@@ -218,7 +218,7 @@ Optional:
 Business Central environments can be imported using their ARM-like resource ID:
 
 ```shell
-terraform import bcadmincenter_environment.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production"
+terraform import bcadmincenter_environment.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production"
 ```
 
 The import ID format is:

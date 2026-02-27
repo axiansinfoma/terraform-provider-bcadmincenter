@@ -60,7 +60,7 @@ func (r *AuthorizedEntraAppResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				Description: "The Azure AD tenant ID. Defaults to the provider's configured tenant ID.",
+				Description: "The Azure AD tenant ID. Defaults to the provider's configured tenant ID. Changing this forces a new Business Central Authorized Entra App to be created.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -69,7 +69,7 @@ func (r *AuthorizedEntraAppResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			"app_id": schema.StringAttribute{
-				Description: "The application (client) ID of the Microsoft Entra app to authorize.",
+				Description: "The application (client) ID of the Microsoft Entra app to authorize. Changing this forces a new Business Central Authorized Entra App to be created.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

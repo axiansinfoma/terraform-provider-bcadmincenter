@@ -70,14 +70,14 @@ func (r *EnvironmentSupportContactResource) Schema(_ context.Context, _ resource
 				},
 			},
 			"application_family": schema.StringAttribute{
-				Description: "Family of the environment's application (e.g., 'BusinessCentral')",
+				Description: "The application family of the environment (e.g., 'BusinessCentral'). Changing this forces a new Business Central Environment Support Contact to be created.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"environment_name": schema.StringAttribute{
-				Description: "Name of the environment",
+				Description: "The name of the environment. Changing this forces a new Business Central Environment Support Contact to be created.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

@@ -98,9 +98,9 @@ resource "bcadmincenter_environment_support_contact" "sandbox" {
 
 ### Required
 
-- `application_family` (String) Family of the environment's application (e.g., 'BusinessCentral')
+- `application_family` (String) The application family of the environment (e.g., 'BusinessCentral'). Changing this forces a new Business Central Environment Support Contact to be created.
 - `email` (String) The email address of the support contact
-- `environment_name` (String) Name of the environment
+- `environment_name` (String) The name of the environment. Changing this forces a new Business Central Environment Support Contact to be created.
 - `name` (String) The name of the support contact (displayed to users)
 
 ### Optional
@@ -117,7 +117,7 @@ resource "bcadmincenter_environment_support_contact" "sandbox" {
 Environment support contact resources can be imported using their ARM-like resource ID:
 
 ```shell
-terraform import bcadmincenter_environment_support_contact.example "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/Production/supportContact"
+terraform import bcadmincenter_environment_support_contact.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/Production/supportContact"
 ```
 
 The import ID format is:
