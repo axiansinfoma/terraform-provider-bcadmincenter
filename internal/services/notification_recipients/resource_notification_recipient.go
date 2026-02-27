@@ -113,16 +113,14 @@ func (r *NotificationRecipientResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Create the notification recipient.
-	svc := NewService(r.client)
-
-	// Use aad_tenant_id from plan if provided, otherwise use provider's tenant ID.
+	// Create the notification recipient using the tenant-specific client.
 	tenantID := r.client.GetTenantID()
 	if !plan.AADTenantID.IsNull() && !plan.AADTenantID.IsUnknown() {
 		tenantID = plan.AADTenantID.ValueString()
 	}
+	svc := NewService(r.client.ForTenant(tenantID))
 
-	recipient, err := svc.Create(ctx, tenantID, plan.Email.ValueString(), plan.Name.ValueString())
+	recipient, err := svc.Create(ctx, plan.Email.ValueString(), plan.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Notification Recipient",
@@ -149,8 +147,6 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	svc := NewService(r.client)
-
 	// Parse the ARM-like ID to get tenant ID and recipient ID.
 	tenantID, recipientID, err := ParseNotificationRecipientID(state.ID.ValueString())
 	if err != nil {
@@ -161,7 +157,9 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	recipient, err := svc.Get(ctx, tenantID, recipientID)
+	svc := NewService(r.client.ForTenant(tenantID))
+
+	recipient, err := svc.Get(ctx, recipientID)
 	if err != nil {
 		// If the recipient is not found, remove it from state.
 		resp.Diagnostics.AddWarning(
@@ -203,9 +201,6 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	// Delete the notification recipient.
-	svc := NewService(r.client)
-
 	// Parse the ARM-like ID to get tenant ID and recipient ID.
 	tenantID, recipientID, err := ParseNotificationRecipientID(state.ID.ValueString())
 	if err != nil {
@@ -215,7 +210,10 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 		)
 		return
 	}
-	err = svc.Delete(ctx, tenantID, recipientID)
+
+	// Delete the notification recipient using the tenant-specific client.
+	svc := NewService(r.client.ForTenant(tenantID))
+	err = svc.Delete(ctx, recipientID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Notification Recipient",
