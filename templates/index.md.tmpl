@@ -14,7 +14,7 @@ The Business Central Admin Center provider enables Infrastructure as Code (IaC) 
 
 **Possible automation tools for app installations and lifecycle management:**
 - [Gordon by eos-solutions](https://gordon.eos-solutions.it/)
-- [Business Central Customers Management App by Duilio Tacconi](https://github.com/duiliotacconi/D365BCAdminCenter)
+- [Business Central Customers Management App (CCMS) by directions4partners](https://github.com/directions4partners/CCMS)
 - [D365BCAdminMCP by Stefano Demiliani](https://github.com/demiliani/D365BCAdminMCP)
 - Official Microsoft BC Admin Center MCP (Announced for January 2026)
 
