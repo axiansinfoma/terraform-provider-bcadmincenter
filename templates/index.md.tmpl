@@ -31,7 +31,7 @@ The Business Central Admin Center provider enables Infrastructure as Code (IaC) 
 
 The provider supports multiple authentication methods via the Azure SDK for Go, following the same patterns as the AzureRM provider.
 
--> **Step-by-step guides**: For comprehensive tutorials on setting up each authentication method, see the [Authentication Tutorials](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/tree/main/tutorials).
+-> **Step-by-step guides**: For comprehensive tutorials on setting up each authentication method, see the [Authentication Guides](guides/service-principal-authentication.md).
 
 ### Required Permissions
 
@@ -88,7 +88,7 @@ az login --tenant 00000000-0000-0000-0000-000000000000
 
 {{tffile "examples/provider/azure-cli.tf"}}
 
-See the full [Azure CLI authentication tutorial](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/azure-cli-authentication.md) for complete setup instructions.
+See the full [Azure CLI authentication guide](guides/azure-cli-authentication.md) for complete setup instructions.
 
 ### Managed Identity (Azure-Hosted)
 
@@ -96,7 +96,7 @@ When Terraform runs on Azure compute (VM, Container Instance, App Service) with 
 
 {{tffile "examples/provider/managed-identity.tf"}}
 
-See the full [Managed Identity tutorial](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/managed-identity-authentication.md).
+See the full [Managed Identity guide](guides/managed-identity-authentication.md).
 
 ### Workload Identity (CI/CD)
 
@@ -104,8 +104,8 @@ The recommended method for GitHub Actions, Azure DevOps, and Kubernetes workload
 
 {{tffile "examples/provider/workload-identity.tf"}}
 
-- [Workload Identity for GitHub Actions tutorial](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-github.md)
-- [Workload Identity for Azure DevOps tutorial](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-azure-devops.md)
+- [Workload Identity for GitHub Actions guide](guides/workload-identity-github.md)
+- [Workload Identity for Azure DevOps guide](guides/workload-identity-azure-devops.md)
 
 {{ .SchemaMarkdown | trimspace }}
 
@@ -123,19 +123,19 @@ The following environment variables can be used to configure the provider:
 | `AZURE_AUTHORITY_HOST` | Azure AD authority host URL |
 | `AZURE_CLIENT_ASSERTION` | Client assertion for federated identity credentials |
 
-## Tutorials
+## Guides
 
 End-to-end guides for common use cases:
 
-| Tutorial | Description |
-|----------|-------------|
-| [Provision an Environment](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/full-environment-tutorial.md) | Step-by-step guide to provision a Business Central environment, reading ring and country information from data sources |
-| [Multi-Tenant Management](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/multi-tenant-management.md) | Manage environments across multiple Business Central tenants using iteration and import workflows |
-| [Service Principal](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/service-principal-authentication.md) | Set up service principal authentication with a client secret |
-| [Azure CLI](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/azure-cli-authentication.md) | Quick setup for local development using Azure CLI |
-| [Managed Identity](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/managed-identity-authentication.md) | Secure authentication for Azure VMs and containers |
-| [Workload Identity – GitHub Actions](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-github.md) | OIDC-based authentication for GitHub workflows |
-| [Workload Identity – Azure DevOps](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/blob/main/tutorials/workload-identity-azure-devops.md) | Federated credentials for Azure Pipelines |
+| Guide | Description |
+|-------|-------------|
+| [Provision an Environment](guides/full-environment-tutorial.md) | Step-by-step guide to provision a Business Central environment, reading ring and country information from data sources |
+| [Multi-Tenant Management](guides/multi-tenant-management.md) | Manage environments across multiple Business Central tenants using iteration and import workflows |
+| [Service Principal](guides/service-principal-authentication.md) | Set up service principal authentication with a client secret |
+| [Azure CLI](guides/azure-cli-authentication.md) | Quick setup for local development using Azure CLI |
+| [Managed Identity](guides/managed-identity-authentication.md) | Secure authentication for Azure VMs and containers |
+| [Workload Identity – GitHub Actions](guides/workload-identity-github.md) | OIDC-based authentication for GitHub workflows |
+| [Workload Identity – Azure DevOps](guides/workload-identity-azure-devops.md) | Federated credentials for Azure Pipelines |
 
 ## Additional Resources
 
