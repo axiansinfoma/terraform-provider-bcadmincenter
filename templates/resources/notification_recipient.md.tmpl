@@ -100,8 +100,6 @@ resource "bcadmincenter_notification_recipient" "secondary_admin" {
 
 Notification recipient resources can be imported using their ARM-like resource ID:
 
--> **Note:** The tenant ID `00000000-0000-0000-0000-000000000000` used in the example below is a placeholder. Replace it with your actual Azure AD tenant ID.
-
 ```shell
 terraform import bcadmincenter_notification_recipient.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/notificationRecipients/550e8400-e29b-41d4-a716-446655440000"
 ```

@@ -126,8 +126,6 @@ terraform import bcadmincenter_authorized_entra_app.example "/tenants/{tenantId}
 
 Example:
 
--> **Note:** The tenant ID `00000000-0000-0000-0000-000000000000` used in the example below is a placeholder. Replace it with your actual Azure AD tenant ID.
-
 ```shell
 terraform import bcadmincenter_authorized_entra_app.partner_app "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/authorizedEntraApps/550e8400-e29b-41d4-a716-446655440000"
 ```

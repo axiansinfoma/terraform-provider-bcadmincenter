@@ -158,8 +158,6 @@ resource "bc_admin_center_environment_settings" "minimal" {
 
 Environment settings resources can be imported using their ARM-like resource ID:
 
--> **Note:** The tenant ID `00000000-0000-0000-0000-000000000000` used in the example below is a placeholder. Replace it with your actual Azure AD tenant ID.
-
 ```shell
 terraform import bcadmincenter_environment_settings.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/settings"
 ```
