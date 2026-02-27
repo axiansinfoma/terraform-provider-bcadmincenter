@@ -135,8 +135,8 @@ resource "bc_admin_center_environment_settings" "minimal" {
 
 ### Required
 
-- `application_family` (String) Family of the environment's application (e.g., 'BusinessCentral')
-- `environment_name` (String) Name of the environment
+- `application_family` (String) The application family of the environment (e.g., 'BusinessCentral'). Changing this forces a new Business Central Environment Settings to be created.
+- `environment_name` (String) The name of the environment. Changing this forces a new Business Central Environment Settings to be created.
 
 ### Optional
 

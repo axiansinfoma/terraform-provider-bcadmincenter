@@ -79,7 +79,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name of the environment. Must be between 1 and 30 characters. Cannot be changed after creation.",
+				MarkdownDescription: "The name of the environment. Must be between 1 and 30 characters. Changing this forces a new Business Central Environment to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -89,7 +89,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"application_family": schema.StringAttribute{
-				MarkdownDescription: "The application family for the environment. Defaults to 'BusinessCentral'. Cannot be changed after creation.",
+				MarkdownDescription: "The application family for the environment. Defaults to 'BusinessCentral'. Changing this forces a new Business Central Environment to be created.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("BusinessCentral"),
@@ -99,7 +99,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "The type of environment. Must be either 'Production' or 'Sandbox'. Cannot be changed after creation.",
+				MarkdownDescription: "The type of environment. Must be either 'Production' or 'Sandbox'. Changing this forces a new Business Central Environment to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -109,14 +109,14 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"country_code": schema.StringAttribute{
-				MarkdownDescription: "The country/region code for the environment (e.g., 'US', 'GB', 'DK'). Cannot be changed after creation.",
+				MarkdownDescription: "The country/region code for the environment (e.g., 'US', 'GB', 'DK'). Changing this forces a new Business Central Environment to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"ring_name": schema.StringAttribute{
-				MarkdownDescription: "The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Cannot be changed after creation.",
+				MarkdownDescription: "The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Changing this forces a new Business Central Environment to be created.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("PROD"),
@@ -133,7 +133,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:            true,
 			},
 			"azure_region": schema.StringAttribute{
-				MarkdownDescription: "The Azure region where the environment should be created. If not specified, a default region will be used. Cannot be changed after creation.",
+				MarkdownDescription: "The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
