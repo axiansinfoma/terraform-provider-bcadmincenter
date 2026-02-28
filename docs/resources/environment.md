@@ -25,7 +25,7 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 
 ~> **Warning:** Most environment attributes cannot be changed after creation and will force recreation (destroy and recreate) if modified. This includes name, type, country, ring, and region.
 
--> **Note:** The `application_version` attribute is read-only and reflects the currently running version of the environment. It cannot be directly set or updated through Terraform. The API automatically assigns the latest available version for the specified `ring_name` during creation. To update an environment to a newer version, use the Business Central Admin Center portal to schedule an update operation.
+-> **Note:** The `application_version` attribute is read-only and reflects the currently running version of the environment. It cannot be directly set or updated through Terraform. The API automatically assigns the latest available version for the specified `ring_name` during creation.
 
 ~> **Warning:** Deleting a Business Central environment is **permanent and irreversible**. All data, configurations, and customizations will be lost.
 
@@ -198,7 +198,7 @@ output "environment_urls" {
 ### Read-Only
 
 - `app_insights_key` (String, Sensitive) The Application Insights instrumentation key for the environment.
-- `application_version` (String) The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set. Version updates are managed through the Business Central Admin Center.
+- `application_version` (String) The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set.
 - `id` (String) The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName})
 - `platform_version` (String) The platform version of the environment.
 - `status` (String) The current status of the environment (e.g., 'Active', 'Creating').

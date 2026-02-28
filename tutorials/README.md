@@ -46,11 +46,17 @@ These tutorials guide you through setting up authentication for different scenar
    - Setup time: ~25 minutes
    - Security level: Very High (OIDC-based, no secrets)
 
-7. **[Workload Identity for Azure DevOps](./workload-identity-azure-devops.md)**
-   - Best for: Azure DevOps pipelines
-   - Difficulty: Medium
-   - Setup time: ~25 minutes
-   - Security level: Very High (federated credentials, no secrets)
+7. **[Service Connection with Workload Identity (Azure DevOps)](./workload-identity-azure-devops.md)**
+    - Best for: Azure DevOps pipelines
+    - Difficulty: Medium
+    - Setup time: ~25 minutes
+    - Security level: Very High (federated credentials, no secrets)
+
+8. **[Service Connection with Client Secret (Azure DevOps)](./azure-devops-service-connection-secret.md)**
+   - Best for: Azure DevOps pipelines that require secret-based authentication
+   - Difficulty: Easy
+   - Setup time: ~15 minutes
+   - Security level: Medium (requires secret management)
 
 ## Choosing the Right Authentication Method
 
@@ -62,7 +68,7 @@ Are you developing locally?
 └─ No → Are you running in CI/CD?
     ├─ Yes → Which CI/CD platform?
     │   ├─ GitHub Actions → Use Workload Identity for GitHub Actions
-    │   ├─ Azure DevOps → Use Workload Identity for Azure DevOps
+    │   ├─ Azure DevOps → Use Service Connection with Workload Identity (preferred) or Client Secret
     │   └─ Other → Use Service Principal with Client Secret
     └─ No → Are you running on Azure compute?
         ├─ Yes → Use Managed Identity
@@ -78,6 +84,7 @@ Are you developing locally?
 | **Managed Identity** | Azure VMs/Containers | No secrets, automatic | Azure-only | Medium |
 | **Workload Identity (GitHub)** | GitHub Actions | No secrets, secure | GitHub-only | Medium |
 | **Workload Identity (Azure DevOps)** | Azure Pipelines | No secrets, secure | Azure DevOps-only | Medium |
+| **Service Connection (Azure DevOps + Secret)** | Azure Pipelines | Simple setup | Requires secret rotation | Low |
 
 ## Common Prerequisites
 
@@ -187,7 +194,9 @@ steps:
       addSpnToEnvironment: true
 ```
 
-See the [Workload Identity for Azure DevOps tutorial](./workload-identity-azure-devops.md) for complete setup.
+See either:
+- [Service Connection with Workload Identity (Azure DevOps)](./workload-identity-azure-devops.md)
+- [Service Connection with Client Secret (Azure DevOps)](./azure-devops-service-connection-secret.md)
 
 ## Security Best Practices
 

@@ -129,7 +129,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"application_version": schema.StringAttribute{
-				MarkdownDescription: "The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set. Version updates are managed through the Business Central Admin Center.",
+				MarkdownDescription: "The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set.",
 				Computed:            true,
 			},
 			"azure_region": schema.StringAttribute{
