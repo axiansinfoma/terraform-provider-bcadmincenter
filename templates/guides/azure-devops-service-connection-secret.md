@@ -1,3 +1,10 @@
+---
+page_title: "Guide: Authenticating with an Azure DevOps Service Connection (Client Secret)"
+subcategory: "Authentication"
+description: |-
+  This guide shows how to run Terraform in Azure DevOps using an Azure Resource Manager service connection that authenticates with a service principal client secret.
+---
+
 # Authenticating with an Azure DevOps Service Connection (Client Secret)
 
 This guide shows how to run Terraform in Azure DevOps using an Azure Resource Manager service connection that authenticates with a service principal client secret.
