@@ -10,7 +10,6 @@ This Terraform provider enables Infrastructure as Code (IaC) management of Micro
 - **No Undo**: Environment deletions are permanent and cannot be reversed. Ensure you have proper backups before making changes.
 - **Development Status**: This provider is in active development and has not been extensively tested in production environments. Use at your own risk.
 - **No Warranty**: The authors and contributors are not responsible for any data loss, service interruption, or other issues that may occur from using this provider.
-- **Version Updates Not Supported**: This provider **cannot schedule or apply version updates** to environments or apps. Environment version updates (`application_version`) and app updates must be managed through the [Business Central Admin Center portal](https://businesscentral.dynamics.com/?page=1801) or other automation tools.
 
 **Best Practices**:
 - Always run `terraform plan` and carefully review changes before `terraform apply`
@@ -94,6 +93,11 @@ provider "bcadmincenter" {
 ```
 
 The provider will automatically detect and use workload identity credentials when available.
+
+#### Azure DevOps Guides
+
+- [Service connection with workload identity](./tutorials/workload-identity-azure-devops.md)
+- [Service connection with client secret](./tutorials/azure-devops-service-connection-secret.md)
 
 ### Example Usage
 

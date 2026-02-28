@@ -8,18 +8,6 @@ description: |-
 
 The Business Central Admin Center provider enables Infrastructure as Code (IaC) management of Microsoft Dynamics 365 Business Central environments through the [Business Central Admin Center API](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api).
 
-## Important Limitations
-
-~> **Warning: Version Updates Not Supported** - This provider **cannot schedule or apply version updates** to environments or applications. Environment version updates (`application_version`) and application updates must be managed through the [Business Central Admin Center portal](https://businesscentral.dynamics.com/?page=1801) or other automation tools. The provider treats `application_version` as a read-only attribute that reflects the currently running version. Attempting to change versions in Terraform configuration will not trigger updates.
-
-**Possible automation tools for app installations and lifecycle management:**
-- [Gordon by eos-solutions](https://gordon.eos-solutions.it/)
-- [Business Central Customers Management App (CCMS) by directions4partners](https://github.com/directions4partners/CCMS)
-- [D365BCAdminMCP by Stefano Demiliani](https://github.com/demiliani/D365BCAdminMCP)
-- Official Microsoft BC Admin Center MCP (Announced for January 2026)
-
--> **Recommended Approach**: Use this provider for **infrastructure provisioning** (creating environments, configuring settings) and use the Business Central Admin Center UI, PowerShell scripts, or the Admin Center API directly for **lifecycle operations** like version updates, which are asynchronous scheduled operations that don't fit Terraform's declarative model.
-
 ## Features
 
 - **Environment Management**: Create, update, and delete Business Central production and sandbox environments
@@ -106,6 +94,7 @@ The recommended method for GitHub Actions, Azure DevOps, and Kubernetes workload
 
 - [Workload Identity for GitHub Actions guide](guides/workload-identity-github.md)
 - [Workload Identity for Azure DevOps guide](guides/workload-identity-azure-devops.md)
+- [Service Connection with Client Secret for Azure DevOps guide](guides/azure-devops-service-connection-secret.md)
 
 {{ .SchemaMarkdown | trimspace }}
 
@@ -136,6 +125,7 @@ End-to-end guides for common use cases:
 | [Managed Identity](guides/managed-identity-authentication.md) | Secure authentication for Azure VMs and containers |
 | [Workload Identity – GitHub Actions](guides/workload-identity-github.md) | OIDC-based authentication for GitHub workflows |
 | [Workload Identity – Azure DevOps](guides/workload-identity-azure-devops.md) | Federated credentials for Azure Pipelines |
+| [Service Connection – Azure DevOps (Client Secret)](guides/azure-devops-service-connection-secret.md) | Service connection authentication for Azure Pipelines using a client secret |
 
 ## Additional Resources
 
