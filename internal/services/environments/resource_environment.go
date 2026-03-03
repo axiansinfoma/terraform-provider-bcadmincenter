@@ -6,6 +6,7 @@ package environments
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -257,6 +258,8 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	// Include ApplicationVersion only when explicitly set by the user.
+	// Save it now so we can restore the short form after the API returns the full form.
+	configuredApplicationVersion := plan.ApplicationVersion
 	if !plan.ApplicationVersion.IsNull() && !plan.ApplicationVersion.IsUnknown() && plan.ApplicationVersion.ValueString() != "" {
 		createReq.ApplicationVersion = plan.ApplicationVersion.ValueString()
 	}
@@ -356,6 +359,10 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		if env.Status == "Active" {
 			// Environment is ready, update state and return.
 			r.updateModelFromEnvironment(&plan, env)
+			// Preserve the user-configured short version (e.g. "27.1") if the API
+			// returned the full build version (e.g. "27.1.41698.41831").
+			plan.ApplicationVersion = types.StringValue(
+				normalizeApplicationVersion(configuredApplicationVersion.ValueString(), plan.ApplicationVersion.ValueString()))
 			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 			return
 		}
@@ -394,6 +401,11 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
+	// Save the prior version before it may be overwritten by updateModelFromEnvironment.
+	// This allows us to preserve a user-configured short form (e.g. "27.1") when the
+	// API returns the full build version (e.g. "27.1.41698.41831").
+	priorApplicationVersion := state.ApplicationVersion
+
 	tflog.Debug(ctx, "Reading BC Admin Center environment", map[string]interface{}{
 		"name":               state.Name.ValueString(),
 		"application_family": state.ApplicationFamily.ValueString(),
@@ -424,6 +436,13 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		})
 	} else {
 		r.applyUpdatesDriftDetection(&state, env, updates)
+	}
+
+	// Normalize application_version: preserve the prior short form if the API returned
+	// the full build version starting with it (e.g. keep "27.1" when API says "27.1.41698.41831").
+	if !priorApplicationVersion.IsNull() && !priorApplicationVersion.IsUnknown() && !state.ApplicationVersion.IsNull() {
+		state.ApplicationVersion = types.StringValue(
+			normalizeApplicationVersion(priorApplicationVersion.ValueString(), state.ApplicationVersion.ValueString()))
 	}
 
 	// Set refreshed state.
@@ -680,4 +699,20 @@ func normalizeRingName(apiRingName string) string {
 		// Return as-is if unknown.
 		return apiRingName
 	}
+}
+
+// normalizeApplicationVersion returns the short form of priorVersion when the API returned
+// the full build version. This prevents spurious drift when users configure versions in
+// "major.minor" format (e.g., "27.1") while the API stores the full build version
+// (e.g., "27.1.41698.41831").
+//
+// A "." separator check is used to avoid incorrectly matching "27.1" against "27.10.xxx".
+func normalizeApplicationVersion(priorVersion, apiVersion string) string {
+	if priorVersion == "" || apiVersion == "" {
+		return apiVersion
+	}
+	if apiVersion == priorVersion || strings.HasPrefix(apiVersion, priorVersion+".") {
+		return priorVersion
+	}
+	return apiVersion
 }

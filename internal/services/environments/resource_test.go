@@ -391,3 +391,76 @@ func TestEnvironmentResource_ImportState_Success(t *testing.T) {
 		t.Errorf("Environment name = %s, want production", parts[2])
 	}
 }
+
+func TestNormalizeApplicationVersion(t *testing.T) {
+tests := []struct {
+name         string
+priorVersion string
+apiVersion   string
+want         string
+}{
+{
+name:         "short major.minor form preserved when API returns full build version",
+priorVersion: "27.1",
+apiVersion:   "27.1.41698.41831",
+want:         "27.1",
+},
+{
+name:         "exact match preserved unchanged",
+priorVersion: "27.1.41698.41831",
+apiVersion:   "27.1.41698.41831",
+want:         "27.1.41698.41831",
+},
+{
+name:         "different minor version triggers drift",
+priorVersion: "27.1",
+apiVersion:   "27.2.12345.67890",
+want:         "27.2.12345.67890",
+},
+{
+name:         "different major version triggers drift",
+priorVersion: "27.1",
+apiVersion:   "28.1.12345.67890",
+want:         "28.1.12345.67890",
+},
+{
+name:         "prefix collision avoided via dot separator: 27.1 does not match 27.10",
+priorVersion: "27.1",
+apiVersion:   "27.10.12345.67890",
+want:         "27.10.12345.67890",
+},
+{
+name:         "empty prior version returns api version",
+priorVersion: "",
+apiVersion:   "27.1.41698.41831",
+want:         "27.1.41698.41831",
+},
+{
+name:         "empty api version returns empty",
+priorVersion: "27.1",
+apiVersion:   "",
+want:         "",
+},
+{
+name:         "both empty returns empty",
+priorVersion: "",
+apiVersion:   "",
+want:         "",
+},
+{
+name:         "full prior version preserved when API returns newer full version of same minor",
+priorVersion: "27.1.41698.41831",
+apiVersion:   "27.1.42000.00000",
+want:         "27.1.42000.00000",
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+got := normalizeApplicationVersion(tt.priorVersion, tt.apiVersion)
+if got != tt.want {
+t.Errorf("normalizeApplicationVersion(%q, %q) = %q, want %q", tt.priorVersion, tt.apiVersion, got, tt.want)
+}
+})
+}
+}
