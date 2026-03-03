@@ -7,11 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -683,17 +684,56 @@ func TestService_SelectUpdateVersion(t *testing.T) {
 	}
 }
 
-// TestService_SelectUpdateVersion_DeselectsFirst verifies that SelectUpdateVersion first sends
-// a PATCH with selected:false (deselect) to clear past-datetime state that would block re-selection
-// (EntityValidationFailed), then sends the actual select request with selected:true.
-func TestService_SelectUpdateVersion_DeselectsFirst(t *testing.T) {
-	requestBodies := make([]map[string]interface{}, 0, 2)
+// TestService_SelectUpdateVersion_RetriesOnPastDateTimeError verifies that SelectUpdateVersion
+// retries with a valid future selectedDateTime when the API rejects the first attempt due to a
+// stale past selectedDateTime (EntityValidationFailed). On retry it caps the datetime to
+// latestSelectableDateTime fetched from the updates list.
+func TestService_SelectUpdateVersion_RetriesOnPastDateTimeError(t *testing.T) {
+	// latestSelectableDateTime ~6 months from now so candidate (now+1h) stays within range.
+	latestSelectable := time.Now().UTC().Add(6 * 30 * 24 * time.Hour).Format(time.RFC3339)
+
+	patchBodies := make([]map[string]interface{}, 0, 2)
+	getCalled := false
+	patchCount := 0
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			getCalled = true
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"value": []map[string]interface{}{
+					{
+						"targetVersion": "27.2",
+						"available":     true,
+						"selected":      true,
+						"scheduleDetails": map[string]interface{}{
+							"latestSelectableDateTime": latestSelectable,
+							"selectedDateTime":         "2026-01-12T21:00:00Z",
+						},
+					},
+				},
+			})
+			return
+		}
+		// PATCH
+		patchCount++
 		var body map[string]interface{}
 		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
-			requestBodies = append(requestBodies, body)
+			patchBodies = append(patchBodies, body)
 		}
-		w.WriteHeader(http.StatusOK)
+		if patchCount == 1 {
+			// First PATCH: simulate the "selected date time in the past" error.
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"code":    "EntityValidationFailed",
+				"message": "Update currently has selected date time in the past (2026-01-12T21:00:00.0000000Z) and cannot be selected. Modify the selected date time first.",
+			})
+		} else {
+			// Second PATCH (retry): succeed.
+			w.WriteHeader(http.StatusOK)
+		}
 	}))
 	defer server.Close()
 
@@ -710,39 +750,65 @@ func TestService_SelectUpdateVersion_DeselectsFirst(t *testing.T) {
 		t.Fatalf("SelectUpdateVersion() unexpected error: %v", err)
 	}
 
-	if len(requestBodies) != 2 {
-		t.Fatalf("expected 2 PATCH requests (deselect + select), got %d", len(requestBodies))
+	if patchCount != 2 {
+		t.Fatalf("expected 2 PATCH requests (initial + retry), got %d", patchCount)
+	}
+	if !getCalled {
+		t.Error("expected GET updates call to resolve latestSelectableDateTime for retry")
 	}
 
-	// First request: deselect step — must have selected:false and no scheduleDetails.
-	deselectBody := requestBodies[0]
-	if selected, ok := deselectBody["selected"].(bool); !ok || selected {
-		t.Errorf("deselect step expected selected:false, got %v", deselectBody["selected"])
+	// First PATCH: plain select — no selectedDateTime.
+	firstBody := patchBodies[0]
+	if selected, ok := firstBody["selected"].(bool); !ok || !selected {
+		t.Errorf("first PATCH expected selected:true, got %v", firstBody["selected"])
 	}
-	if _, hasDetails := deselectBody["scheduleDetails"]; hasDetails {
-		t.Error("deselect step should not have 'scheduleDetails' field")
+	if details, ok := firstBody["scheduleDetails"].(map[string]interface{}); ok {
+		if _, hasDateTime := details["selectedDateTime"]; hasDateTime {
+			t.Error("first PATCH should not include selectedDateTime")
+		}
 	}
 
-	// Second request: select step — must have selected:true.
-	selectBody := requestBodies[1]
-	if selected, ok := selectBody["selected"].(bool); !ok || !selected {
-		t.Errorf("select step expected selected:true, got %v", selectBody["selected"])
+	// Second PATCH (retry): must include selected:true and a valid future selectedDateTime.
+	retryBody := patchBodies[1]
+	if selected, ok := retryBody["selected"].(bool); !ok || !selected {
+		t.Errorf("retry PATCH expected selected:true, got %v", retryBody["selected"])
+	}
+	details, hasDetails := retryBody["scheduleDetails"].(map[string]interface{})
+	if !hasDetails {
+		t.Fatal("retry PATCH must include 'scheduleDetails'")
+	}
+	selectedDateTime, hasDateTime := details["selectedDateTime"].(string)
+	if !hasDateTime || selectedDateTime == "" {
+		t.Error("retry PATCH scheduleDetails must include a non-empty 'selectedDateTime'")
+	} else {
+		dt, parseErr := time.Parse(time.RFC3339, selectedDateTime)
+		if parseErr != nil {
+			t.Errorf("retry selectedDateTime is not valid RFC3339: %v", selectedDateTime)
+		} else {
+			if !dt.After(time.Now()) {
+				t.Errorf("retry selectedDateTime must be in the future, got: %v", selectedDateTime)
+			}
+			latest, _ := time.Parse(time.RFC3339, latestSelectable)
+			if dt.After(latest) {
+				t.Errorf("retry selectedDateTime %v exceeds latestSelectableDateTime %v", dt, latest)
+			}
+		}
 	}
 }
 
-// TestService_SelectUpdateVersion_ProceedsWhenDeselectFails verifies that SelectUpdateVersion
-// still attempts the select even if the deselect step fails (best-effort).
-func TestService_SelectUpdateVersion_ProceedsWhenDeselectFails(t *testing.T) {
-	callCount := 0
+// TestService_SelectUpdateVersion_SinglePatchOnSuccess verifies that SelectUpdateVersion sends
+// only ONE PATCH (no GET, no retry) when the first attempt succeeds.
+func TestService_SelectUpdateVersion_SinglePatchOnSuccess(t *testing.T) {
+	patchCount := 0
+	getCalled := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		callCount++
-		if callCount == 1 {
-			// First call (deselect): fail
-			w.WriteHeader(http.StatusBadRequest)
-		} else {
-			// Second call (select): succeed
+		if r.Method == http.MethodGet {
+			getCalled = true
 			w.WriteHeader(http.StatusOK)
+			return
 		}
+		patchCount++
+		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
@@ -756,10 +822,13 @@ func TestService_SelectUpdateVersion_ProceedsWhenDeselectFails(t *testing.T) {
 	svc := NewService(c)
 	err := svc.SelectUpdateVersion(context.Background(), "BusinessCentral", "production", "27.2", false)
 	if err != nil {
-		t.Errorf("SelectUpdateVersion() should succeed when only deselect fails, got: %v", err)
+		t.Errorf("SelectUpdateVersion() unexpected error: %v", err)
 	}
-	if callCount != 2 {
-		t.Errorf("expected 2 PATCH calls, got %d", callCount)
+	if patchCount != 1 {
+		t.Errorf("expected exactly 1 PATCH (no retry needed), got %d", patchCount)
+	}
+	if getCalled {
+		t.Error("GET should not be called when first PATCH succeeds")
 	}
 }
 

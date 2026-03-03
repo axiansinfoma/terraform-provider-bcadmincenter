@@ -273,27 +273,63 @@ func (s *Service) patchUpdate(ctx context.Context, applicationFamily, environmen
 //
 // The API rejects re-selection when the existing update entry holds a past selectedDateTime
 // ("EntityValidationFailed: Update currently has selected date time in the past").
-// To handle this, we first send {"selected": false} to deselect the entry (clearing any
-// past selectedDateTime state), then send the actual select request. The deselect step is
-// best-effort — if it fails (e.g. the entry doesn't exist yet) we proceed anyway.
+// To handle this, we first attempt a plain select (no selectedDateTime). If the API rejects
+// it due to a stale past datetime, we retry supplying a fresh valid selectedDateTime — set to
+// now+1h, capped to latestSelectableDateTime (fetched from the updates list). This preserves
+// the natural "next update window" behaviour on first selection while recovering cleanly on
+// re-selection after a previously scheduled upgrade that never ran.
+// NOTE: the API does NOT support selected:false (deselect); that returns EntityValidationFailed.
 func (s *Service) SelectUpdateVersion(ctx context.Context, applicationFamily, environmentName, targetVersion string, ignoreUpdateWindow bool) error {
-	// Step 1: deselect the version to clear any past selectedDateTime that would block re-selection.
-	deselect := SelectUpdateRequest{Selected: false}
-	if err := s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, deselect); err != nil {
-		// Best-effort: if deselect fails (e.g. no existing entry), proceed with selection.
-		// Log the error for observability without blocking the upgrade.
-		fmt.Printf("[WARN] SelectUpdateVersion: failed to deselect %s/%s/%s: %v; proceeding with select\n",
-			applicationFamily, environmentName, targetVersion, err)
-	}
-
-	// Step 2: select the version.
 	req := SelectUpdateRequest{
 		Selected: true,
 		ScheduleDetails: &UpdateScheduleDetails{
 			IgnoreUpdateWindow: ignoreUpdateWindow,
 		},
 	}
+	err := s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, req)
+	if err == nil {
+		return nil
+	}
+
+	// If the API rejected because of a stale past selectedDateTime, retry with a fresh datetime.
+	if !isPastSelectedDateTimeError(err) {
+		return err
+	}
+
+	fmt.Printf("[WARN] SelectUpdateVersion: stale past selectedDateTime detected for %s/%s/%s; retrying with refreshed datetime\n",
+		applicationFamily, environmentName, targetVersion)
+
+	safeDateTime := time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
+	// Cap to latestSelectableDateTime if the API provides one for this version.
+	if updates, getErr := s.GetUpdates(ctx, applicationFamily, environmentName); getErr == nil {
+		for _, u := range updates {
+			if u.TargetVersion == targetVersion && u.ScheduleDetails != nil && u.ScheduleDetails.LatestSelectableDateTime != "" {
+				if latest, parseErr := time.Parse(time.RFC3339, u.ScheduleDetails.LatestSelectableDateTime); parseErr == nil {
+					candidate := time.Now().UTC().Add(1 * time.Hour)
+					if candidate.After(latest) {
+						safeDateTime = latest.Add(-1 * time.Minute).Format(time.RFC3339)
+					}
+				}
+				break
+			}
+		}
+	}
+
+	req.ScheduleDetails.SelectedDateTime = safeDateTime
 	return s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, req)
+}
+
+// isPastSelectedDateTimeError reports whether err is the "selected date time in the past" API error.
+func isPastSelectedDateTimeError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var apiErr *client.AdminCenterError
+	if errors.As(err, &apiErr) {
+		return apiErr.Code == "EntityValidationFailed" &&
+			strings.Contains(apiErr.Message, "selected date time in the past")
+	}
+	return strings.Contains(err.Error(), "selected date time in the past")
 }
 
 // ScheduleUpdateVersion schedules an upgrade with an explicit datetime.
