@@ -25,7 +25,7 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 
 ~> **Warning:** Most environment attributes cannot be changed after creation and will force recreation (destroy and recreate) if modified. This includes name, type, country, ring, and region.
 
--> **Note:** The `application_version` attribute can be set to specify a desired version at creation or to schedule an in-place upgrade. If omitted, the API assigns the latest available version for the specified `ring_name`. During a scheduled or running upgrade, `application_version` reflects the target version and does not cause drift. If the upgrade fails, the attribute reflects the currently running version, causing Terraform to detect drift and retry on the next apply.
+-> **Note:** The `application_version` attribute can be set to specify a desired version at creation or to schedule an in-place upgrade. If omitted, the API assigns the latest available version for the specified `ring_name`. During a scheduled or running upgrade, `application_version` reflects the target version and does not cause drift. If the upgrade fails, the attribute reflects the currently running version, causing Terraform to detect drift and retry on the next apply. Use the computed `pending_upgrade_version` and `pending_upgrade_scheduled_for` attributes to observe the in-progress upgrade state without affecting plan output.
 
 ~> **Warning:** Do **not** use `application_version` on `bcadmincenter_environment` and `bcadmincenter_environment_update_schedule` for the same environment simultaneously.
 
@@ -221,6 +221,8 @@ output "environment_urls" {
 
 - `app_insights_key` (String, Sensitive) The Application Insights instrumentation key for the environment.
 - `id` (String) The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName})
+- `pending_upgrade_scheduled_for` (String) The RFC3339 datetime at which the pending upgrade is scheduled to run. Empty when the upgrade will run at the next update window or when no upgrade is pending.
+- `pending_upgrade_version` (String) The target version of a currently selected/scheduled or running upgrade. Empty when no upgrade is in progress. While non-empty, `application_version` is suppressed to this value so no drift is reported.
 - `platform_version` (String) The platform version of the environment.
 - `status` (String) The current status of the environment (e.g., 'Active', 'Creating').
 - `web_client_login_url` (String) The URL for accessing the web client.

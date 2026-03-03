@@ -52,7 +52,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 	}
 
 	// Verify computed attributes exist.
-	computedAttrs := []string{"id", "status", "web_client_login_url", "web_service_url", "app_insights_key", "platform_version"}
+	computedAttrs := []string{"id", "status", "web_client_login_url", "web_service_url", "app_insights_key", "platform_version", "pending_upgrade_version", "pending_upgrade_scheduled_for"}
 	for _, attr := range computedAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
 			t.Errorf("Schema missing computed attribute: %s", attr)
@@ -100,6 +100,8 @@ func TestEnvironmentResourceModel(t *testing.T) {
 	_ = model.AppInsightsKey
 	_ = model.PlatformVersion
 	_ = model.AADTenantID
+	_ = model.PendingUpgradeVersion
+	_ = model.PendingUpgradeScheduledFor
 	_ = model.Timeouts
 }
 

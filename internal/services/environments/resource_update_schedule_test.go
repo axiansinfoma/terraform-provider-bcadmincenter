@@ -213,10 +213,12 @@ func TestFindSelectedUpdate(t *testing.T) {
 
 func TestApplyUpdatesDriftDetection(t *testing.T) {
 	tests := []struct {
-		name            string
-		envVersion      string
-		updates         []EnvironmentUpdate
-		expectedVersion string
+		name                    string
+		envVersion              string
+		updates                 []EnvironmentUpdate
+		wantVersion             string
+		wantPendingVersion      string
+		wantPendingScheduledFor string
 	}{
 		{
 			name:       "scheduled update - suppress drift with target version",
@@ -224,7 +226,20 @@ func TestApplyUpdatesDriftDetection(t *testing.T) {
 			updates: []EnvironmentUpdate{
 				{TargetVersion: "26.1", Selected: true, UpdateStatus: UpdateStatusScheduled},
 			},
-			expectedVersion: "26.1",
+			wantVersion:             "26.1",
+			wantPendingVersion:      "26.1",
+			wantPendingScheduledFor: "",
+		},
+		{
+			name:       "scheduled update with explicit datetime - surfaces scheduled datetime",
+			envVersion: "25.0",
+			updates: []EnvironmentUpdate{
+				{TargetVersion: "26.1", Selected: true, UpdateStatus: UpdateStatusScheduled,
+					ScheduleDetails: &UpdateScheduleDetails{SelectedDateTime: "2026-04-01T02:00:00Z"}},
+			},
+			wantVersion:             "26.1",
+			wantPendingVersion:      "26.1",
+			wantPendingScheduledFor: "2026-04-01T02:00:00Z",
 		},
 		{
 			name:       "running update - suppress drift with target version",
@@ -232,7 +247,19 @@ func TestApplyUpdatesDriftDetection(t *testing.T) {
 			updates: []EnvironmentUpdate{
 				{TargetVersion: "26.1", Selected: true, UpdateStatus: UpdateStatusRunning},
 			},
-			expectedVersion: "26.1",
+			wantVersion:             "26.1",
+			wantPendingVersion:      "26.1",
+			wantPendingScheduledFor: "",
+		},
+		{
+			name:       "selected with empty updateStatus (just scheduled, status not yet propagated) - suppress drift",
+			envVersion: "25.0",
+			updates: []EnvironmentUpdate{
+				{TargetVersion: "26.1", Selected: true, UpdateStatus: ""},
+			},
+			wantVersion:             "26.1",
+			wantPendingVersion:      "26.1",
+			wantPendingScheduledFor: "",
 		},
 		{
 			name:       "failed update - drift with current running version",
@@ -240,7 +267,9 @@ func TestApplyUpdatesDriftDetection(t *testing.T) {
 			updates: []EnvironmentUpdate{
 				{TargetVersion: "26.1", Selected: true, UpdateStatus: UpdateStatusFailed},
 			},
-			expectedVersion: "25.0",
+			wantVersion:             "25.0",
+			wantPendingVersion:      "",
+			wantPendingScheduledFor: "",
 		},
 		{
 			name:       "no selected update - use env version",
@@ -248,7 +277,9 @@ func TestApplyUpdatesDriftDetection(t *testing.T) {
 			updates: []EnvironmentUpdate{
 				{TargetVersion: "26.0", Selected: false},
 			},
-			expectedVersion: "25.0",
+			wantVersion:             "25.0",
+			wantPendingVersion:      "",
+			wantPendingScheduledFor: "",
 		},
 	}
 
@@ -266,8 +297,14 @@ func TestApplyUpdatesDriftDetection(t *testing.T) {
 			r.updateModelFromEnvironment(model, env)
 			r.applyUpdatesDriftDetection(model, env, tt.updates)
 
-			if model.ApplicationVersion.ValueString() != tt.expectedVersion {
-				t.Errorf("application_version = %v, want %v", model.ApplicationVersion.ValueString(), tt.expectedVersion)
+			if model.ApplicationVersion.ValueString() != tt.wantVersion {
+				t.Errorf("ApplicationVersion = %v, want %v", model.ApplicationVersion.ValueString(), tt.wantVersion)
+			}
+			if model.PendingUpgradeVersion.ValueString() != tt.wantPendingVersion {
+				t.Errorf("PendingUpgradeVersion = %v, want %v", model.PendingUpgradeVersion.ValueString(), tt.wantPendingVersion)
+			}
+			if model.PendingUpgradeScheduledFor.ValueString() != tt.wantPendingScheduledFor {
+				t.Errorf("PendingUpgradeScheduledFor = %v, want %v", model.PendingUpgradeScheduledFor.ValueString(), tt.wantPendingScheduledFor)
 			}
 		})
 	}

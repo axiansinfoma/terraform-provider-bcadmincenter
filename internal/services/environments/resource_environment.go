@@ -43,22 +43,24 @@ type EnvironmentResource struct {
 
 // EnvironmentResourceModel describes the resource data model.
 type EnvironmentResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	ApplicationFamily  types.String `tfsdk:"application_family"`
-	Type               types.String `tfsdk:"type"`
-	CountryCode        types.String `tfsdk:"country_code"`
-	RingName           types.String `tfsdk:"ring_name"`
-	ApplicationVersion types.String `tfsdk:"application_version"`
-	IgnoreUpdateWindow types.Bool   `tfsdk:"ignore_update_window"`
-	AzureRegion        types.String `tfsdk:"azure_region"`
-	Status             types.String `tfsdk:"status"`
-	WebClientLoginURL  types.String `tfsdk:"web_client_login_url"`
-	WebServiceURL      types.String `tfsdk:"web_service_url"`
-	AppInsightsKey     types.String `tfsdk:"app_insights_key"`
-	PlatformVersion    types.String `tfsdk:"platform_version"`
-	AADTenantID        types.String `tfsdk:"aad_tenant_id"`
-	Timeouts           types.Object `tfsdk:"timeouts"`
+	ID                         types.String `tfsdk:"id"`
+	Name                       types.String `tfsdk:"name"`
+	ApplicationFamily          types.String `tfsdk:"application_family"`
+	Type                       types.String `tfsdk:"type"`
+	CountryCode                types.String `tfsdk:"country_code"`
+	RingName                   types.String `tfsdk:"ring_name"`
+	ApplicationVersion         types.String `tfsdk:"application_version"`
+	IgnoreUpdateWindow         types.Bool   `tfsdk:"ignore_update_window"`
+	AzureRegion                types.String `tfsdk:"azure_region"`
+	Status                     types.String `tfsdk:"status"`
+	WebClientLoginURL          types.String `tfsdk:"web_client_login_url"`
+	WebServiceURL              types.String `tfsdk:"web_service_url"`
+	AppInsightsKey             types.String `tfsdk:"app_insights_key"`
+	PlatformVersion            types.String `tfsdk:"platform_version"`
+	AADTenantID                types.String `tfsdk:"aad_tenant_id"`
+	PendingUpgradeVersion      types.String `tfsdk:"pending_upgrade_version"`
+	PendingUpgradeScheduledFor types.String `tfsdk:"pending_upgrade_scheduled_for"`
+	Timeouts                   types.Object `tfsdk:"timeouts"`
 }
 
 // Metadata returns the resource type name.
@@ -203,6 +205,17 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"pending_upgrade_version": schema.StringAttribute{
+				MarkdownDescription: "The target version of a currently selected/scheduled or running upgrade. " +
+					"Empty when no upgrade is in progress. " +
+					"While non-empty, `application_version` is suppressed to this value so no drift is reported.",
+				Computed: true,
+			},
+			"pending_upgrade_scheduled_for": schema.StringAttribute{
+				MarkdownDescription: "The RFC3339 datetime at which the pending upgrade is scheduled to run. " +
+					"Empty when the upgrade will run at the next update window or when no upgrade is pending.",
+				Computed: true,
 			},
 			"timeouts": schema.SingleNestedAttribute{
 				MarkdownDescription: "Timeout configuration for the resource operations.",
@@ -665,10 +678,26 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 	} else {
 		model.PlatformVersion = types.StringNull()
 	}
+
+	// Clear pending upgrade attrs; applyUpdatesDriftDetection will populate them if an upgrade is in flight.
+	model.PendingUpgradeVersion = types.StringValue("")
+	model.PendingUpgradeScheduledFor = types.StringValue("")
 }
 
 // applyUpdatesDriftDetection applies drift detection logic based on the environment updates list.
-// It updates model.ApplicationVersion according to the three-condition table in the issue.
+//
+// Suppression table:
+//
+//	| selected | updateStatus          | behavior                                              |
+//	|----------|-----------------------|-------------------------------------------------------|
+//	| true     | "" / "scheduled" / "running" | Suppress drift; set application_version = targetVersion; populate pending_ attrs |
+//	| true     | "failed"              | Report drift; clear pending_ attrs                    |
+//	| true     | "succeeded" / other   | No suppression; clear pending_ attrs                  |
+//	| false    | any                   | No suppression; clear pending_ attrs                  |
+//
+// The API may return selected:true with an empty updateStatus immediately after scheduling
+// (before the upgrade transitions to "scheduled"). We treat that the same as "scheduled" to
+// avoid false-positive drift during the window between PATCH and status propagation.
 func (r *EnvironmentResource) applyUpdatesDriftDetection(model *EnvironmentResourceModel, env *Environment, updates []EnvironmentUpdate) {
 	// Find the selected update.
 	var selectedUpdate *EnvironmentUpdate
@@ -681,22 +710,32 @@ func (r *EnvironmentResource) applyUpdatesDriftDetection(model *EnvironmentResou
 
 	if selectedUpdate == nil {
 		// No selected update: use applicationVersion from environment GET (no drift if versions match).
+		// pending_ attrs are already cleared by updateModelFromEnvironment.
 		return
 	}
 
 	switch selectedUpdate.UpdateStatus {
-	case UpdateStatusScheduled, UpdateStatusRunning:
-		// Suppress drift: store the target version so Terraform sees no change.
-		model.ApplicationVersion = types.StringValue(selectedUpdate.TargetVersion)
 	case UpdateStatusFailed:
 		// Drift: store the currently running version so Terraform detects a change and retries.
+		// pending_ attrs remain empty (upgrade is not in progress).
 		if env.ApplicationVersion != "" {
 			model.ApplicationVersion = types.StringValue(env.ApplicationVersion)
 		} else {
 			model.ApplicationVersion = types.StringNull()
 		}
+	case UpdateStatusScheduled, UpdateStatusRunning, "":
+		// Suppress drift: the upgrade is selected, in-progress, or just scheduled (status not yet
+		// propagated). Store the target version and surface the pending upgrade attributes.
+		model.ApplicationVersion = types.StringValue(selectedUpdate.TargetVersion)
+		model.PendingUpgradeVersion = types.StringValue(selectedUpdate.TargetVersion)
+		if selectedUpdate.ScheduleDetails != nil && selectedUpdate.ScheduleDetails.SelectedDateTime != "" {
+			model.PendingUpgradeScheduledFor = types.StringValue(selectedUpdate.ScheduleDetails.SelectedDateTime)
+		} else {
+			model.PendingUpgradeScheduledFor = types.StringValue("")
+		}
 	default:
 		// For other statuses (e.g., "succeeded"), fall through to the environment version (already set).
+		// pending_ attrs remain empty.
 	}
 }
 
