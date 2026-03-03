@@ -183,6 +183,7 @@ func (p *BCAdminCenterProvider) DataSources(ctx context.Context) []func() dataso
 		available_applications.NewApplicationFamilyDataSource,
 		environments.NewEnvironmentDataSource,
 		environments.NewEnvironmentsDataSource,
+		environments.NewEnvironmentUpdatesDataSource,
 		notificationrecipients.NewNotificationSettingsDataSource,
 		quotas.NewQuotasDataSource,
 		timezones.NewTimeZonesDataSource,

@@ -1,0 +1,136 @@
+---
+page_title: "Data Source bcadmincenter_environment_updates - bcadmincenter"
+subcategory: "Environment"
+description: |-
+  Retrieves the list of available version updates for a Business Central environment. Each entry represents a version that can be scheduled for upgrade, along with its current scheduling state.
+---
+
+# Data Source (bcadmincenter_environment_updates)
+
+Retrieves the list of available version updates for a Business Central environment. Each entry represents a version that can be scheduled for upgrade, along with its current scheduling state.
+
+## Example Usage
+
+### Basic Example
+
+```terraform
+# Copyright (c) 2025 Axians Infoma GmbH
+# SPDX-License-Identifier: MPL-2.0
+
+# List all available version updates for a Business Central environment
+
+terraform {
+  required_providers {
+    bcadmincenter = {
+      source = "axiansinfoma/bcadmincenter"
+    }
+  }
+}
+
+provider "bcadmincenter" {
+  # Authentication configured via environment variables or provider block
+}
+
+data "bcadmincenter_environment_updates" "prod" {
+  application_family = "BusinessCentral"
+  environment_name   = "production"
+}
+
+# Output all available updates
+output "available_updates" {
+  value = [
+    for u in data.bcadmincenter_environment_updates.prod.updates :
+    {
+      version = u.target_version
+      status  = u.update_status
+    }
+    if u.available
+  ]
+}
+
+# Find the currently selected update (if any)
+output "selected_update" {
+  value = [
+    for u in data.bcadmincenter_environment_updates.prod.updates :
+    {
+      version            = u.target_version
+      status             = u.update_status
+      scheduled_datetime = u.scheduled_datetime
+    }
+    if u.selected
+  ]
+}
+```
+
+### Checking for a Scheduled Upgrade
+
+```terraform
+data "bcadmincenter_environment_updates" "prod" {
+  application_family = "BusinessCentral"
+  environment_name   = "production"
+}
+
+locals {
+  selected = [
+    for u in data.bcadmincenter_environment_updates.prod.updates : u
+    if u.selected
+  ]
+}
+
+output "scheduled_upgrade_version" {
+  value = length(local.selected) > 0 ? local.selected[0].target_version : "none"
+}
+```
+
+### Listing Available Versions
+
+```terraform
+data "bcadmincenter_environment_updates" "prod" {
+  application_family = "BusinessCentral"
+  environment_name   = "production"
+}
+
+output "available_versions" {
+  value = [
+    for u in data.bcadmincenter_environment_updates.prod.updates :
+    u.target_version if u.available
+  ]
+}
+```
+
+## Schema
+
+### Required
+
+- `application_family` (String) The application family of the environment (e.g. `"BusinessCentral"`).
+- `environment_name` (String) The name of the environment.
+
+### Optional
+
+- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, the provider's configured tenant ID is used.
+
+### Read-Only
+
+- `updates` (List of Object) The list of available updates for the environment. (see [below for nested schema](#nestedatt--updates))
+
+<a id="nestedatt--updates"></a>
+### Nested Schema for `updates`
+
+Read-Only:
+
+- `available` (Boolean) Whether this version is available for selection.
+- `ignore_update_window` (Boolean) Whether the upgrade ignores the environment's configured update window.
+- `latest_selectable_datetime` (String) The latest datetime by which this update can be scheduled.
+- `rollout_status` (String) The rollout status of the update (e.g. `"Active"`, `"UnderMaintenance"`, `"Postponed"`).
+- `scheduled_datetime` (String) The datetime at which the upgrade is scheduled to run.
+- `selected` (Boolean) Whether this version is currently selected for upgrade.
+- `target_version` (String) The target version for this update entry.
+- `target_version_type` (String) The type of the target version (e.g. `"Cumulative"`, `"Mandatory"`).
+- `update_status` (String) The current update status (e.g. `"scheduled"`, `"running"`, `"failed"`).
+
+## Notes
+
+- The `updates` list contains all version entries returned by the Business Central Admin Center API, including versions that are not yet available (`available = false`).
+- Use `selected = true` to identify which version is currently scheduled for upgrade.
+- The `update_status` field reflects the current state: `"scheduled"`, `"running"`, or `"failed"`.
+- If no update is scheduled, no entry in the list will have `selected = true`.

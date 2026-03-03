@@ -148,8 +148,8 @@ func TestBCAdminCenterProvider_DataSources(t *testing.T) {
 
 	dataSources := p.DataSources(context.Background())
 
-	// We should have 9 data sources: authorized_entra_apps, manageable_tenants, available_applications, application_family, environment, environments, notification_settings, quotas, timezones.
-	expectedCount := 9
+	// We should have 10 data sources: authorized_entra_apps, manageable_tenants, available_applications, application_family, environment, environments, environment_updates, notification_settings, quotas, timezones.
+	expectedCount := 10
 	if len(dataSources) != expectedCount {
 		t.Errorf("DataSources() returned %d data sources, want %d", len(dataSources), expectedCount)
 	}
