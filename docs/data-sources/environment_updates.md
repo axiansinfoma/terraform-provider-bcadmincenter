@@ -111,7 +111,7 @@ output "available_versions" {
 
 ### Read-Only
 
-- `updates` (List of Object) The list of available updates for the environment. (see [below for nested schema](#nestedatt--updates))
+- `updates` (Attributes List) The list of available updates for the environment. (see [below for nested schema](#nestedatt--updates))
 
 <a id="nestedatt--updates"></a>
 ### Nested Schema for `updates`

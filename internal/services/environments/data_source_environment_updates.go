@@ -40,15 +40,15 @@ type environmentUpdatesDataSourceModel struct {
 
 // updateItemAttrTypes defines the object attribute types for a single update entry.
 var updateItemAttrTypes = map[string]attr.Type{
-	"target_version":              types.StringType,
-	"available":                   types.BoolType,
-	"selected":                    types.BoolType,
-	"update_status":               types.StringType,
-	"target_version_type":         types.StringType,
-	"scheduled_datetime":          types.StringType,
-	"ignore_update_window":        types.BoolType,
-	"rollout_status":              types.StringType,
-	"latest_selectable_datetime":  types.StringType,
+	"target_version":             types.StringType,
+	"available":                  types.BoolType,
+	"selected":                   types.BoolType,
+	"update_status":              types.StringType,
+	"target_version_type":        types.StringType,
+	"scheduled_datetime":         types.StringType,
+	"ignore_update_window":       types.BoolType,
+	"rollout_status":             types.StringType,
+	"latest_selectable_datetime": types.StringType,
 }
 
 // Metadata returns the data source type name.
