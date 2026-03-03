@@ -270,7 +270,29 @@ func (s *Service) patchUpdate(ctx context.Context, applicationFamily, environmen
 // Used by the bcadmincenter_environment resource (application_version change).
 // PATCH /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates/{targetVersion}
 // Body: {"selected": true, "scheduleDetails": {"ignoreUpdateWindow": <bool>}}
+//
+// The API rejects re-selection when the existing update entry holds a past selectedDateTime
+// ("EntityValidationFailed: Update currently has selected date time in the past").
+// To handle this, we first send a PATCH that explicitly nulls out selectedDateTime, then
+// send the select request. The first step is best-effort — if it fails (e.g. the entry
+// doesn't exist yet) we proceed with the selection.
 func (s *Service) SelectUpdateVersion(ctx context.Context, applicationFamily, environmentName, targetVersion string, ignoreUpdateWindow bool) error {
+	// Step 1: clear any stored selectedDateTime so the API doesn't reject the select
+	// because of a past datetime from a prior schedule.
+	clearReq := map[string]interface{}{
+		"scheduleDetails": map[string]interface{}{
+			"selectedDateTime":   nil,
+			"ignoreUpdateWindow": ignoreUpdateWindow,
+		},
+	}
+	if err := s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, clearReq); err != nil {
+		// Best-effort: if clearing fails (e.g. no existing entry), proceed with selection.
+		// Log the error for observability without blocking the upgrade.
+		fmt.Printf("[WARN] SelectUpdateVersion: failed to clear selectedDateTime for %s/%s/%s: %v; proceeding with select\n",
+			applicationFamily, environmentName, targetVersion, err)
+	}
+
+	// Step 2: select the version.
 	req := SelectUpdateRequest{
 		Selected: true,
 		ScheduleDetails: &UpdateScheduleDetails{

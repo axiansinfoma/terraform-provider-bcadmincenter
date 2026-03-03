@@ -163,23 +163,38 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"status": schema.StringAttribute{
 				MarkdownDescription: "The current status of the environment (e.g., 'Active', 'Creating').",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"web_client_login_url": schema.StringAttribute{
 				MarkdownDescription: "The URL for accessing the web client.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"web_service_url": schema.StringAttribute{
 				MarkdownDescription: "The URL for web service access.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"app_insights_key": schema.StringAttribute{
 				MarkdownDescription: "The Application Insights instrumentation key for the environment.",
 				Computed:            true,
 				Sensitive:           true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"platform_version": schema.StringAttribute{
 				MarkdownDescription: "The platform version of the environment.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
 				MarkdownDescription: "The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.",

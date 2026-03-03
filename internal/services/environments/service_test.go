@@ -683,6 +683,57 @@ func TestService_SelectUpdateVersion(t *testing.T) {
 	}
 }
 
+// TestService_SelectUpdateVersion_ClearsDatetime verifies that SelectUpdateVersion first sends
+// a PATCH to null out selectedDateTime (to avoid EntityValidationFailed for past datetimes),
+// then sends the actual select request with selected:true.
+func TestService_SelectUpdateVersion_ClearsDatetime(t *testing.T) {
+	requestBodies := make([]map[string]interface{}, 0, 2)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			requestBodies = append(requestBodies, body)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	mockCred := &mockTokenCredential{token: "test-token"}
+	c := &client.Client{}
+	c.SetCredential(mockCred)
+	c.SetBaseURL(server.URL)
+	c.SetAPIVersion(constants.DefaultAPIVersion)
+	c.SetHTTPClient(&http.Client{})
+
+	svc := NewService(c)
+	err := svc.SelectUpdateVersion(context.Background(), "BusinessCentral", "production", "27.2", false)
+	if err != nil {
+		t.Fatalf("SelectUpdateVersion() unexpected error: %v", err)
+	}
+
+	if len(requestBodies) != 2 {
+		t.Fatalf("expected 2 PATCH requests (clear + select), got %d", len(requestBodies))
+	}
+
+	// First request: clear step — scheduleDetails.selectedDateTime must be null.
+	clearBody := requestBodies[0]
+	if _, hasSelected := clearBody["selected"]; hasSelected {
+		t.Error("clear step should not have 'selected' field")
+	}
+	details, ok := clearBody["scheduleDetails"].(map[string]interface{})
+	if !ok {
+		t.Fatal("clear step missing 'scheduleDetails'")
+	}
+	if val, exists := details["selectedDateTime"]; !exists || val != nil {
+		t.Errorf("clear step scheduleDetails.selectedDateTime should be null, got %v (exists=%v)", val, exists)
+	}
+
+	// Second request: select step — must have selected:true.
+	selectBody := requestBodies[1]
+	if selected, ok := selectBody["selected"].(bool); !ok || !selected {
+		t.Errorf("select step expected selected:true, got %v", selectBody["selected"])
+	}
+}
+
 func TestService_ScheduleUpdateVersion(t *testing.T) {
 	tests := []struct {
 		name               string
