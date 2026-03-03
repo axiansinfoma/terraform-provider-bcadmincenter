@@ -42,22 +42,22 @@ type EnvironmentResource struct {
 
 // EnvironmentResourceModel describes the resource data model.
 type EnvironmentResourceModel struct {
-	ID                  types.String `tfsdk:"id"`
-	Name                types.String `tfsdk:"name"`
-	ApplicationFamily   types.String `tfsdk:"application_family"`
-	Type                types.String `tfsdk:"type"`
-	CountryCode         types.String `tfsdk:"country_code"`
-	RingName            types.String `tfsdk:"ring_name"`
-	ApplicationVersion  types.String `tfsdk:"application_version"`
-	IgnoreUpdateWindow  types.Bool   `tfsdk:"ignore_update_window"`
-	AzureRegion         types.String `tfsdk:"azure_region"`
-	Status              types.String `tfsdk:"status"`
-	WebClientLoginURL   types.String `tfsdk:"web_client_login_url"`
-	WebServiceURL       types.String `tfsdk:"web_service_url"`
-	AppInsightsKey      types.String `tfsdk:"app_insights_key"`
-	PlatformVersion     types.String `tfsdk:"platform_version"`
-	AADTenantID         types.String `tfsdk:"aad_tenant_id"`
-	Timeouts            types.Object `tfsdk:"timeouts"`
+	ID                 types.String `tfsdk:"id"`
+	Name               types.String `tfsdk:"name"`
+	ApplicationFamily  types.String `tfsdk:"application_family"`
+	Type               types.String `tfsdk:"type"`
+	CountryCode        types.String `tfsdk:"country_code"`
+	RingName           types.String `tfsdk:"ring_name"`
+	ApplicationVersion types.String `tfsdk:"application_version"`
+	IgnoreUpdateWindow types.Bool   `tfsdk:"ignore_update_window"`
+	AzureRegion        types.String `tfsdk:"azure_region"`
+	Status             types.String `tfsdk:"status"`
+	WebClientLoginURL  types.String `tfsdk:"web_client_login_url"`
+	WebServiceURL      types.String `tfsdk:"web_service_url"`
+	AppInsightsKey     types.String `tfsdk:"app_insights_key"`
+	PlatformVersion    types.String `tfsdk:"platform_version"`
+	AADTenantID        types.String `tfsdk:"aad_tenant_id"`
+	Timeouts           types.Object `tfsdk:"timeouts"`
 }
 
 // Metadata returns the resource type name.

@@ -131,114 +131,114 @@ func TestEnvironmentIDRoundTrip(t *testing.T) {
 }
 
 func TestBuildUpdateScheduleID(t *testing.T) {
-tests := []struct {
-name              string
-tenantID          string
-applicationFamily string
-envName           string
-want              string
-}{
-{
-name:              "production environment update schedule",
-tenantID:          "9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d",
-applicationFamily: "BusinessCentral",
-envName:           "production",
-want:              "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/updateSchedule",
-},
-}
+	tests := []struct {
+		name              string
+		tenantID          string
+		applicationFamily string
+		envName           string
+		want              string
+	}{
+		{
+			name:              "production environment update schedule",
+			tenantID:          "9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d",
+			applicationFamily: "BusinessCentral",
+			envName:           "production",
+			want:              "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/updateSchedule",
+		},
+	}
 
-for _, tt := range tests {
-t.Run(tt.name, func(t *testing.T) {
-got := BuildUpdateScheduleID(tt.tenantID, tt.applicationFamily, tt.envName)
-if got != tt.want {
-t.Errorf("BuildUpdateScheduleID() = %v, want %v", got, tt.want)
-}
-})
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuildUpdateScheduleID(tt.tenantID, tt.applicationFamily, tt.envName)
+			if got != tt.want {
+				t.Errorf("BuildUpdateScheduleID() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 func TestParseUpdateScheduleID(t *testing.T) {
-tests := []struct {
-name          string
-id            string
-wantTenantID  string
-wantAppFamily string
-wantEnvName   string
-wantErr       bool
-}{
-{
-name:          "valid update schedule ID",
-id:            "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/updateSchedule",
-wantTenantID:  "9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d",
-wantAppFamily: "BusinessCentral",
-wantEnvName:   "production",
-wantErr:       false,
-},
-{
-name:    "invalid format - missing updateSchedule suffix",
-id:      "/tenants/tenant123/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/prod",
-wantErr: true,
-},
-{
-name:    "invalid format - wrong provider",
-id:      "/tenants/tenant123/providers/WrongProvider/applications/BusinessCentral/environments/prod/updateSchedule",
-wantErr: true,
-},
-{
-name:    "invalid format - empty",
-id:      "",
-wantErr: true,
-},
-{
-name:    "invalid format - wrong last segment",
-id:      "/tenants/tenant123/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/prod/wrongSegment",
-wantErr: true,
-},
-}
+	tests := []struct {
+		name          string
+		id            string
+		wantTenantID  string
+		wantAppFamily string
+		wantEnvName   string
+		wantErr       bool
+	}{
+		{
+			name:          "valid update schedule ID",
+			id:            "/tenants/9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/updateSchedule",
+			wantTenantID:  "9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d",
+			wantAppFamily: "BusinessCentral",
+			wantEnvName:   "production",
+			wantErr:       false,
+		},
+		{
+			name:    "invalid format - missing updateSchedule suffix",
+			id:      "/tenants/tenant123/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/prod",
+			wantErr: true,
+		},
+		{
+			name:    "invalid format - wrong provider",
+			id:      "/tenants/tenant123/providers/WrongProvider/applications/BusinessCentral/environments/prod/updateSchedule",
+			wantErr: true,
+		},
+		{
+			name:    "invalid format - empty",
+			id:      "",
+			wantErr: true,
+		},
+		{
+			name:    "invalid format - wrong last segment",
+			id:      "/tenants/tenant123/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/prod/wrongSegment",
+			wantErr: true,
+		},
+	}
 
-for _, tt := range tests {
-t.Run(tt.name, func(t *testing.T) {
-gotTenantID, gotAppFamily, gotEnvName, err := ParseUpdateScheduleID(tt.id)
-if (err != nil) != tt.wantErr {
-t.Errorf("ParseUpdateScheduleID() error = %v, wantErr %v", err, tt.wantErr)
-return
-}
-if !tt.wantErr {
-if gotTenantID != tt.wantTenantID {
-t.Errorf("ParseUpdateScheduleID() tenantID = %v, want %v", gotTenantID, tt.wantTenantID)
-}
-if gotAppFamily != tt.wantAppFamily {
-t.Errorf("ParseUpdateScheduleID() applicationFamily = %v, want %v", gotAppFamily, tt.wantAppFamily)
-}
-if gotEnvName != tt.wantEnvName {
-t.Errorf("ParseUpdateScheduleID() environmentName = %v, want %v", gotEnvName, tt.wantEnvName)
-}
-}
-})
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotTenantID, gotAppFamily, gotEnvName, err := ParseUpdateScheduleID(tt.id)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseUpdateScheduleID() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				if gotTenantID != tt.wantTenantID {
+					t.Errorf("ParseUpdateScheduleID() tenantID = %v, want %v", gotTenantID, tt.wantTenantID)
+				}
+				if gotAppFamily != tt.wantAppFamily {
+					t.Errorf("ParseUpdateScheduleID() applicationFamily = %v, want %v", gotAppFamily, tt.wantAppFamily)
+				}
+				if gotEnvName != tt.wantEnvName {
+					t.Errorf("ParseUpdateScheduleID() environmentName = %v, want %v", gotEnvName, tt.wantEnvName)
+				}
+			}
+		})
+	}
 }
 
 func TestUpdateScheduleIDRoundTrip(t *testing.T) {
-tenantID := "9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d"
-appFamily := "BusinessCentral"
-envName := "production"
+	tenantID := "9ff11aaa-cddc-4df5-97c9-b9e79db1ba1d"
+	appFamily := "BusinessCentral"
+	envName := "production"
 
-id := BuildUpdateScheduleID(tenantID, appFamily, envName)
-parsedTenantID, parsedAppFamily, parsedEnvName, err := ParseUpdateScheduleID(id)
+	id := BuildUpdateScheduleID(tenantID, appFamily, envName)
+	parsedTenantID, parsedAppFamily, parsedEnvName, err := ParseUpdateScheduleID(id)
 
-if err != nil {
-t.Fatalf("ParseUpdateScheduleID() unexpected error: %v", err)
-}
+	if err != nil {
+		t.Fatalf("ParseUpdateScheduleID() unexpected error: %v", err)
+	}
 
-if parsedTenantID != tenantID {
-t.Errorf("Round trip tenantID = %v, want %v", parsedTenantID, tenantID)
-}
+	if parsedTenantID != tenantID {
+		t.Errorf("Round trip tenantID = %v, want %v", parsedTenantID, tenantID)
+	}
 
-if parsedAppFamily != appFamily {
-t.Errorf("Round trip applicationFamily = %v, want %v", parsedAppFamily, appFamily)
-}
+	if parsedAppFamily != appFamily {
+		t.Errorf("Round trip applicationFamily = %v, want %v", parsedAppFamily, appFamily)
+	}
 
-if parsedEnvName != envName {
-t.Errorf("Round trip environmentName = %v, want %v", parsedEnvName, envName)
-}
+	if parsedEnvName != envName {
+		t.Errorf("Round trip environmentName = %v, want %v", parsedEnvName, envName)
+	}
 }

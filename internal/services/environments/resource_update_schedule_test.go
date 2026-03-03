@@ -213,10 +213,10 @@ func TestFindSelectedUpdate(t *testing.T) {
 
 func TestApplyUpdatesDriftDetection(t *testing.T) {
 	tests := []struct {
-		name               string
-		envVersion         string
-		updates            []EnvironmentUpdate
-		expectedVersion    string
+		name            string
+		envVersion      string
+		updates         []EnvironmentUpdate
+		expectedVersion string
 	}{
 		{
 			name:       "scheduled update - suppress drift with target version",
