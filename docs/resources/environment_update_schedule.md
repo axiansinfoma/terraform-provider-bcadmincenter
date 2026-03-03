@@ -4,8 +4,8 @@ subcategory: "Environment"
 description: |-
   Manages an explicitly scheduled upgrade for a Business Central environment.
   Use this resource instead of application_version on bcadmincenter_environment when you need explicit scheduling control over which version to target and when the upgrade should run.
-  Do not use application_version on bcadmincenter_environment and bcadmincenter_environment_update_schedule for the same environment simultaneously.
-  Warning: Destroying this resource removes it from Terraform state only. No API call is made and the scheduled upgrade on the Business Central side is not cancelled.
+  ~> Note: Do not use application_version on bcadmincenter_environment and bcadmincenter_environment_update_schedule for the same environment simultaneously.
+  ~> Warning: Destroying this resource removes it from Terraform state only. No API call is made and the scheduled upgrade on the Business Central side is not cancelled.
 ---
 
 # Resource (bcadmincenter_environment_update_schedule)
@@ -15,6 +15,12 @@ Manages an explicitly scheduled upgrade for a Business Central environment.
 Use this resource instead of `application_version` on `bcadmincenter_environment` when you need explicit scheduling control over which version to target and when the upgrade should run.
 
 ~> **Note:** Do **not** use `application_version` on `bcadmincenter_environment` and `bcadmincenter_environment_update_schedule` for the same environment simultaneously.
+
+~> **Warning:** Destroying this resource removes it from Terraform state only. No API call is made and the scheduled upgrade on the Business Central side is **not** cancelled.
+
+## Important Notes
+
+~> **Warning:** Do **not** use `application_version` on `bcadmincenter_environment` and `bcadmincenter_environment_update_schedule` for the same environment simultaneously. Choose one approach per environment.
 
 ~> **Warning:** **Destroying** this resource removes it from Terraform state only. No API call is made to cancel the scheduled upgrade on the Business Central side. The upgrade will continue as scheduled regardless of whether this resource exists in Terraform state.
 

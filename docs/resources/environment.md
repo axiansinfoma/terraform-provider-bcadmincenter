@@ -88,6 +88,22 @@ output "application_version" {
 }
 ```
 
+### Environment with Specific Version
+
+```terraform
+resource "bcadmincenter_environment" "prod" {
+  name                 = "my-production"
+  application_family   = "BusinessCentral"
+  type                 = "Production"
+  country_code         = "US"
+  ring_name            = "PROD"
+  application_version  = "26.1"
+  ignore_update_window = false  # default; update waits for next update window
+}
+```
+
+Changing `application_version = "26.2"` on a subsequent apply schedules an in-place upgrade. A `scheduled` or `running` status suppresses drift. A `failed` status causes drift and retries on next apply.
+
 ### Sandbox Environment on Latest Version
 
 ```terraform
