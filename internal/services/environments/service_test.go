@@ -683,10 +683,10 @@ func TestService_SelectUpdateVersion(t *testing.T) {
 	}
 }
 
-// TestService_SelectUpdateVersion_ClearsDatetime verifies that SelectUpdateVersion first sends
-// a PATCH to null out selectedDateTime (to avoid EntityValidationFailed for past datetimes),
-// then sends the actual select request with selected:true.
-func TestService_SelectUpdateVersion_ClearsDatetime(t *testing.T) {
+// TestService_SelectUpdateVersion_DeselectsFirst verifies that SelectUpdateVersion first sends
+// a PATCH with selected:false (deselect) to clear past-datetime state that would block re-selection
+// (EntityValidationFailed), then sends the actual select request with selected:true.
+func TestService_SelectUpdateVersion_DeselectsFirst(t *testing.T) {
 	requestBodies := make([]map[string]interface{}, 0, 2)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]interface{}
@@ -711,26 +711,55 @@ func TestService_SelectUpdateVersion_ClearsDatetime(t *testing.T) {
 	}
 
 	if len(requestBodies) != 2 {
-		t.Fatalf("expected 2 PATCH requests (clear + select), got %d", len(requestBodies))
+		t.Fatalf("expected 2 PATCH requests (deselect + select), got %d", len(requestBodies))
 	}
 
-	// First request: clear step — scheduleDetails.selectedDateTime must be null.
-	clearBody := requestBodies[0]
-	if _, hasSelected := clearBody["selected"]; hasSelected {
-		t.Error("clear step should not have 'selected' field")
+	// First request: deselect step — must have selected:false and no scheduleDetails.
+	deselectBody := requestBodies[0]
+	if selected, ok := deselectBody["selected"].(bool); !ok || selected {
+		t.Errorf("deselect step expected selected:false, got %v", deselectBody["selected"])
 	}
-	details, ok := clearBody["scheduleDetails"].(map[string]interface{})
-	if !ok {
-		t.Fatal("clear step missing 'scheduleDetails'")
-	}
-	if val, exists := details["selectedDateTime"]; !exists || val != nil {
-		t.Errorf("clear step scheduleDetails.selectedDateTime should be null, got %v (exists=%v)", val, exists)
+	if _, hasDetails := deselectBody["scheduleDetails"]; hasDetails {
+		t.Error("deselect step should not have 'scheduleDetails' field")
 	}
 
 	// Second request: select step — must have selected:true.
 	selectBody := requestBodies[1]
 	if selected, ok := selectBody["selected"].(bool); !ok || !selected {
 		t.Errorf("select step expected selected:true, got %v", selectBody["selected"])
+	}
+}
+
+// TestService_SelectUpdateVersion_ProceedsWhenDeselectFails verifies that SelectUpdateVersion
+// still attempts the select even if the deselect step fails (best-effort).
+func TestService_SelectUpdateVersion_ProceedsWhenDeselectFails(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		if callCount == 1 {
+			// First call (deselect): fail
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			// Second call (select): succeed
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	mockCred := &mockTokenCredential{token: "test-token"}
+	c := &client.Client{}
+	c.SetCredential(mockCred)
+	c.SetBaseURL(server.URL)
+	c.SetAPIVersion(constants.DefaultAPIVersion)
+	c.SetHTTPClient(&http.Client{})
+
+	svc := NewService(c)
+	err := svc.SelectUpdateVersion(context.Background(), "BusinessCentral", "production", "27.2", false)
+	if err != nil {
+		t.Errorf("SelectUpdateVersion() should succeed when only deselect fails, got: %v", err)
+	}
+	if callCount != 2 {
+		t.Errorf("expected 2 PATCH calls, got %d", callCount)
 	}
 }
 
