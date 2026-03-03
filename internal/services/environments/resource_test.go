@@ -44,7 +44,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 	}
 
 	// Verify optional attributes exist.
-	optionalAttrs := []string{"application_family", "ring_name", "application_version", "azure_region", "aad_tenant_id"}
+	optionalAttrs := []string{"application_family", "ring_name", "application_version", "ignore_update_window", "azure_region", "aad_tenant_id"}
 	for _, attr := range optionalAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
 			t.Errorf("Schema missing optional attribute: %s", attr)
@@ -92,6 +92,7 @@ func TestEnvironmentResourceModel(t *testing.T) {
 	_ = model.CountryCode
 	_ = model.RingName
 	_ = model.ApplicationVersion
+	_ = model.IgnoreUpdateWindow
 	_ = model.AzureRegion
 	_ = model.Status
 	_ = model.WebClientLoginURL

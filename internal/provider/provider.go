@@ -162,6 +162,7 @@ func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource
 	return []func() resource.Resource{
 		authorizedentraapps.NewAuthorizedEntraAppResource,
 		environments.NewEnvironmentResource,
+		environments.NewUpdateScheduleResource,
 		environmentsettings.NewEnvironmentSettingsResource,
 		environmentsupportcontact.NewEnvironmentSupportContactResource,
 		notificationrecipients.NewNotificationRecipientResource,

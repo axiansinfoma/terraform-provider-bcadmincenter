@@ -34,12 +34,12 @@ type LocationOption struct {
 
 // CreateEnvironmentRequest represents the request body for creating a new environment.
 type CreateEnvironmentRequest struct {
-	EnvironmentType string `json:"environmentType"`
-	Name            string `json:"name"`
-	CountryCode     string `json:"countryCode"`
-	RingName        string `json:"ringName,omitempty"`
-	// ApplicationVersion is NOT included - API automatically assigns based on ring
-	AzureRegion string `json:"azureRegion,omitempty"`
+	EnvironmentType    string `json:"environmentType"`
+	Name               string `json:"name"`
+	CountryCode        string `json:"countryCode"`
+	RingName           string `json:"ringName,omitempty"`
+	ApplicationVersion string `json:"applicationVersion,omitempty"` // set only when specified by user
+	AzureRegion        string `json:"azureRegion,omitempty"`
 }
 
 // UpdateEnvironmentRequest represents the request body for updating an environment.
@@ -92,4 +92,45 @@ const (
 const (
 	EnvironmentTypeProduction = "Production"
 	EnvironmentTypeSandbox    = "Sandbox"
+)
+
+// EnvironmentUpdatesResponse represents the response when listing available updates.
+type EnvironmentUpdatesResponse struct {
+	Value []EnvironmentUpdate `json:"value"`
+}
+
+// EnvironmentUpdate represents a single available update entry for an environment.
+type EnvironmentUpdate struct {
+	TargetVersion     string                 `json:"targetVersion"`
+	Available         bool                   `json:"available"`
+	Selected          bool                   `json:"selected"`
+	UpdateStatus      string                 `json:"updateStatus,omitempty"`
+	ScheduleDetails   *UpdateScheduleDetails `json:"scheduleDetails,omitempty"`
+	TargetVersionType string                 `json:"targetVersionType,omitempty"`
+}
+
+// UpdateScheduleDetails holds scheduling information for an environment update.
+type UpdateScheduleDetails struct {
+	LatestSelectableDateTime string `json:"latestSelectableDateTime,omitempty"`
+	SelectedDateTime         string `json:"selectedDateTime,omitempty"`
+	IgnoreUpdateWindow       bool   `json:"ignoreUpdateWindow"`
+	RolloutStatus            string `json:"rolloutStatus,omitempty"`
+}
+
+// SelectUpdateRequest is used by SelectUpdateVersion and ScheduleUpdateVersion.
+type SelectUpdateRequest struct {
+	Selected        bool                   `json:"selected"`
+	ScheduleDetails *UpdateScheduleDetails `json:"scheduleDetails,omitempty"`
+}
+
+// UpdateScheduleDetailsRequest is used by UpdateScheduleDetails (no "selected" field).
+type UpdateScheduleDetailsRequest struct {
+	ScheduleDetails *UpdateScheduleDetails `json:"scheduleDetails"`
+}
+
+// UpdateStatus constants for EnvironmentUpdate.updateStatus field.
+const (
+	UpdateStatusScheduled = "scheduled"
+	UpdateStatusRunning   = "running"
+	UpdateStatusFailed    = "failed"
 )

@@ -224,3 +224,93 @@ func isEnvironmentNotFoundError(err error) bool {
 
 	return strings.Contains(err.Error(), "EnvironmentNotFound")
 }
+
+// GetUpdates returns available and selected updates for an environment.
+// GET /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates
+func (s *Service) GetUpdates(ctx context.Context, applicationFamily, environmentName string) ([]EnvironmentUpdate, error) {
+	path := fmt.Sprintf("applications/%s/environments/%s/updates", applicationFamily, environmentName)
+
+	resp, err := s.client.Get(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updates: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var updates EnvironmentUpdatesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&updates); err != nil {
+		return nil, fmt.Errorf("failed to decode updates response: %w", err)
+	}
+
+	return updates.Value, nil
+}
+
+// patchUpdate is a shared helper that sends a PATCH request to the updates endpoint.
+func (s *Service) patchUpdate(ctx context.Context, applicationFamily, environmentName, targetVersion string, body interface{}) error {
+	path := fmt.Sprintf("applications/%s/environments/%s/updates/%s", applicationFamily, environmentName, targetVersion)
+
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := s.client.Patch(ctx, path, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to patch update: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
+	}
+
+	return nil
+}
+
+// SelectUpdateVersion schedules an upgrade to the target version in the next update window.
+// Used by the bcadmincenter_environment resource (application_version change).
+// PATCH /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates/{targetVersion}
+// Body: {"selected": true, "scheduleDetails": {"ignoreUpdateWindow": <bool>}}
+func (s *Service) SelectUpdateVersion(ctx context.Context, applicationFamily, environmentName, targetVersion string, ignoreUpdateWindow bool) error {
+	req := SelectUpdateRequest{
+		Selected: true,
+		ScheduleDetails: &UpdateScheduleDetails{
+			IgnoreUpdateWindow: ignoreUpdateWindow,
+		},
+	}
+	return s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, req)
+}
+
+// ScheduleUpdateVersion schedules an upgrade with an explicit datetime.
+// Used by the bcadmincenter_environment_update_schedule resource.
+// PATCH /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates/{targetVersion}
+// Body: {"selected": true, "scheduleDetails": {"selectedDateTime": <datetime>, "ignoreUpdateWindow": <bool>}}
+func (s *Service) ScheduleUpdateVersion(ctx context.Context, applicationFamily, environmentName, targetVersion, scheduledDateTime string, ignoreUpdateWindow bool) error {
+	scheduleDetails := &UpdateScheduleDetails{
+		IgnoreUpdateWindow: ignoreUpdateWindow,
+	}
+	if scheduledDateTime != "" {
+		scheduleDetails.SelectedDateTime = scheduledDateTime
+	}
+	req := SelectUpdateRequest{
+		Selected:        true,
+		ScheduleDetails: scheduleDetails,
+	}
+	return s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, req)
+}
+
+// UpdateScheduleDetails updates scheduleDetails for an already-selected version without reselecting.
+// Used when only scheduled_datetime or ignore_update_window changes on the update_schedule resource.
+// PATCH /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates/{targetVersion}
+// Body: {"scheduleDetails": {"selectedDateTime": <datetime>, "ignoreUpdateWindow": <bool>}}
+func (s *Service) UpdateScheduleDetails(ctx context.Context, applicationFamily, environmentName, targetVersion, scheduledDateTime string, ignoreUpdateWindow bool) error {
+	scheduleDetails := &UpdateScheduleDetails{
+		IgnoreUpdateWindow: ignoreUpdateWindow,
+	}
+	if scheduledDateTime != "" {
+		scheduleDetails.SelectedDateTime = scheduledDateTime
+	}
+	req := UpdateScheduleDetailsRequest{
+		ScheduleDetails: scheduleDetails,
+	}
+	return s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, req)
+}

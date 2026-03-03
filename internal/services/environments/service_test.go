@@ -542,3 +542,249 @@ func TestIsEnvironmentNotFoundError(t *testing.T) {
 		})
 	}
 }
+
+func TestService_GetUpdates(t *testing.T) {
+tests := []struct {
+name              string
+applicationFamily string
+environmentName   string
+responseBody      interface{}
+responseStatus    int
+wantErr           bool
+expectedCount     int
+}{
+{
+name:              "successful response with updates",
+applicationFamily: "BusinessCentral",
+environmentName:   "production",
+responseBody: EnvironmentUpdatesResponse{
+Value: []EnvironmentUpdate{
+{
+TargetVersion: "26.0",
+Available:     true,
+Selected:      false,
+},
+{
+TargetVersion: "26.1",
+Available:     true,
+Selected:      true,
+UpdateStatus:  UpdateStatusScheduled,
+},
+},
+},
+responseStatus: http.StatusOK,
+wantErr:        false,
+expectedCount:  2,
+},
+{
+name:              "empty updates list",
+applicationFamily: "BusinessCentral",
+environmentName:   "production",
+responseBody: EnvironmentUpdatesResponse{
+Value: []EnvironmentUpdate{},
+},
+responseStatus: http.StatusOK,
+wantErr:        false,
+expectedCount:  0,
+},
+{
+name:              "server error",
+applicationFamily: "BusinessCentral",
+environmentName:   "production",
+responseBody:      map[string]string{"error": "internal server error"},
+responseStatus:    http.StatusInternalServerError,
+wantErr:           true,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+w.WriteHeader(tt.responseStatus)
+if err := json.NewEncoder(w).Encode(tt.responseBody); err != nil {
+t.Fatalf("Failed to encode response: %v", err)
+}
+}))
+defer server.Close()
+
+mockCred := &mockTokenCredential{token: "test-token"}
+c := &client.Client{}
+c.SetCredential(mockCred)
+c.SetBaseURL(server.URL)
+c.SetAPIVersion(constants.DefaultAPIVersion)
+c.SetHTTPClient(&http.Client{})
+
+svc := NewService(c)
+updates, err := svc.GetUpdates(context.Background(), tt.applicationFamily, tt.environmentName)
+
+if (err != nil) != tt.wantErr {
+t.Errorf("GetUpdates() error = %v, wantErr %v", err, tt.wantErr)
+return
+}
+
+if !tt.wantErr && len(updates) != tt.expectedCount {
+t.Errorf("GetUpdates() returned %d updates, expected %d", len(updates), tt.expectedCount)
+}
+})
+}
+}
+
+func TestService_SelectUpdateVersion(t *testing.T) {
+tests := []struct {
+name               string
+targetVersion      string
+ignoreUpdateWindow bool
+responseStatus     int
+wantErr            bool
+}{
+{
+name:               "successful select",
+targetVersion:      "26.1",
+ignoreUpdateWindow: false,
+responseStatus:     http.StatusOK,
+wantErr:            false,
+},
+{
+name:               "successful select with ignore window",
+targetVersion:      "26.1",
+ignoreUpdateWindow: true,
+responseStatus:     http.StatusNoContent,
+wantErr:            false,
+},
+{
+name:           "bad request",
+targetVersion:  "invalid",
+responseStatus: http.StatusBadRequest,
+wantErr:        true,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+w.WriteHeader(tt.responseStatus)
+}))
+defer server.Close()
+
+mockCred := &mockTokenCredential{token: "test-token"}
+c := &client.Client{}
+c.SetCredential(mockCred)
+c.SetBaseURL(server.URL)
+c.SetAPIVersion(constants.DefaultAPIVersion)
+c.SetHTTPClient(&http.Client{})
+
+svc := NewService(c)
+err := svc.SelectUpdateVersion(context.Background(), "BusinessCentral", "production", tt.targetVersion, tt.ignoreUpdateWindow)
+
+if (err != nil) != tt.wantErr {
+t.Errorf("SelectUpdateVersion() error = %v, wantErr %v", err, tt.wantErr)
+}
+})
+}
+}
+
+func TestService_ScheduleUpdateVersion(t *testing.T) {
+tests := []struct {
+name               string
+targetVersion      string
+scheduledDateTime  string
+ignoreUpdateWindow bool
+responseStatus     int
+wantErr            bool
+}{
+{
+name:               "successful schedule with datetime",
+targetVersion:      "26.1",
+scheduledDateTime:  "2026-04-01T02:00:00Z",
+ignoreUpdateWindow: false,
+responseStatus:     http.StatusOK,
+wantErr:            false,
+},
+{
+name:               "successful schedule without datetime",
+targetVersion:      "26.1",
+scheduledDateTime:  "",
+ignoreUpdateWindow: false,
+responseStatus:     http.StatusNoContent,
+wantErr:            false,
+},
+{
+name:           "server error",
+targetVersion:  "26.1",
+responseStatus: http.StatusInternalServerError,
+wantErr:        true,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+w.WriteHeader(tt.responseStatus)
+}))
+defer server.Close()
+
+mockCred := &mockTokenCredential{token: "test-token"}
+c := &client.Client{}
+c.SetCredential(mockCred)
+c.SetBaseURL(server.URL)
+c.SetAPIVersion(constants.DefaultAPIVersion)
+c.SetHTTPClient(&http.Client{})
+
+svc := NewService(c)
+err := svc.ScheduleUpdateVersion(context.Background(), "BusinessCentral", "production", tt.targetVersion, tt.scheduledDateTime, tt.ignoreUpdateWindow)
+
+if (err != nil) != tt.wantErr {
+t.Errorf("ScheduleUpdateVersion() error = %v, wantErr %v", err, tt.wantErr)
+}
+})
+}
+}
+
+func TestService_UpdateScheduleDetails(t *testing.T) {
+tests := []struct {
+name               string
+targetVersion      string
+scheduledDateTime  string
+ignoreUpdateWindow bool
+responseStatus     int
+wantErr            bool
+}{
+{
+name:               "successful update",
+targetVersion:      "26.1",
+scheduledDateTime:  "2026-04-01T04:00:00Z",
+ignoreUpdateWindow: true,
+responseStatus:     http.StatusOK,
+wantErr:            false,
+},
+{
+name:           "not found",
+targetVersion:  "26.1",
+responseStatus: http.StatusNotFound,
+wantErr:        true,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+w.WriteHeader(tt.responseStatus)
+}))
+defer server.Close()
+
+mockCred := &mockTokenCredential{token: "test-token"}
+c := &client.Client{}
+c.SetCredential(mockCred)
+c.SetBaseURL(server.URL)
+c.SetAPIVersion(constants.DefaultAPIVersion)
+c.SetHTTPClient(&http.Client{})
+
+svc := NewService(c)
+err := svc.UpdateScheduleDetails(context.Background(), "BusinessCentral", "production", tt.targetVersion, tt.scheduledDateTime, tt.ignoreUpdateWindow)
+
+if (err != nil) != tt.wantErr {
+t.Errorf("UpdateScheduleDetails() error = %v, wantErr %v", err, tt.wantErr)
+}
+})
+}
+}
