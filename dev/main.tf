@@ -16,4 +16,5 @@ provider "bcadmincenter" {
   # Optional: AZURE_CLIENT_ID
   # Optional: AZURE_CLIENT_SECRET
   # If not set, will use Azure CLI authentication
+  tenant_id = "c6c8fc28-a4d8-4cb3-aee2-7853710491df"
 }

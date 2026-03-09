@@ -44,7 +44,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 	}
 
 	// Verify optional attributes exist.
-	optionalAttrs := []string{"application_family", "ring_name", "application_version", "azure_region", "aad_tenant_id"}
+	optionalAttrs := []string{"application_family", "ring_name", "application_version", "ignore_update_window", "azure_region", "aad_tenant_id"}
 	for _, attr := range optionalAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
 			t.Errorf("Schema missing optional attribute: %s", attr)
@@ -52,7 +52,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 	}
 
 	// Verify computed attributes exist.
-	computedAttrs := []string{"id", "status", "web_client_login_url", "web_service_url", "app_insights_key", "platform_version"}
+	computedAttrs := []string{"id", "status", "web_client_login_url", "web_service_url", "app_insights_key", "platform_version", "pending_upgrade_version", "pending_upgrade_scheduled_for"}
 	for _, attr := range computedAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
 			t.Errorf("Schema missing computed attribute: %s", attr)
@@ -92,6 +92,7 @@ func TestEnvironmentResourceModel(t *testing.T) {
 	_ = model.CountryCode
 	_ = model.RingName
 	_ = model.ApplicationVersion
+	_ = model.IgnoreUpdateWindow
 	_ = model.AzureRegion
 	_ = model.Status
 	_ = model.WebClientLoginURL
@@ -99,6 +100,8 @@ func TestEnvironmentResourceModel(t *testing.T) {
 	_ = model.AppInsightsKey
 	_ = model.PlatformVersion
 	_ = model.AADTenantID
+	_ = model.PendingUpgradeVersion
+	_ = model.PendingUpgradeScheduledFor
 	_ = model.Timeouts
 }
 
@@ -388,5 +391,78 @@ func TestEnvironmentResource_ImportState_Success(t *testing.T) {
 
 	if parts[2] != "production" {
 		t.Errorf("Environment name = %s, want production", parts[2])
+	}
+}
+
+func TestNormalizeApplicationVersion(t *testing.T) {
+	tests := []struct {
+		name         string
+		priorVersion string
+		apiVersion   string
+		want         string
+	}{
+		{
+			name:         "short major.minor form preserved when API returns full build version",
+			priorVersion: "27.1",
+			apiVersion:   "27.1.41698.41831",
+			want:         "27.1",
+		},
+		{
+			name:         "exact match preserved unchanged",
+			priorVersion: "27.1.41698.41831",
+			apiVersion:   "27.1.41698.41831",
+			want:         "27.1.41698.41831",
+		},
+		{
+			name:         "different minor version triggers drift",
+			priorVersion: "27.1",
+			apiVersion:   "27.2.12345.67890",
+			want:         "27.2.12345.67890",
+		},
+		{
+			name:         "different major version triggers drift",
+			priorVersion: "27.1",
+			apiVersion:   "28.1.12345.67890",
+			want:         "28.1.12345.67890",
+		},
+		{
+			name:         "prefix collision avoided via dot separator: 27.1 does not match 27.10",
+			priorVersion: "27.1",
+			apiVersion:   "27.10.12345.67890",
+			want:         "27.10.12345.67890",
+		},
+		{
+			name:         "empty prior version returns api version",
+			priorVersion: "",
+			apiVersion:   "27.1.41698.41831",
+			want:         "27.1.41698.41831",
+		},
+		{
+			name:         "empty api version returns empty",
+			priorVersion: "27.1",
+			apiVersion:   "",
+			want:         "",
+		},
+		{
+			name:         "both empty returns empty",
+			priorVersion: "",
+			apiVersion:   "",
+			want:         "",
+		},
+		{
+			name:         "full prior version preserved when API returns newer full version of same minor",
+			priorVersion: "27.1.41698.41831",
+			apiVersion:   "27.1.42000.00000",
+			want:         "27.1.42000.00000",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeApplicationVersion(tt.priorVersion, tt.apiVersion)
+			if got != tt.want {
+				t.Errorf("normalizeApplicationVersion(%q, %q) = %q, want %q", tt.priorVersion, tt.apiVersion, got, tt.want)
+			}
+		})
 	}
 }

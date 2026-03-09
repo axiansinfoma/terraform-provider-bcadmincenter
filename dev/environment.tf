@@ -3,11 +3,12 @@
 
 # Create a test sandbox environment
 resource "bcadmincenter_environment" "test" {
-  name               = "test-sandbox"
-  application_family = "BusinessCentral"
-  type               = "Sandbox"
-  country_code       = "DE"
-  ring_name          = "PROD"
+  name                = "tf-test"
+  application_family  = "BusinessCentral"
+  type                = "Sandbox"
+  country_code        = "DE"
+  ring_name           = "PROD"
+  application_version = "27.2"
 }
 
 resource "bcadmincenter_environment_settings" "test" {

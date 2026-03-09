@@ -162,6 +162,7 @@ func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource
 	return []func() resource.Resource{
 		authorizedentraapps.NewAuthorizedEntraAppResource,
 		environments.NewEnvironmentResource,
+		environments.NewUpdateScheduleResource,
 		environmentsettings.NewEnvironmentSettingsResource,
 		environmentsupportcontact.NewEnvironmentSupportContactResource,
 		notificationrecipients.NewNotificationRecipientResource,
@@ -182,6 +183,7 @@ func (p *BCAdminCenterProvider) DataSources(ctx context.Context) []func() dataso
 		available_applications.NewApplicationFamilyDataSource,
 		environments.NewEnvironmentDataSource,
 		environments.NewEnvironmentsDataSource,
+		environments.NewEnvironmentUpdatesDataSource,
 		notificationrecipients.NewNotificationSettingsDataSource,
 		quotas.NewQuotasDataSource,
 		timezones.NewTimeZonesDataSource,

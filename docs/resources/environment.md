@@ -25,7 +25,11 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 
 ~> **Warning:** Most environment attributes cannot be changed after creation and will force recreation (destroy and recreate) if modified. This includes name, type, country, ring, and region.
 
--> **Note:** The `application_version` attribute reflects the currently running version of the environment. The API automatically assigns the latest available version for the specified `ring_name` during creation.
+-> **Note:** The `application_version` attribute can be set to specify a desired version at creation or to schedule an in-place upgrade. If omitted, the API assigns the latest available version for the specified `ring_name`. During a scheduled or running upgrade, `application_version` reflects the target version and does not cause drift. If the upgrade fails, the attribute reflects the currently running version, causing Terraform to detect drift and retry on the next apply. Use the computed `pending_upgrade_version` and `pending_upgrade_scheduled_for` attributes to observe the in-progress upgrade state without affecting plan output.
+
+~> **Warning:** Do **not** use `application_version` on `bcadmincenter_environment` and `bcadmincenter_environment_update_schedule` for the same environment simultaneously.
+
+-> **Note:** The `ignore_update_window` attribute applies only to platform/environment version updates triggered via `application_version`. It has no effect on app installations or updates (managed separately).
 
 ~> **Warning:** Deleting a Business Central environment is **permanent and irreversible**. All data, configurations, and customizations will be lost.
 
@@ -83,6 +87,22 @@ output "application_version" {
   description = "The application version running in the environment (read-only, assigned by the API)"
 }
 ```
+
+### Environment with Specific Version
+
+```terraform
+resource "bcadmincenter_environment" "prod" {
+  name                 = "my-production"
+  application_family   = "BusinessCentral"
+  type                 = "Production"
+  country_code         = "US"
+  ring_name            = "PROD"
+  application_version  = "26.1"
+  ignore_update_window = false  # default; update waits for next update window
+}
+```
+
+Changing `application_version = "26.2"` on a subsequent apply schedules an in-place upgrade. A `scheduled` or `running` status suppresses drift. A `failed` status causes drift and retries on next apply.
 
 ### Sandbox Environment on Latest Version
 
@@ -191,15 +211,18 @@ output "environment_urls" {
 
 - `aad_tenant_id` (String) The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.
 - `application_family` (String) The application family for the environment. Defaults to 'BusinessCentral'. Changing this forces a new Business Central Environment to be created.
+- `application_version` (String) The desired application version for the environment (e.g. `"26.1"`). When set at creation, the version is passed to the Create API. When changed after creation, the provider schedules an in-place upgrade via the Admin Center Updates API. When not set, the API assigns the version based on the ring. During a scheduled or running upgrade, this attribute reflects the target version and does not cause drift. If the upgrade fails, this attribute reflects the currently running version, causing drift and triggering a retry on next apply. Do not use this alongside `bcadmincenter_environment_update_schedule` for the same environment.
 - `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.
+- `ignore_update_window` (Boolean) When `true`, the version upgrade scheduled via `application_version` may start immediately without waiting for the environment's configured update window. When `false` (default), the upgrade waits for the next update window. This setting applies only to platform/environment version updates — it has no effect on app installations or updates.
 - `ring_name` (String) The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Changing this forces a new Business Central Environment to be created.
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
 
 ### Read-Only
 
 - `app_insights_key` (String, Sensitive) The Application Insights instrumentation key for the environment.
-- `application_version` (String) The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set.
 - `id` (String) The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName})
+- `pending_upgrade_scheduled_for` (String) The RFC3339 datetime at which the pending upgrade is scheduled to run. Empty when the upgrade will run at the next update window or when no upgrade is pending.
+- `pending_upgrade_version` (String) The target version of a currently selected/scheduled or running upgrade. Empty when no upgrade is in progress. While non-empty, `application_version` is suppressed to this value so no drift is reported.
 - `platform_version` (String) The platform version of the environment.
 - `status` (String) The current status of the environment (e.g., 'Active', 'Creating').
 - `web_client_login_url` (String) The URL for accessing the web client.

@@ -1,0 +1,61 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: "Environment"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+### Basic Example
+
+{{tffile "examples/data-sources/bc_admin_center_environment_updates/data-source.tf"}}
+
+### Checking for a Scheduled Upgrade
+
+```terraform
+data "bcadmincenter_environment_updates" "prod" {
+  application_family = "BusinessCentral"
+  environment_name   = "production"
+}
+
+locals {
+  selected = [
+    for u in data.bcadmincenter_environment_updates.prod.updates : u
+    if u.selected
+  ]
+}
+
+output "scheduled_upgrade_version" {
+  value = length(local.selected) > 0 ? local.selected[0].target_version : "none"
+}
+```
+
+### Listing Available Versions
+
+```terraform
+data "bcadmincenter_environment_updates" "prod" {
+  application_family = "BusinessCentral"
+  environment_name   = "production"
+}
+
+output "available_versions" {
+  value = [
+    for u in data.bcadmincenter_environment_updates.prod.updates :
+    u.target_version if u.available
+  ]
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Notes
+
+- The `updates` list contains all version entries returned by the Business Central Admin Center API, including versions that are not yet available (`available = false`).
+- Use `selected = true` to identify which version is currently scheduled for upgrade.
+- The `update_status` field reflects the current state: `"scheduled"`, `"running"`, or `"failed"`.
+- If no update is scheduled, no entry in the list will have `selected = true`.

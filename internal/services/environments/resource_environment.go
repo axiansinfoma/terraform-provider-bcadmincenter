@@ -6,12 +6,14 @@ package environments
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -20,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -41,21 +44,24 @@ type EnvironmentResource struct {
 
 // EnvironmentResourceModel describes the resource data model.
 type EnvironmentResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	ApplicationFamily  types.String `tfsdk:"application_family"`
-	Type               types.String `tfsdk:"type"`
-	CountryCode        types.String `tfsdk:"country_code"`
-	RingName           types.String `tfsdk:"ring_name"`
-	ApplicationVersion types.String `tfsdk:"application_version"`
-	AzureRegion        types.String `tfsdk:"azure_region"`
-	Status             types.String `tfsdk:"status"`
-	WebClientLoginURL  types.String `tfsdk:"web_client_login_url"`
-	WebServiceURL      types.String `tfsdk:"web_service_url"`
-	AppInsightsKey     types.String `tfsdk:"app_insights_key"`
-	PlatformVersion    types.String `tfsdk:"platform_version"`
-	AADTenantID        types.String `tfsdk:"aad_tenant_id"`
-	Timeouts           types.Object `tfsdk:"timeouts"`
+	ID                         types.String `tfsdk:"id"`
+	Name                       types.String `tfsdk:"name"`
+	ApplicationFamily          types.String `tfsdk:"application_family"`
+	Type                       types.String `tfsdk:"type"`
+	CountryCode                types.String `tfsdk:"country_code"`
+	RingName                   types.String `tfsdk:"ring_name"`
+	ApplicationVersion         types.String `tfsdk:"application_version"`
+	IgnoreUpdateWindow         types.Bool   `tfsdk:"ignore_update_window"`
+	AzureRegion                types.String `tfsdk:"azure_region"`
+	Status                     types.String `tfsdk:"status"`
+	WebClientLoginURL          types.String `tfsdk:"web_client_login_url"`
+	WebServiceURL              types.String `tfsdk:"web_service_url"`
+	AppInsightsKey             types.String `tfsdk:"app_insights_key"`
+	PlatformVersion            types.String `tfsdk:"platform_version"`
+	AADTenantID                types.String `tfsdk:"aad_tenant_id"`
+	PendingUpgradeVersion      types.String `tfsdk:"pending_upgrade_version"`
+	PendingUpgradeScheduledFor types.String `tfsdk:"pending_upgrade_scheduled_for"`
+	Timeouts                   types.Object `tfsdk:"timeouts"`
 }
 
 // Metadata returns the resource type name.
@@ -129,8 +135,27 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"application_version": schema.StringAttribute{
-				MarkdownDescription: "The current application version running on the environment. This value is assigned by the API based on the ring_name and cannot be directly set.",
-				Computed:            true,
+				MarkdownDescription: "The desired application version for the environment (e.g. `\"26.1\"`). " +
+					"When set at creation, the version is passed to the Create API. " +
+					"When changed after creation, the provider schedules an in-place upgrade via the Admin Center Updates API. " +
+					"When not set, the API assigns the version based on the ring. " +
+					"During a scheduled or running upgrade, this attribute reflects the target version and does not cause drift. " +
+					"If the upgrade fails, this attribute reflects the currently running version, causing drift and triggering a retry on next apply. " +
+					"Do not use this alongside `bcadmincenter_environment_update_schedule` for the same environment.",
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					utils.NoDowngradeVersion(),
+				},
+			},
+			"ignore_update_window": schema.BoolAttribute{
+				MarkdownDescription: "When `true`, the version upgrade scheduled via `application_version` may start immediately " +
+					"without waiting for the environment's configured update window. " +
+					"When `false` (default), the upgrade waits for the next update window. " +
+					"This setting applies only to platform/environment version updates — it has no effect on app installations or updates.",
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
 			},
 			"azure_region": schema.StringAttribute{
 				MarkdownDescription: "The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.",
@@ -144,23 +169,38 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"status": schema.StringAttribute{
 				MarkdownDescription: "The current status of the environment (e.g., 'Active', 'Creating').",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"web_client_login_url": schema.StringAttribute{
 				MarkdownDescription: "The URL for accessing the web client.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"web_service_url": schema.StringAttribute{
 				MarkdownDescription: "The URL for web service access.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"app_insights_key": schema.StringAttribute{
 				MarkdownDescription: "The Application Insights instrumentation key for the environment.",
 				Computed:            true,
 				Sensitive:           true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"platform_version": schema.StringAttribute{
 				MarkdownDescription: "The platform version of the environment.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
 				MarkdownDescription: "The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.",
@@ -169,6 +209,17 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"pending_upgrade_version": schema.StringAttribute{
+				MarkdownDescription: "The target version of a currently selected/scheduled or running upgrade. " +
+					"Empty when no upgrade is in progress. " +
+					"While non-empty, `application_version` is suppressed to this value so no drift is reported.",
+				Computed: true,
+			},
+			"pending_upgrade_scheduled_for": schema.StringAttribute{
+				MarkdownDescription: "The RFC3339 datetime at which the pending upgrade is scheduled to run. " +
+					"Empty when the upgrade will run at the next update window or when no upgrade is pending.",
+				Computed: true,
 			},
 			"timeouts": schema.SingleNestedAttribute{
 				MarkdownDescription: "Timeout configuration for the resource operations.",
@@ -235,8 +286,14 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		Name:            plan.Name.ValueString(),
 		CountryCode:     plan.CountryCode.ValueString(),
 		RingName:        plan.RingName.ValueString(), // API expects "PROD", "PREVIEW", "FAST"
-		// ApplicationVersion is omitted - API automatically assigns latest version for the ring
-		AzureRegion: plan.AzureRegion.ValueString(),
+		AzureRegion:     plan.AzureRegion.ValueString(),
+	}
+
+	// Include ApplicationVersion only when explicitly set by the user.
+	// Save it now so we can restore the short form after the API returns the full form.
+	configuredApplicationVersion := plan.ApplicationVersion
+	if !plan.ApplicationVersion.IsNull() && !plan.ApplicationVersion.IsUnknown() && plan.ApplicationVersion.ValueString() != "" {
+		createReq.ApplicationVersion = plan.ApplicationVersion.ValueString()
 	}
 
 	// Create the environment.
@@ -334,6 +391,10 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		if env.Status == "Active" {
 			// Environment is ready, update state and return.
 			r.updateModelFromEnvironment(&plan, env)
+			// Preserve the user-configured short version (e.g. "27.1") if the API
+			// returned the full build version (e.g. "27.1.41698.41831").
+			plan.ApplicationVersion = types.StringValue(
+				normalizeApplicationVersion(configuredApplicationVersion.ValueString(), plan.ApplicationVersion.ValueString()))
 			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 			return
 		}
@@ -372,6 +433,11 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
+	// Save the prior version before it may be overwritten by updateModelFromEnvironment.
+	// This allows us to preserve a user-configured short form (e.g. "27.1") when the
+	// API returns the full build version (e.g. "27.1.41698.41831").
+	priorApplicationVersion := state.ApplicationVersion
+
 	tflog.Debug(ctx, "Reading BC Admin Center environment", map[string]interface{}{
 		"name":               state.Name.ValueString(),
 		"application_family": state.ApplicationFamily.ValueString(),
@@ -393,18 +459,79 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 	// Update state with current environment data.
 	r.updateModelFromEnvironment(&state, env)
 
+	// Drift detection: check pending/running/failed updates.
+	updates, err := svc.GetUpdates(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString())
+	if err != nil {
+		// Non-fatal: if the updates endpoint fails, fall back to environment version.
+		tflog.Warn(ctx, "Failed to get environment updates for drift detection; using environment version", map[string]interface{}{
+			"error": err.Error(),
+		})
+	} else {
+		r.applyUpdatesDriftDetection(&state, env, updates)
+	}
+
+	// Normalize application_version: preserve the prior short form if the API returned
+	// the full build version starting with it (e.g. keep "27.1" when API says "27.1.41698.41831").
+	if !priorApplicationVersion.IsNull() && !priorApplicationVersion.IsUnknown() && !state.ApplicationVersion.IsNull() {
+		state.ApplicationVersion = types.StringValue(
+			normalizeApplicationVersion(priorApplicationVersion.ValueString(), state.ApplicationVersion.ValueString()))
+	}
+
 	// Set refreshed state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Most environment attributes require replacement (ForceNew)
-	// This method is here for completeness but may not be used in practice.
-	resp.Diagnostics.AddError(
-		"Update not supported",
-		"Environment resources do not support in-place updates. Most changes require replacement.",
-	)
+	var plan, state EnvironmentResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Only application_version and ignore_update_window support in-place updates.
+	versionChanged := !plan.ApplicationVersion.Equal(state.ApplicationVersion)
+	windowChanged := !plan.IgnoreUpdateWindow.Equal(state.IgnoreUpdateWindow)
+
+	if !versionChanged && !windowChanged {
+		// Nothing to do; copy plan to state.
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		return
+	}
+
+	if plan.ApplicationVersion.IsNull() || plan.ApplicationVersion.IsUnknown() || plan.ApplicationVersion.ValueString() == "" {
+		resp.Diagnostics.AddError(
+			"Cannot update without application_version",
+			"application_version must be set to schedule a version upgrade.",
+		)
+		return
+	}
+
+	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
+
+	targetVersion := plan.ApplicationVersion.ValueString()
+	ignoreUpdateWindow := plan.IgnoreUpdateWindow.ValueBool()
+
+	tflog.Debug(ctx, "Scheduling environment version upgrade", map[string]interface{}{
+		"application_family":   state.ApplicationFamily.ValueString(),
+		"environment_name":     state.Name.ValueString(),
+		"target_version":       targetVersion,
+		"ignore_update_window": ignoreUpdateWindow,
+	})
+
+	if err := svc.SelectUpdateVersion(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString(), targetVersion, ignoreUpdateWindow); err != nil {
+		resp.Diagnostics.AddError(
+			"Error scheduling environment upgrade",
+			fmt.Sprintf("Could not schedule upgrade to version %s: %s", targetVersion, err),
+		)
+		return
+	}
+
+	// Store the target version in state immediately; drift detection in Read will resolve it.
+	plan.ApplicationVersion = types.StringValue(targetVersion)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -499,6 +626,8 @@ func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.Impo
 }
 
 // updateModelFromEnvironment updates the Terraform model with data from the API.
+// It sets application_version as a baseline from the environment GET response.
+// applyUpdatesDriftDetection may override application_version based on pending updates.
 func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResourceModel, env *Environment) {
 	// Build ARM-like ID using tenant ID from aad_tenant_id field.
 	tenantID := env.AADTenantID
@@ -540,6 +669,8 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 		model.RingName = types.StringNull()
 	}
 
+	// Set application_version from environment response as baseline.
+	// applyUpdatesDriftDetection may override this with the target version.
 	if env.ApplicationVersion != "" {
 		model.ApplicationVersion = types.StringValue(env.ApplicationVersion)
 	} else {
@@ -550,6 +681,65 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 		model.PlatformVersion = types.StringValue(env.PlatformVersion)
 	} else {
 		model.PlatformVersion = types.StringNull()
+	}
+
+	// Clear pending upgrade attrs; applyUpdatesDriftDetection will populate them if an upgrade is in flight.
+	model.PendingUpgradeVersion = types.StringValue("")
+	model.PendingUpgradeScheduledFor = types.StringValue("")
+}
+
+// applyUpdatesDriftDetection applies drift detection logic based on the environment updates list.
+//
+// Suppression table:
+//
+//	| selected | updateStatus          | behavior                                              |
+//	|----------|-----------------------|-------------------------------------------------------|
+//	| true     | "" / "scheduled" / "running" | Suppress drift; set application_version = targetVersion; populate pending_ attrs |
+//	| true     | "failed"              | Report drift; clear pending_ attrs                    |
+//	| true     | "succeeded" / other   | No suppression; clear pending_ attrs                  |
+//	| false    | any                   | No suppression; clear pending_ attrs                  |
+//
+// The API may return selected:true with an empty updateStatus immediately after scheduling
+// (before the upgrade transitions to "scheduled"). We treat that the same as "scheduled" to
+// avoid false-positive drift during the window between PATCH and status propagation.
+func (r *EnvironmentResource) applyUpdatesDriftDetection(model *EnvironmentResourceModel, env *Environment, updates []EnvironmentUpdate) {
+	// Find the selected update.
+	var selectedUpdate *EnvironmentUpdate
+	for i := range updates {
+		if updates[i].Selected {
+			selectedUpdate = &updates[i]
+			break
+		}
+	}
+
+	if selectedUpdate == nil {
+		// No selected update: use applicationVersion from environment GET (no drift if versions match).
+		// pending_ attrs are already cleared by updateModelFromEnvironment.
+		return
+	}
+
+	switch selectedUpdate.UpdateStatus {
+	case UpdateStatusFailed:
+		// Drift: store the currently running version so Terraform detects a change and retries.
+		// pending_ attrs remain empty (upgrade is not in progress).
+		if env.ApplicationVersion != "" {
+			model.ApplicationVersion = types.StringValue(env.ApplicationVersion)
+		} else {
+			model.ApplicationVersion = types.StringNull()
+		}
+	case UpdateStatusScheduled, UpdateStatusRunning, "":
+		// Suppress drift: the upgrade is selected, in-progress, or just scheduled (status not yet
+		// propagated). Store the target version and surface the pending upgrade attributes.
+		model.ApplicationVersion = types.StringValue(selectedUpdate.TargetVersion)
+		model.PendingUpgradeVersion = types.StringValue(selectedUpdate.TargetVersion)
+		if selectedUpdate.ScheduleDetails != nil && selectedUpdate.ScheduleDetails.SelectedDateTime != "" {
+			model.PendingUpgradeScheduledFor = types.StringValue(selectedUpdate.ScheduleDetails.SelectedDateTime)
+		} else {
+			model.PendingUpgradeScheduledFor = types.StringValue("")
+		}
+	default:
+		// For other statuses (e.g., "succeeded"), fall through to the environment version (already set).
+		// pending_ attrs remain empty.
 	}
 }
 
@@ -567,4 +757,20 @@ func normalizeRingName(apiRingName string) string {
 		// Return as-is if unknown.
 		return apiRingName
 	}
+}
+
+// normalizeApplicationVersion returns the short form of priorVersion when the API returned
+// the full build version. This prevents spurious drift when users configure versions in
+// "major.minor" format (e.g., "27.1") while the API stores the full build version
+// (e.g., "27.1.41698.41831").
+//
+// A "." separator check is used to avoid incorrectly matching "27.1" against "27.10.xxx".
+func normalizeApplicationVersion(priorVersion, apiVersion string) string {
+	if priorVersion == "" || apiVersion == "" {
+		return apiVersion
+	}
+	if apiVersion == priorVersion || strings.HasPrefix(apiVersion, priorVersion+".") {
+		return priorVersion
+	}
+	return apiVersion
 }

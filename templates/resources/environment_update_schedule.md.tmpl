@@ -1,0 +1,96 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: "Environment"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+## Important Notes
+
+~> **Warning:** Do **not** use `application_version` on `bcadmincenter_environment` and `bcadmincenter_environment_update_schedule` for the same environment simultaneously. Choose one approach per environment.
+
+~> **Warning:** **Destroying** this resource removes it from Terraform state only. No API call is made to cancel the scheduled upgrade on the Business Central side. The upgrade will continue as scheduled regardless of whether this resource exists in Terraform state.
+
+-> **Note:** The Business Central Admin Center API does not support deselecting an update without selecting a new one (`"selected": false` returns an error). For this reason, the `delete` operation is a state-only removal.
+
+## Example Usage
+
+### Explicitly Scheduled Future Upgrade
+
+{{tffile "examples/resources/bcadmincenter_environment_update_schedule/resource.tf"}}
+
+### Update Schedule Without Explicit Datetime
+
+```terraform
+resource "bcadmincenter_environment" "prod" {
+  name               = "my-production"
+  application_family = "BusinessCentral"
+  type               = "Production"
+  country_code       = "US"
+  ring_name          = "PROD"
+  # application_version intentionally omitted — managed via update_schedule
+}
+
+resource "bcadmincenter_environment_update_schedule" "prod_upgrade" {
+  application_family = bcadmincenter_environment.prod.application_family
+  environment_name   = bcadmincenter_environment.prod.name
+  target_version     = "26.2"
+  # scheduled_datetime omitted: upgrade runs in next update window
+}
+```
+
+### Bypassing the Update Window
+
+```terraform
+resource "bcadmincenter_environment_update_schedule" "emergency_upgrade" {
+  application_family   = "BusinessCentral"
+  environment_name     = "my-production"
+  target_version       = "26.2"
+  scheduled_datetime   = "2026-04-01T02:00:00Z"
+  ignore_update_window = true  # may start at scheduled_datetime regardless of update window
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Business Central environment update schedules can be imported using their ARM-like resource ID:
+
+```shell
+terraform import bcadmincenter_environment_update_schedule.example "/tenants/00000000-0000-0000-0000-000000000000/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/production/updateSchedule"
+```
+
+The import ID format is:
+```
+/tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/updateSchedule
+```
+
+Where:
+- `{tenantId}` - The Azure AD tenant ID
+- `{applicationFamily}` - The application family (e.g., "BusinessCentral")
+- `{environmentName}` - The name of the environment
+
+## Drift Detection
+
+The resource applies the following drift detection rules on `Read`:
+
+| Condition | Terraform behavior |
+|---|---|
+| `update_status` is `"scheduled"` or `"running"` | No drift |
+| `update_status` is `"failed"` | Drift — retrigger Create on next apply |
+| No selected update exists in the API | Resource removed from state |
+
+## Update Behavior
+
+- If `target_version` changes: the provider sends a new PATCH with `"selected": true` for the new version. The API automatically deselects the previous version.
+- If only `scheduled_datetime` or `ignore_update_window` changes (same `target_version`): the provider sends a PATCH **without** the `"selected"` field to update schedule details only.
+
+## Related Resources
+
+- `bcadmincenter_environment` resource — manages environment lifecycle; use `application_version` for simple in-place upgrades
+- `bcadmincenter_available_applications` data source — query available application versions for a ring

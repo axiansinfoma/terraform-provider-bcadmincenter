@@ -22,7 +22,11 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 
 ~> **Warning:** Most environment attributes cannot be changed after creation and will force recreation (destroy and recreate) if modified. This includes name, type, country, ring, and region.
 
--> **Note:** The `application_version` attribute reflects the currently running version of the environment. The API automatically assigns the latest available version for the specified `ring_name` during creation.
+-> **Note:** The `application_version` attribute can be set to specify a desired version at creation or to schedule an in-place upgrade. If omitted, the API assigns the latest available version for the specified `ring_name`. During a scheduled or running upgrade, `application_version` reflects the target version and does not cause drift. If the upgrade fails, the attribute reflects the currently running version, causing Terraform to detect drift and retry on the next apply. Use the computed `pending_upgrade_version` and `pending_upgrade_scheduled_for` attributes to observe the in-progress upgrade state without affecting plan output.
+
+~> **Warning:** Do **not** use `application_version` on `bcadmincenter_environment` and `bcadmincenter_environment_update_schedule` for the same environment simultaneously.
+
+-> **Note:** The `ignore_update_window` attribute applies only to platform/environment version updates triggered via `application_version`. It has no effect on app installations or updates (managed separately).
 
 ~> **Warning:** Deleting a Business Central environment is **permanent and irreversible**. All data, configurations, and customizations will be lost.
 
@@ -31,6 +35,22 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 ### Basic Production Environment
 
 {{tffile "examples/resources/bc_admin_center_environment/resource.tf"}}
+
+### Environment with Specific Version
+
+```terraform
+resource "bcadmincenter_environment" "prod" {
+  name                 = "my-production"
+  application_family   = "BusinessCentral"
+  type                 = "Production"
+  country_code         = "US"
+  ring_name            = "PROD"
+  application_version  = "26.1"
+  ignore_update_window = false  # default; update waits for next update window
+}
+```
+
+Changing `application_version = "26.2"` on a subsequent apply schedules an in-place upgrade. A `scheduled` or `running` status suppresses drift. A `failed` status causes drift and retries on next apply.
 
 ### Sandbox Environment on Latest Version
 

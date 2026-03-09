@@ -13,9 +13,10 @@
     },
     "ghcr.io/devcontainers/features/git-lfs:1": {
       "version": "latest"
-    }
+    },
+    "ghcr.io/devcontainers/features/azure-cli:1": {}
   },
-  "postCreateCommand": "go mod download",
+  "postCreateCommand": "go mod download && pre-commit install",
   "customizations": {
     "vscode": {
       "extensions": [

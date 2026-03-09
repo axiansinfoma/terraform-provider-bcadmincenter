@@ -206,3 +206,82 @@ func TestEnvironmentsDataSourceModel(t *testing.T) {
 		t.Errorf("Environments[1].Name = %v, want env2", model.Environments[1].Name.ValueString())
 	}
 }
+
+func TestEnvironmentUpdatesDataSource_Metadata(t *testing.T) {
+	d := NewEnvironmentUpdatesDataSource()
+	req := datasource.MetadataRequest{ProviderTypeName: "bcadmincenter"}
+	resp := &datasource.MetadataResponse{}
+
+	d.Metadata(context.Background(), req, resp)
+
+	expected := "bcadmincenter_environment_updates"
+	if resp.TypeName != expected {
+		t.Errorf("TypeName = %v, want %v", resp.TypeName, expected)
+	}
+}
+
+func TestEnvironmentUpdatesDataSource_Schema(t *testing.T) {
+	d := NewEnvironmentUpdatesDataSource()
+	req := datasource.SchemaRequest{}
+	resp := &datasource.SchemaResponse{}
+
+	d.Schema(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
+	}
+
+	requiredAttrs := []string{"application_family", "environment_name", "updates"}
+	for _, attr := range requiredAttrs {
+		if _, ok := resp.Schema.Attributes[attr]; !ok {
+			t.Errorf("Schema missing %s attribute", attr)
+		}
+	}
+}
+
+func TestEnvironmentUpdatesDataSource_Configure(t *testing.T) {
+	d := &environmentUpdatesDataSource{}
+
+	// Test with nil provider data (should not error).
+	req := datasource.ConfigureRequest{ProviderData: nil}
+	resp := &datasource.ConfigureResponse{}
+
+	d.Configure(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Errorf("Configure() with nil ProviderData should not error: %v", resp.Diagnostics)
+	}
+}
+
+func TestEnvironmentUpdatesDataSource_Configure_WithInvalidType(t *testing.T) {
+	d := &environmentUpdatesDataSource{}
+
+	// Test with invalid provider data type.
+	req := datasource.ConfigureRequest{
+		ProviderData: "invalid-type",
+	}
+	resp := &datasource.ConfigureResponse{}
+
+	d.Configure(context.Background(), req, resp)
+
+	if !resp.Diagnostics.HasError() {
+		t.Error("Configure() with invalid type should return error")
+	}
+}
+
+func TestEnvironmentUpdatesDataSourceModel(t *testing.T) {
+	// Test that the model struct can be created and populated.
+	model := environmentUpdatesDataSourceModel{
+		ApplicationFamily: types.StringValue("BusinessCentral"),
+		EnvironmentName:   types.StringValue("production"),
+		AadTenantID:       types.StringValue("tenant-id"),
+		Updates:           types.ListNull(types.ObjectType{AttrTypes: updateItemAttrTypes}),
+	}
+
+	if model.ApplicationFamily.ValueString() != "BusinessCentral" {
+		t.Errorf("ApplicationFamily = %v, want BusinessCentral", model.ApplicationFamily.ValueString())
+	}
+	if model.EnvironmentName.ValueString() != "production" {
+		t.Errorf("EnvironmentName = %v, want production", model.EnvironmentName.ValueString())
+	}
+}
