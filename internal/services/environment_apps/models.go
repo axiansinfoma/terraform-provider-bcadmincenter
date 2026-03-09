@@ -23,6 +23,8 @@ type InstallAppRequest struct {
 	TargetVersion                     string `json:"targetVersion,omitempty"`
 	AllowPreviewVersion               bool   `json:"allowPreviewVersion"`
 	InstallOrUpdateNeededDependencies bool   `json:"installOrUpdateNeededDependencies"`
+	AcceptIsvEula                     bool   `json:"acceptIsvEula,omitempty"`
+	LanguageID                        string `json:"languageId,omitempty"`
 }
 
 // UpdateAppRequest represents the request body for updating an app.

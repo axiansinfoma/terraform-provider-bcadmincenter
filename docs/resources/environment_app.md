@@ -123,8 +123,10 @@ resource "bcadmincenter_environment_app" "my_app" {
 ### Optional
 
 - `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.
+- `accept_isv_eula` (Boolean) When `true`, accepts the ISV End User License Agreement (EULA) for the app. Required for some ISV apps. Defaults to `false`. Changing this forces a new resource to be created.
 - `allow_preview_version` (Boolean) When `true`, allows installing preview versions of the app. Defaults to `false`.
 - `install_or_update_needed_dependencies` (Boolean) When `true`, automatically installs or updates app dependencies. Defaults to `true`.
+- `language_id` (String) The language identifier for the app installation (e.g. `"en-US"`). If not specified, the default language is used. Changing this forces a new resource to be created.
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
 - `version` (String) The target app version to install or update to (e.g. `"1.2.3.4"`). Omit or leave null to install the latest available version. Changing this to a higher version schedules an in-place update. Downgrading is blocked at plan time.
 

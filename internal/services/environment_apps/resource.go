@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -48,6 +49,8 @@ type EnvironmentAppResourceModel struct {
 	Version                           types.String `tfsdk:"version"`
 	AllowPreviewVersion               types.Bool   `tfsdk:"allow_preview_version"`
 	InstallOrUpdateNeededDependencies types.Bool   `tfsdk:"install_or_update_needed_dependencies"`
+	AcceptIsvEula                     types.Bool   `tfsdk:"accept_isv_eula"`
+	LanguageID                        types.String `tfsdk:"language_id"`
 	Name                              types.String `tfsdk:"name"`
 	Publisher                         types.String `tfsdk:"publisher"`
 	PublishedAs                       types.String `tfsdk:"published_as"`
@@ -127,6 +130,22 @@ func (r *EnvironmentAppResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
+			},
+			"accept_isv_eula": schema.BoolAttribute{
+				MarkdownDescription: "When `true`, accepts the ISV End User License Agreement (EULA) for the app. Required for some ISV apps. Defaults to `false`. Changing this forces a new resource to be created.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
+			},
+			"language_id": schema.StringAttribute{
+				MarkdownDescription: "The language identifier for the app installation (e.g. `\"en-US\"`). If not specified, the default language is used. Changing this forces a new resource to be created.",
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the app (read from the API).",
@@ -228,9 +247,13 @@ func (r *EnvironmentAppResource) Create(ctx context.Context, req resource.Create
 	installReq := &InstallAppRequest{
 		AllowPreviewVersion:               plan.AllowPreviewVersion.ValueBool(),
 		InstallOrUpdateNeededDependencies: plan.InstallOrUpdateNeededDependencies.ValueBool(),
+		AcceptIsvEula:                     plan.AcceptIsvEula.ValueBool(),
 	}
 	if !plan.Version.IsNull() && !plan.Version.IsUnknown() && plan.Version.ValueString() != "" {
 		installReq.TargetVersion = plan.Version.ValueString()
+	}
+	if !plan.LanguageID.IsNull() && !plan.LanguageID.IsUnknown() && plan.LanguageID.ValueString() != "" {
+		installReq.LanguageID = plan.LanguageID.ValueString()
 	}
 
 	operation, err := svc.Install(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AppID.ValueString(), installReq)
