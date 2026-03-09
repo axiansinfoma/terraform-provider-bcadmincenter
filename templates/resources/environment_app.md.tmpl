@@ -1,0 +1,86 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: "Environment"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+Manages the install/update/uninstall lifecycle of a Business Central app in an environment. This resource:
+
+- Installs the specified app (optionally at a pinned version) via the Admin Center API.
+- Monitors the asynchronous install/update/uninstall operation until completion.
+- Supports in-place version upgrades by changing the `version` attribute.
+- Automatically removes from state if the app is no longer installed.
+
+## Important Notes
+
+~> **Warning:** App install, update, and uninstall are asynchronous operations that can take several minutes to complete.
+
+~> **Warning:** Downgrading `version` to a lower value is blocked at plan time. Only version upgrades are supported via this resource.
+
+-> **Note:** When the app reaches a terminal failure state (`"installFailed"` or `"updateFailed"`), Terraform will automatically plan a replacement (destroy + recreate) on the next `terraform plan`, allowing the environment to converge without manual state manipulation.
+
+-> **Note:** All identity attributes (`application_family`, `environment_name`, `app_id`) are `ForceNew`. Changing any of them destroys the existing app installation and installs the new app.
+
+## Example Usage
+
+### Install a Specific App Version
+
+{{tffile "examples/resources/bcadmincenter_environment_app/resource.tf"}}
+
+### Install Latest Version
+
+```terraform
+resource "bcadmincenter_environment_app" "my_app" {
+  application_family = "BusinessCentral"
+  environment_name   = "my-sandbox"
+  app_id             = "00000000-0000-0000-0000-000000000000"
+  # version omitted — installs the latest available version
+}
+```
+
+### In-Place Version Upgrade
+
+Changing `version` from `"1.0.0.0"` to `"1.1.0.0"` on a subsequent apply triggers an in-place update without recreating the resource:
+
+```terraform
+resource "bcadmincenter_environment_app" "my_app" {
+  application_family = "BusinessCentral"
+  environment_name   = "my-sandbox"
+  app_id             = "00000000-0000-0000-0000-000000000000"
+  version            = "1.1.0.0"  # changed from "1.0.0.0" → in-place update
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Environment app resources can be imported using the ARM-like resource ID:
+
+```shell
+terraform import bcadmincenter_environment_app.example /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/apps/{appId}
+```
+
+For example:
+
+```shell
+terraform import bcadmincenter_environment_app.contoso_app \
+  /tenants/00000000-0000-0000-0000-000000000001/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/my-sandbox/apps/00000000-0000-0000-0000-000000000002
+```
+
+## Best Practices
+
+- Pin `version` to a specific value to ensure deterministic deployments.
+- Omit `version` to always track the latest available version.
+- Use `install_or_update_needed_dependencies = true` (default) to avoid dependency conflicts.
+- Use `allow_preview_version = false` (default) for production environments.
+- If an app enters `"installFailed"` or `"updateFailed"` status, the next `terraform plan` will propose a replacement — run `terraform apply` to recover.
+
+## Related Resources
+
+- [`bcadmincenter_environment`](../resources/environment.md) — Manages the Business Central environment that hosts the app.

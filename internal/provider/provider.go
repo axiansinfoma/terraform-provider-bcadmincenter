@@ -19,6 +19,7 @@ import (
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 	authorizedentraapps "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/authorized_entra_apps"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/available_applications"
+	environmentapps "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_apps"
 	environmentsettings "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_settings"
 	environmentsupportcontact "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_support_contact"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environments"
@@ -163,6 +164,7 @@ func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource
 		authorizedentraapps.NewAuthorizedEntraAppResource,
 		environments.NewEnvironmentResource,
 		environments.NewUpdateScheduleResource,
+		environmentapps.NewEnvironmentAppResource,
 		environmentsettings.NewEnvironmentSettingsResource,
 		environmentsupportcontact.NewEnvironmentSupportContactResource,
 		notificationrecipients.NewNotificationRecipientResource,
