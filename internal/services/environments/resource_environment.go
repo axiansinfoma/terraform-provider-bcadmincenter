@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -143,6 +144,9 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"Do not use this alongside `bcadmincenter_environment_update_schedule` for the same environment.",
 				Optional: true,
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					utils.NoDowngradeVersion(),
+				},
 			},
 			"ignore_update_window": schema.BoolAttribute{
 				MarkdownDescription: "When `true`, the version upgrade scheduled via `application_version` may start immediately " +

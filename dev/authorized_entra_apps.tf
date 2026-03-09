@@ -21,8 +21,8 @@ output "authorized_apps" {
 # List manageable tenants (for delegated admins)
 # NOTE: This will return 403 Forbidden if the authenticated account is not a delegated admin
 # Comment out this data source if you are not using delegated admin access
-# data "bcadmincenter_manageable_tenants" "accessible" {}
+data "bcadmincenter_manageable_tenants" "accessible" {}
 
-# output "manageable_tenants" {
-#   value = data.bcadmincenter_manageable_tenants.accessible.tenants
-# }
+output "manageable_tenants" {
+  value = data.bcadmincenter_manageable_tenants.accessible.tenants
+}

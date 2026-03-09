@@ -10,6 +10,8 @@
 
 **CONVENTIONAL COMMITS REQUIRED**: All commit messages and pull request titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. This ensures consistent, meaningful commit history and enables automated changelog generation. See the [Conventional Commits Guidelines](#conventional-commits-guidelines) section for details.
 
+**CHANGELOG MUST BE UPDATED**: Every change — new resources, bug fixes, breaking changes, deprecations, or notable improvements — MUST be reflected in `CHANGELOG.md` before the work is considered complete. See the [Changelog Guidelines](#changelog-guidelines) section for details.
+
 ## Project Overview
 
 This repository contains a Terraform provider for managing Microsoft Dynamics 365 Business Central environments through the [Business Central Admin Center API](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api). The provider enables Infrastructure as Code (IaC) for Business Central tenant administration tasks.
@@ -808,6 +810,59 @@ Provider documentation must include:
 - [ ] Environment variables reference
 - [ ] Example configurations
 - [ ] Links to additional resources
+
+## Changelog Guidelines
+
+`CHANGELOG.md` MUST be kept up to date as part of every change. Follow these rules:
+
+### When to Update
+
+Update `CHANGELOG.md` whenever you:
+- Add a new resource or data source
+- Fix a bug (even a minor one)
+- Introduce a breaking change or deprecation
+- Make a notable improvement, refactor, or performance change
+- Add or change documentation in a user-visible way
+- Bump dependencies that affect behaviour
+
+### Format
+
+The changelog follows [HashiCorp's provider changelog conventions](https://developer.hashicorp.com/terraform/plugin/best-practices/versioning):
+
+```markdown
+## X.Y.Z (Unreleased)
+
+BREAKING CHANGES:
+* resource/bc_example: attribute `foo` has been removed ([#123](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues/123))
+
+FEATURES:
+* **New Resource:** `bc_new_resource` ([#456](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/456))
+* **New Data Source:** `bc_new_data_source` ([#456](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/456))
+
+ENHANCEMENTS:
+* resource/bc_environment: add `ignore_update_window` attribute ([#789](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/789))
+
+BUG FIXES:
+* resource/bc_environment: fix drift caused by version casing ([#101](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/101))
+```
+
+### Categories (in order)
+
+| Category | Use for |
+|---|---|
+| `BREAKING CHANGES:` | Removals, renames, or behaviour changes requiring user action |
+| `FEATURES:` | New resources, data sources, or provider-level capabilities |
+| `ENHANCEMENTS:` | New attributes, improved behaviour, better error messages |
+| `BUG FIXES:` | Corrections to existing behaviour |
+| `NOTES:` | Deprecations, upgrade guidance, dependency bumps |
+
+### Rules
+
+- Every entry MUST reference a PR or issue number as a Markdown link.
+- Entries go under the **topmost** `(Unreleased)` version block. Create one if it does not exist.
+- Keep entries short: one line per change.
+- Use the `resource/<name>:` or `data-source/<name>:` prefix for resource-scoped changes.
+- Do NOT edit previously released version blocks.
 
 ## Development Workflow
 

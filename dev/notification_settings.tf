@@ -1,8 +1,8 @@
-# Copyright Axians Infoma GmbH 2025, 2026, 0
-# SPDX-License-Identifier: MPL-2.0
+# # Copyright Axians Infoma GmbH 2025, 2026, 0
+# # SPDX-License-Identifier: MPL-2.0
 
-# Example notification settings data source usage
-# NOTE: This is commented out by default - uncomment to test
+# # Example notification settings data source usage
+# # NOTE: This is commented out by default - uncomment to test
 
 # data "bcadmincenter_notification_settings" "current" {
 # }
