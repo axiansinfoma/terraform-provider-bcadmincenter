@@ -20,16 +20,16 @@ type AppListResponse struct {
 
 // InstallAppRequest represents the request body for installing an app.
 type InstallAppRequest struct {
-	TargetVersion                    string `json:"targetVersion,omitempty"`
-	AllowPreviewVersion              bool   `json:"allowPreviewVersion"`
-	InstallOrUpdateNeededDependencies bool  `json:"installOrUpdateNeededDependencies"`
+	TargetVersion                     string `json:"targetVersion,omitempty"`
+	AllowPreviewVersion               bool   `json:"allowPreviewVersion"`
+	InstallOrUpdateNeededDependencies bool   `json:"installOrUpdateNeededDependencies"`
 }
 
 // UpdateAppRequest represents the request body for updating an app.
 type UpdateAppRequest struct {
-	TargetVersion                    string `json:"targetVersion,omitempty"`
-	AllowPreviewVersion              bool   `json:"allowPreviewVersion"`
-	InstallOrUpdateNeededDependencies bool  `json:"installOrUpdateNeededDependencies"`
+	TargetVersion                     string `json:"targetVersion,omitempty"`
+	AllowPreviewVersion               bool   `json:"allowPreviewVersion"`
+	InstallOrUpdateNeededDependencies bool   `json:"installOrUpdateNeededDependencies"`
 }
 
 // UninstallAppRequest represents the request body for uninstalling an app.

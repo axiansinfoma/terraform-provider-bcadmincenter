@@ -40,19 +40,19 @@ type EnvironmentAppResource struct {
 
 // EnvironmentAppResourceModel describes the resource data model.
 type EnvironmentAppResourceModel struct {
-	ID                               types.String `tfsdk:"id"`
-	AADTenantID                      types.String `tfsdk:"aad_tenant_id"`
-	ApplicationFamily                types.String `tfsdk:"application_family"`
-	EnvironmentName                  types.String `tfsdk:"environment_name"`
-	AppID                            types.String `tfsdk:"app_id"`
-	Version                          types.String `tfsdk:"version"`
-	AllowPreviewVersion              types.Bool   `tfsdk:"allow_preview_version"`
-	InstallOrUpdateNeededDependencies types.Bool  `tfsdk:"install_or_update_needed_dependencies"`
-	Name                             types.String `tfsdk:"name"`
-	Publisher                        types.String `tfsdk:"publisher"`
-	PublishedAs                      types.String `tfsdk:"published_as"`
-	Status                           types.String `tfsdk:"status"`
-	Timeouts                         types.Object `tfsdk:"timeouts"`
+	ID                                types.String `tfsdk:"id"`
+	AADTenantID                       types.String `tfsdk:"aad_tenant_id"`
+	ApplicationFamily                 types.String `tfsdk:"application_family"`
+	EnvironmentName                   types.String `tfsdk:"environment_name"`
+	AppID                             types.String `tfsdk:"app_id"`
+	Version                           types.String `tfsdk:"version"`
+	AllowPreviewVersion               types.Bool   `tfsdk:"allow_preview_version"`
+	InstallOrUpdateNeededDependencies types.Bool   `tfsdk:"install_or_update_needed_dependencies"`
+	Name                              types.String `tfsdk:"name"`
+	Publisher                         types.String `tfsdk:"publisher"`
+	PublishedAs                       types.String `tfsdk:"published_as"`
+	Status                            types.String `tfsdk:"status"`
+	Timeouts                          types.Object `tfsdk:"timeouts"`
 }
 
 // Metadata returns the resource type name.
@@ -226,7 +226,7 @@ func (r *EnvironmentAppResource) Create(ctx context.Context, req resource.Create
 	svc := NewService(r.client.ForTenant(tenantID))
 
 	installReq := &InstallAppRequest{
-		AllowPreviewVersion:              plan.AllowPreviewVersion.ValueBool(),
+		AllowPreviewVersion:               plan.AllowPreviewVersion.ValueBool(),
 		InstallOrUpdateNeededDependencies: plan.InstallOrUpdateNeededDependencies.ValueBool(),
 	}
 	if !plan.Version.IsNull() && !plan.Version.IsUnknown() && plan.Version.ValueString() != "" {
@@ -330,7 +330,7 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
 	updateReq := &UpdateAppRequest{
-		AllowPreviewVersion:              plan.AllowPreviewVersion.ValueBool(),
+		AllowPreviewVersion:               plan.AllowPreviewVersion.ValueBool(),
 		InstallOrUpdateNeededDependencies: plan.InstallOrUpdateNeededDependencies.ValueBool(),
 	}
 	if !plan.Version.IsNull() && !plan.Version.IsUnknown() && plan.Version.ValueString() != "" {

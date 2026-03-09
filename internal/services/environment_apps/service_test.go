@@ -165,7 +165,7 @@ func TestService_Install(t *testing.T) {
 			svc := NewService(c)
 
 			req := &InstallAppRequest{
-				AllowPreviewVersion:              false,
+				AllowPreviewVersion:               false,
 				InstallOrUpdateNeededDependencies: true,
 			}
 			op, err := svc.Install(context.Background(), "BusinessCentral", "my-env", "app-id-1", req)
@@ -225,8 +225,8 @@ func TestService_Update(t *testing.T) {
 			svc := NewService(c)
 
 			req := &UpdateAppRequest{
-				TargetVersion:                    "2.0.0.0",
-				AllowPreviewVersion:              false,
+				TargetVersion:                     "2.0.0.0",
+				AllowPreviewVersion:               false,
 				InstallOrUpdateNeededDependencies: true,
 			}
 			op, err := svc.Update(context.Background(), "BusinessCentral", "my-env", "app-id-1", req)

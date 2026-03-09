@@ -49,13 +49,13 @@ func TestBuildEnvironmentAppID(t *testing.T) {
 
 func TestParseEnvironmentAppID(t *testing.T) {
 	tests := []struct {
-		name                    string
-		id                      string
-		wantTenantID            string
-		wantApplicationFamily   string
-		wantEnvironmentName     string
-		wantAppID               string
-		wantErr                 bool
+		name                  string
+		id                    string
+		wantTenantID          string
+		wantApplicationFamily string
+		wantEnvironmentName   string
+		wantAppID             string
+		wantErr               bool
 	}{
 		{
 			name:                  "valid ID",
