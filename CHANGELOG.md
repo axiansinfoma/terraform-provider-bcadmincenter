@@ -1,5 +1,8 @@
 ## 0.1.0 (Unreleased)
 
+ENHANCEMENTS:
+* resource/bcadmincenter_environment: add optional `settings` nested block to manage environment settings inline, removing the need for a separate `bcadmincenter_environment_settings` resource ([#42](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues/42))
+
 FEATURES:
 * **New Resource:** `bcadmincenter_authorized_entra_app` ([#1](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/1))
 * **New Resource:** `bcadmincenter_environment` ([#1](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/1))

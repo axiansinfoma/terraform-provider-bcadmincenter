@@ -6,6 +6,7 @@ package environments
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	environmentsettings "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_settings"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 )
 
@@ -44,25 +46,42 @@ type EnvironmentResource struct {
 
 // EnvironmentResourceModel describes the resource data model.
 type EnvironmentResourceModel struct {
-	ID                         types.String `tfsdk:"id"`
-	Name                       types.String `tfsdk:"name"`
-	ApplicationFamily          types.String `tfsdk:"application_family"`
-	Type                       types.String `tfsdk:"type"`
-	CountryCode                types.String `tfsdk:"country_code"`
-	RingName                   types.String `tfsdk:"ring_name"`
-	ApplicationVersion         types.String `tfsdk:"application_version"`
-	IgnoreUpdateWindow         types.Bool   `tfsdk:"ignore_update_window"`
-	AzureRegion                types.String `tfsdk:"azure_region"`
-	Status                     types.String `tfsdk:"status"`
-	WebClientLoginURL          types.String `tfsdk:"web_client_login_url"`
-	WebServiceURL              types.String `tfsdk:"web_service_url"`
-	AppInsightsKey             types.String `tfsdk:"app_insights_key"`
-	PlatformVersion            types.String `tfsdk:"platform_version"`
-	AADTenantID                types.String `tfsdk:"aad_tenant_id"`
-	PendingUpgradeVersion      types.String `tfsdk:"pending_upgrade_version"`
-	PendingUpgradeScheduledFor types.String `tfsdk:"pending_upgrade_scheduled_for"`
-	Timeouts                   types.Object `tfsdk:"timeouts"`
+	ID                         types.String                    `tfsdk:"id"`
+	Name                       types.String                    `tfsdk:"name"`
+	ApplicationFamily          types.String                    `tfsdk:"application_family"`
+	Type                       types.String                    `tfsdk:"type"`
+	CountryCode                types.String                    `tfsdk:"country_code"`
+	RingName                   types.String                    `tfsdk:"ring_name"`
+	ApplicationVersion         types.String                    `tfsdk:"application_version"`
+	IgnoreUpdateWindow         types.Bool                      `tfsdk:"ignore_update_window"`
+	AzureRegion                types.String                    `tfsdk:"azure_region"`
+	Status                     types.String                    `tfsdk:"status"`
+	WebClientLoginURL          types.String                    `tfsdk:"web_client_login_url"`
+	WebServiceURL              types.String                    `tfsdk:"web_service_url"`
+	AppInsightsKey             types.String                    `tfsdk:"app_insights_key"`
+	PlatformVersion            types.String                    `tfsdk:"platform_version"`
+	AADTenantID                types.String                    `tfsdk:"aad_tenant_id"`
+	PendingUpgradeVersion      types.String                    `tfsdk:"pending_upgrade_version"`
+	PendingUpgradeScheduledFor types.String                    `tfsdk:"pending_upgrade_scheduled_for"`
+	Settings                   *EnvironmentSettingsNestedModel `tfsdk:"settings"`
+	Timeouts                   types.Object                    `tfsdk:"timeouts"`
 }
+
+// EnvironmentSettingsNestedModel describes the optional settings nested block within the environment resource.
+type EnvironmentSettingsNestedModel struct {
+	UpdateWindowStartTime   types.String `tfsdk:"update_window_start_time"`
+	UpdateWindowEndTime     types.String `tfsdk:"update_window_end_time"`
+	UpdateWindowTimeZone    types.String `tfsdk:"update_window_timezone"`
+	AppInsightsKey          types.String `tfsdk:"app_insights_key"`
+	SecurityGroupID         types.String `tfsdk:"security_group_id"`
+	AccessWithM365Licenses  types.Bool   `tfsdk:"access_with_m365_licenses"`
+	AppUpdateCadence        types.String `tfsdk:"app_update_cadence"`
+	PartnerAccessStatus     types.String `tfsdk:"partner_access_status"`
+	AllowedPartnerTenantIDs types.List   `tfsdk:"allowed_partner_tenant_ids"`
+}
+
+// settingsTimeFormatRegex validates time in HH:mm format.
+var settingsTimeFormatRegex = regexp.MustCompile(`^([01]\d|2[0-3]):([0-5]\d)$`)
 
 // Metadata returns the resource type name.
 func (r *EnvironmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -220,6 +239,70 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				MarkdownDescription: "The RFC3339 datetime at which the pending upgrade is scheduled to run. " +
 					"Empty when the upgrade will run at the next update window or when no upgrade is pending.",
 				Computed: true,
+			},
+			"settings": schema.SingleNestedAttribute{
+				MarkdownDescription: "Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline. " +
+					"This is an alternative to using the separate `bcadmincenter_environment_settings` resource.",
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"update_window_start_time": schema.StringAttribute{
+						MarkdownDescription: "Start time for the update window in HH:mm format (24-hour). Requires `update_window_timezone` to be set.",
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.RegexMatches(
+								settingsTimeFormatRegex,
+								"must be in HH:mm format (e.g., '22:00')",
+							),
+						},
+					},
+					"update_window_end_time": schema.StringAttribute{
+						MarkdownDescription: "End time for the update window in HH:mm format (24-hour). Requires `update_window_timezone` to be set. Must be at least 6 hours after start time.",
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.RegexMatches(
+								settingsTimeFormatRegex,
+								"must be in HH:mm format (e.g., '06:00')",
+							),
+						},
+					},
+					"update_window_timezone": schema.StringAttribute{
+						MarkdownDescription: "Windows time zone identifier for the update window (e.g., 'Pacific Standard Time', 'Eastern Standard Time'). Required if `update_window_start_time` or `update_window_end_time` are set.",
+						Optional:            true,
+					},
+					"app_insights_key": schema.StringAttribute{
+						MarkdownDescription: "Application Insights connection string or instrumentation key for environment telemetry. Warning: Setting this triggers an automatic environment restart.",
+						Optional:            true,
+						Sensitive:           true,
+					},
+					"security_group_id": schema.StringAttribute{
+						MarkdownDescription: "Microsoft Entra (Azure AD) security group object ID to restrict environment access.",
+						Optional:            true,
+					},
+					"access_with_m365_licenses": schema.BoolAttribute{
+						MarkdownDescription: "Whether users can access the environment with Microsoft 365 licenses (requires environment version 21.1+).",
+						Optional:            true,
+						Computed:            true,
+					},
+					"app_update_cadence": schema.StringAttribute{
+						MarkdownDescription: "How frequently AppSource apps should be updated. Valid values: `Default`, `DuringMajorUpgrade`, `DuringMajorMinorUpgrade`.",
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("Default", "DuringMajorUpgrade", "DuringMajorMinorUpgrade"),
+						},
+					},
+					"partner_access_status": schema.StringAttribute{
+						MarkdownDescription: "Partner access configuration. Valid values: `Disabled`, `AllowAllPartnerTenants`, `AllowSelectedPartnerTenants`. Note: Only internal global administrators can modify this setting.",
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("Disabled", "AllowAllPartnerTenants", "AllowSelectedPartnerTenants"),
+						},
+					},
+					"allowed_partner_tenant_ids": schema.ListAttribute{
+						MarkdownDescription: "List of partner tenant IDs allowed to access the environment. Only used when `partner_access_status` is `AllowSelectedPartnerTenants`.",
+						Optional:            true,
+						ElementType:         types.StringType,
+					},
+				},
 			},
 			"timeouts": schema.SingleNestedAttribute{
 				MarkdownDescription: "Timeout configuration for the resource operations.",
@@ -395,6 +478,27 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			// returned the full build version (e.g. "27.1.41698.41831").
 			plan.ApplicationVersion = types.StringValue(
 				normalizeApplicationVersion(configuredApplicationVersion.ValueString(), plan.ApplicationVersion.ValueString()))
+
+			// Apply inline settings block if configured.
+			if plan.Settings != nil {
+				settingsSvc := environmentsettings.NewService(r.client.ForTenant(tenantID))
+				if err := r.applyEnvironmentSettings(ctx, settingsSvc, plan.ApplicationFamily.ValueString(), envName, plan.Settings); err != nil {
+					resp.Diagnostics.AddError(
+						"Error applying environment settings",
+						"Could not apply settings after environment creation: "+err.Error(),
+					)
+					return
+				}
+				// Read back readable settings (update_window, security_group, m365 access).
+				if err := r.readEnvironmentSettings(ctx, settingsSvc, plan.ApplicationFamily.ValueString(), envName, plan.Settings); err != nil {
+					resp.Diagnostics.AddError(
+						"Error reading environment settings",
+						"Could not read settings after applying: "+err.Error(),
+					)
+					return
+				}
+			}
+
 			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 			return
 		}
@@ -477,6 +581,18 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 			normalizeApplicationVersion(priorApplicationVersion.ValueString(), state.ApplicationVersion.ValueString()))
 	}
 
+	// Read inline settings if the settings block is configured in state.
+	if state.Settings != nil {
+		settingsSvc := environmentsettings.NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
+		if err := r.readEnvironmentSettings(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), state.Settings); err != nil {
+			resp.Diagnostics.AddError(
+				"Error reading environment settings",
+				"Could not read inline settings: "+err.Error(),
+			)
+			return
+		}
+	}
+
 	// Set refreshed state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -494,9 +610,36 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	// Only application_version and ignore_update_window support in-place updates.
 	versionChanged := !plan.ApplicationVersion.Equal(state.ApplicationVersion)
 	windowChanged := !plan.IgnoreUpdateWindow.Equal(state.IgnoreUpdateWindow)
+	settingsChanged := settingsBlockChanged(plan.Settings, state.Settings)
+
+	if !versionChanged && !windowChanged && !settingsChanged {
+		// Nothing to do; copy plan to state.
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		return
+	}
+
+	// Apply inline settings changes if the block was added, modified, or removed.
+	if settingsChanged && plan.Settings != nil {
+		settingsSvc := environmentsettings.NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
+		if err := r.applyEnvironmentSettingsChanges(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), plan.Settings, state.Settings); err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating environment settings",
+				"Could not update inline settings: "+err.Error(),
+			)
+			return
+		}
+		// Read back readable settings to keep state consistent.
+		if err := r.readEnvironmentSettings(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), plan.Settings); err != nil {
+			resp.Diagnostics.AddError(
+				"Error reading environment settings",
+				"Could not read settings after update: "+err.Error(),
+			)
+			return
+		}
+	}
 
 	if !versionChanged && !windowChanged {
-		// Nothing to do; copy plan to state.
+		// Only settings changed; persist the plan (with refreshed settings).
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return
 	}
@@ -773,4 +916,239 @@ func normalizeApplicationVersion(priorVersion, apiVersion string) string {
 		return priorVersion
 	}
 	return apiVersion
+}
+
+// settingsBlockChanged returns true if the settings block differs between plan and state.
+// Both nil means no change. One nil and one non-nil means change (block added/removed).
+func settingsBlockChanged(plan, state *EnvironmentSettingsNestedModel) bool {
+	if plan == nil && state == nil {
+		return false
+	}
+	if plan == nil || state == nil {
+		return true
+	}
+	return !plan.UpdateWindowStartTime.Equal(state.UpdateWindowStartTime) ||
+		!plan.UpdateWindowEndTime.Equal(state.UpdateWindowEndTime) ||
+		!plan.UpdateWindowTimeZone.Equal(state.UpdateWindowTimeZone) ||
+		!plan.AppInsightsKey.Equal(state.AppInsightsKey) ||
+		!plan.SecurityGroupID.Equal(state.SecurityGroupID) ||
+		!plan.AccessWithM365Licenses.Equal(state.AccessWithM365Licenses) ||
+		!plan.AppUpdateCadence.Equal(state.AppUpdateCadence) ||
+		!plan.PartnerAccessStatus.Equal(state.PartnerAccessStatus) ||
+		!plan.AllowedPartnerTenantIDs.Equal(state.AllowedPartnerTenantIDs)
+}
+
+// applyEnvironmentSettings applies all settings from the nested block to the environment via the settings service.
+func (r *EnvironmentResource) applyEnvironmentSettings(ctx context.Context, svc *environmentsettings.Service, applicationFamily, environmentName string, settings *EnvironmentSettingsNestedModel) error {
+	// Apply update window if any component is set.
+	if !settings.UpdateWindowStartTime.IsNull() || !settings.UpdateWindowEndTime.IsNull() || !settings.UpdateWindowTimeZone.IsNull() {
+		us := &environmentsettings.UpdateSettings{}
+		if !settings.UpdateWindowStartTime.IsNull() {
+			v := settings.UpdateWindowStartTime.ValueString()
+			us.PreferredStartTime = &v
+		}
+		if !settings.UpdateWindowEndTime.IsNull() {
+			v := settings.UpdateWindowEndTime.ValueString()
+			us.PreferredEndTime = &v
+		}
+		if !settings.UpdateWindowTimeZone.IsNull() {
+			v := settings.UpdateWindowTimeZone.ValueString()
+			us.TimeZoneID = &v
+		}
+		if _, err := svc.SetUpdateSettings(ctx, applicationFamily, environmentName, us); err != nil {
+			return fmt.Errorf("setting update window: %w", err)
+		}
+	}
+
+	// Apply Application Insights key if provided.
+	if !settings.AppInsightsKey.IsNull() {
+		if err := svc.SetAppInsightsKey(ctx, applicationFamily, environmentName, settings.AppInsightsKey.ValueString()); err != nil {
+			return fmt.Errorf("setting app insights key: %w", err)
+		}
+	}
+
+	// Apply security group if provided.
+	if !settings.SecurityGroupID.IsNull() {
+		if err := svc.SetSecurityGroup(ctx, applicationFamily, environmentName, settings.SecurityGroupID.ValueString()); err != nil {
+			return fmt.Errorf("setting security group: %w", err)
+		}
+	}
+
+	// Apply M365 license access if provided.
+	if !settings.AccessWithM365Licenses.IsNull() {
+		if err := svc.SetAccessWithM365Licenses(ctx, applicationFamily, environmentName, settings.AccessWithM365Licenses.ValueBool()); err != nil {
+			return fmt.Errorf("setting M365 license access: %w", err)
+		}
+	}
+
+	// Apply app update cadence if provided.
+	if !settings.AppUpdateCadence.IsNull() {
+		if err := svc.SetAppUpdateCadence(ctx, applicationFamily, environmentName, settings.AppUpdateCadence.ValueString()); err != nil {
+			return fmt.Errorf("setting app update cadence: %w", err)
+		}
+	}
+
+	// Apply partner access if provided.
+	if !settings.PartnerAccessStatus.IsNull() {
+		pa := &environmentsettings.PartnerAccessRequest{
+			Status: settings.PartnerAccessStatus.ValueString(),
+		}
+		if settings.PartnerAccessStatus.ValueString() == "AllowSelectedPartnerTenants" && !settings.AllowedPartnerTenantIDs.IsNull() {
+			var tenantIDs []string
+			diags := settings.AllowedPartnerTenantIDs.ElementsAs(ctx, &tenantIDs, false)
+			if diags.HasError() {
+				return fmt.Errorf("reading allowed_partner_tenant_ids: %s", diags)
+			}
+			pa.AllowedPartnerTenantIDs = tenantIDs
+		}
+		if err := svc.SetPartnerAccess(ctx, applicationFamily, environmentName, pa); err != nil {
+			return fmt.Errorf("setting partner access: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// applyEnvironmentSettingsChanges applies only the settings that changed between plan and state.
+func (r *EnvironmentResource) applyEnvironmentSettingsChanges(ctx context.Context, svc *environmentsettings.Service, applicationFamily, environmentName string, plan, state *EnvironmentSettingsNestedModel) error {
+	// For a nil state (block was just added), apply everything.
+	if state == nil {
+		return r.applyEnvironmentSettings(ctx, svc, applicationFamily, environmentName, plan)
+	}
+
+	// Update window settings if changed.
+	if !plan.UpdateWindowStartTime.Equal(state.UpdateWindowStartTime) ||
+		!plan.UpdateWindowEndTime.Equal(state.UpdateWindowEndTime) ||
+		!plan.UpdateWindowTimeZone.Equal(state.UpdateWindowTimeZone) {
+		us := &environmentsettings.UpdateSettings{}
+		if !plan.UpdateWindowStartTime.IsNull() {
+			v := plan.UpdateWindowStartTime.ValueString()
+			us.PreferredStartTime = &v
+		}
+		if !plan.UpdateWindowEndTime.IsNull() {
+			v := plan.UpdateWindowEndTime.ValueString()
+			us.PreferredEndTime = &v
+		}
+		if !plan.UpdateWindowTimeZone.IsNull() {
+			v := plan.UpdateWindowTimeZone.ValueString()
+			us.TimeZoneID = &v
+		}
+		if _, err := svc.SetUpdateSettings(ctx, applicationFamily, environmentName, us); err != nil {
+			return fmt.Errorf("updating update window: %w", err)
+		}
+	}
+
+	// Update Application Insights key if changed.
+	if !plan.AppInsightsKey.Equal(state.AppInsightsKey) && !plan.AppInsightsKey.IsNull() {
+		if err := svc.SetAppInsightsKey(ctx, applicationFamily, environmentName, plan.AppInsightsKey.ValueString()); err != nil {
+			return fmt.Errorf("updating app insights key: %w", err)
+		}
+	}
+
+	// Update security group if changed.
+	if !plan.SecurityGroupID.Equal(state.SecurityGroupID) {
+		if plan.SecurityGroupID.IsNull() {
+			if err := svc.ClearSecurityGroup(ctx, applicationFamily, environmentName); err != nil {
+				return fmt.Errorf("clearing security group: %w", err)
+			}
+		} else {
+			if err := svc.SetSecurityGroup(ctx, applicationFamily, environmentName, plan.SecurityGroupID.ValueString()); err != nil {
+				return fmt.Errorf("updating security group: %w", err)
+			}
+		}
+	}
+
+	// Update M365 license access if changed.
+	if !plan.AccessWithM365Licenses.Equal(state.AccessWithM365Licenses) && !plan.AccessWithM365Licenses.IsNull() {
+		if err := svc.SetAccessWithM365Licenses(ctx, applicationFamily, environmentName, plan.AccessWithM365Licenses.ValueBool()); err != nil {
+			return fmt.Errorf("updating M365 license access: %w", err)
+		}
+	}
+
+	// Update app update cadence if changed.
+	if !plan.AppUpdateCadence.Equal(state.AppUpdateCadence) && !plan.AppUpdateCadence.IsNull() {
+		if err := svc.SetAppUpdateCadence(ctx, applicationFamily, environmentName, plan.AppUpdateCadence.ValueString()); err != nil {
+			return fmt.Errorf("updating app update cadence: %w", err)
+		}
+	}
+
+	// Update partner access if changed.
+	if !plan.PartnerAccessStatus.Equal(state.PartnerAccessStatus) || !plan.AllowedPartnerTenantIDs.Equal(state.AllowedPartnerTenantIDs) {
+		if !plan.PartnerAccessStatus.IsNull() {
+			pa := &environmentsettings.PartnerAccessRequest{
+				Status: plan.PartnerAccessStatus.ValueString(),
+			}
+			if plan.PartnerAccessStatus.ValueString() == "AllowSelectedPartnerTenants" && !plan.AllowedPartnerTenantIDs.IsNull() {
+				var tenantIDs []string
+				diags := plan.AllowedPartnerTenantIDs.ElementsAs(ctx, &tenantIDs, false)
+				if diags.HasError() {
+					return fmt.Errorf("reading allowed_partner_tenant_ids: %s", diags)
+				}
+				pa.AllowedPartnerTenantIDs = tenantIDs
+			}
+			if err := svc.SetPartnerAccess(ctx, applicationFamily, environmentName, pa); err != nil {
+				return fmt.Errorf("updating partner access: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// readEnvironmentSettings reads readable settings from the API and updates the nested model in place.
+// Write-only fields (AppInsightsKey, AppUpdateCadence, PartnerAccess) are preserved from the current model.
+func (r *EnvironmentResource) readEnvironmentSettings(ctx context.Context, svc *environmentsettings.Service, applicationFamily, environmentName string, settings *EnvironmentSettingsNestedModel) error {
+	// Read update window settings.
+	updateSettings, err := svc.GetUpdateSettings(ctx, applicationFamily, environmentName)
+	if err != nil {
+		return fmt.Errorf("reading update settings: %w", err)
+	}
+	if updateSettings != nil {
+		if updateSettings.PreferredStartTime != nil {
+			settings.UpdateWindowStartTime = types.StringValue(*updateSettings.PreferredStartTime)
+		} else {
+			settings.UpdateWindowStartTime = types.StringNull()
+		}
+		if updateSettings.PreferredEndTime != nil {
+			settings.UpdateWindowEndTime = types.StringValue(*updateSettings.PreferredEndTime)
+		} else {
+			settings.UpdateWindowEndTime = types.StringNull()
+		}
+		if updateSettings.TimeZoneID != nil {
+			settings.UpdateWindowTimeZone = types.StringValue(*updateSettings.TimeZoneID)
+		} else {
+			settings.UpdateWindowTimeZone = types.StringNull()
+		}
+	}
+
+	// Read security group.
+	securityGroup, err := svc.GetSecurityGroup(ctx, applicationFamily, environmentName)
+	if err != nil {
+		// Log but don't fail — security group may not be configured.
+		tflog.Warn(ctx, "Could not read security group for inline settings", map[string]interface{}{
+			"error": err.Error(),
+		})
+	} else if securityGroup != nil {
+		settings.SecurityGroupID = types.StringValue(securityGroup.ID)
+	} else {
+		settings.SecurityGroupID = types.StringNull()
+	}
+
+	// Read M365 license access.
+	m365Access, err := svc.GetAccessWithM365Licenses(ctx, applicationFamily, environmentName)
+	if err != nil {
+		tflog.Warn(ctx, "Could not read M365 license access for inline settings", map[string]interface{}{
+			"error": err.Error(),
+		})
+		settings.AccessWithM365Licenses = types.BoolNull()
+	} else if m365Access != nil {
+		settings.AccessWithM365Licenses = types.BoolValue(m365Access.Enabled)
+	} else {
+		settings.AccessWithM365Licenses = types.BoolNull()
+	}
+
+	// AppInsightsKey, AppUpdateCadence, and PartnerAccess are write-only / require elevated permissions.
+	// They are not read back from the API; the current state values are preserved by the caller.
+
+	return nil
 }

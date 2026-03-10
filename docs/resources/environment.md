@@ -63,12 +63,37 @@ resource "bcadmincenter_environment" "production" {
   application_family = "BusinessCentral"
   type               = "Production"
   country_code       = "US"
-  ring_name          = "Production"
+  ring_name          = "PROD"
   azure_region       = "westus2"
 
   timeouts {
     create = "90m"
     delete = "60m"
+  }
+}
+
+# Example: Sandbox environment with inline settings
+
+resource "bcadmincenter_environment" "sandbox" {
+  name               = "sandbox-1"
+  application_family = "BusinessCentral"
+  type               = "Sandbox"
+  country_code       = "US"
+  ring_name          = "PROD"
+  azure_region       = "eastus"
+
+  settings {
+    # Configure update window (must be at least 6 hours)
+    update_window_start_time = "22:00" # 10 PM
+    update_window_end_time   = "06:00" # 6 AM
+    update_window_timezone   = "Pacific Standard Time"
+
+    # Enable Application Insights telemetry
+    # Note: Setting this triggers an automatic environment restart
+    app_insights_key = "InstrumentationKey=your-app-insights-key;IngestionEndpoint=https://westus2-1.in.applicationinsights.azure.com/"
+
+    # Configure app update cadence
+    app_update_cadence = "DuringMajorUpgrade"
   }
 }
 
@@ -88,7 +113,38 @@ output "application_version" {
 }
 ```
 
-### Environment with Specific Version
+### Environment with Inline Settings
+
+```terraform
+resource "bcadmincenter_environment" "sandbox" {
+  name               = "sandbox-1"
+  application_family = "BusinessCentral"
+  type               = "Sandbox"
+  country_code       = "US"
+  ring_name          = "PROD"
+  azure_region       = "eastus"
+
+  settings {
+    # Configure update window (must be at least 6 hours apart)
+    update_window_start_time = "22:00" # 10 PM
+    update_window_end_time   = "06:00" # 6 AM
+    update_window_timezone   = "Pacific Standard Time"
+
+    # Enable Application Insights telemetry
+    # Note: Setting this triggers an automatic environment restart
+    app_insights_key = "InstrumentationKey=your-key;IngestionEndpoint=https://westus2-1.in.applicationinsights.azure.com/"
+
+    # Configure app update cadence
+    app_update_cadence = "DuringMajorUpgrade"
+  }
+}
+```
+
+-> **Note:** The `settings` block is an alternative to the separate `bcadmincenter_environment_settings` resource. Using both on the same environment is not recommended as they will conflict. When the `settings` block is removed from the configuration, the settings remain on the environment (they are not reset to defaults).
+
+-> **Migration:** To migrate from a separate `bcadmincenter_environment_settings` resource to the inline `settings` block: (1) add the `settings` block to the environment resource with the same attributes, (2) run `terraform plan` to verify no unintended changes, (3) remove the `bcadmincenter_environment_settings` resource from your configuration, and (4) run `terraform state rm` to remove it from state.
+
+### Environment with Version
 
 ```terraform
 resource "bcadmincenter_environment" "prod" {
@@ -215,6 +271,7 @@ output "environment_urls" {
 - `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.
 - `ignore_update_window` (Boolean) When `true`, the version upgrade scheduled via `application_version` may start immediately without waiting for the environment's configured update window. When `false` (default), the upgrade waits for the next update window. This setting applies only to platform/environment version updates — it has no effect on app installations or updates.
 - `ring_name` (String) The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Changing this forces a new Business Central Environment to be created.
+- `settings` (Attributes) Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline. This is an alternative to using the separate `bcadmincenter_environment_settings` resource. (see [below for nested schema](#nestedatt--settings))
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
 
 ### Read-Only
@@ -227,6 +284,22 @@ output "environment_urls" {
 - `status` (String) The current status of the environment (e.g., 'Active', 'Creating').
 - `web_client_login_url` (String) The URL for accessing the web client.
 - `web_service_url` (String) The URL for web service access.
+
+<a id="nestedatt--settings"></a>
+### Nested Schema for `settings`
+
+Optional:
+
+- `access_with_m365_licenses` (Boolean) Whether users can access the environment with Microsoft 365 licenses (requires environment version 21.1+).
+- `allowed_partner_tenant_ids` (List of String) List of partner tenant IDs allowed to access the environment. Only used when `partner_access_status` is `AllowSelectedPartnerTenants`.
+- `app_insights_key` (String, Sensitive) Application Insights connection string or instrumentation key for environment telemetry. Warning: Setting this triggers an automatic environment restart.
+- `app_update_cadence` (String) How frequently AppSource apps should be updated. Valid values: `Default`, `DuringMajorUpgrade`, `DuringMajorMinorUpgrade`.
+- `partner_access_status` (String) Partner access configuration. Valid values: `Disabled`, `AllowAllPartnerTenants`, `AllowSelectedPartnerTenants`. Note: Only internal global administrators can modify this setting.
+- `security_group_id` (String) Microsoft Entra (Azure AD) security group object ID to restrict environment access.
+- `update_window_end_time` (String) End time for the update window in HH:mm format (24-hour). Requires `update_window_timezone` to be set. Must be at least 6 hours after start time.
+- `update_window_start_time` (String) Start time for the update window in HH:mm format (24-hour). Requires `update_window_timezone` to be set.
+- `update_window_timezone` (String) Windows time zone identifier for the update window (e.g., 'Pacific Standard Time', 'Eastern Standard Time'). Required if `update_window_start_time` or `update_window_end_time` are set.
+
 
 <a id="nestedatt--timeouts"></a>
 ### Nested Schema for `timeouts`
@@ -404,5 +477,5 @@ If an environment remains in "Creating" status:
 ## Related Resources
 
 - `bcadmincenter_available_applications` data source - Query available application families and rings
-- `bcadmincenter_environment_settings` resource - Configure environment-specific settings
+- `bcadmincenter_environment_settings` resource - Configure environment-specific settings (standalone alternative to the `settings` block)
 - `bcadmincenter_environment_app` resource - Manage app installations
