@@ -107,7 +107,7 @@ resource "bcadmincenter_environment_app" "my_app" {
   application_family = "BusinessCentral"
   environment_name   = "my-sandbox"
   app_id             = "00000000-0000-0000-0000-000000000000"
-  version            = "1.1.0.0" # changed from "1.0.0.0" → in-place update
+  version            = "1.1.0.0"  # changed from "1.0.0.0" → in-place update
 }
 ```
 
