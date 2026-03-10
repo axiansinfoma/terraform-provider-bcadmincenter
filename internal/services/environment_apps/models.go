@@ -32,12 +32,14 @@ type UpdateAppRequest struct {
 	TargetVersion                     string `json:"targetVersion,omitempty"`
 	AllowPreviewVersion               bool   `json:"allowPreviewVersion"`
 	InstallOrUpdateNeededDependencies bool   `json:"installOrUpdateNeededDependencies"`
+	IgnoreUpdateWindow                bool   `json:"ignoreUpdateWindow"`
 }
 
 // UninstallAppRequest represents the request body for uninstalling an app.
 type UninstallAppRequest struct {
 	DoNotSaveData       bool `json:"doNotSaveData"`
 	UninstallDependents bool `json:"uninstallDependents"`
+	IgnoreUpdateWindow  bool `json:"ignoreUpdateWindow"`
 }
 
 // Operation represents an asynchronous operation returned by the app lifecycle API.

@@ -47,6 +47,7 @@ func TestEnvironmentAppResource_Schema(t *testing.T) {
 		"install_or_update_needed_dependencies",
 		"accept_isv_eula",
 		"language_id",
+		"ignore_update_window",
 		"name",
 		"publisher",
 		"published_as",

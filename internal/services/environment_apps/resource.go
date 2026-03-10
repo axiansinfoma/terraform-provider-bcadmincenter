@@ -51,6 +51,7 @@ type EnvironmentAppResourceModel struct {
 	InstallOrUpdateNeededDependencies types.Bool   `tfsdk:"install_or_update_needed_dependencies"`
 	AcceptIsvEula                     types.Bool   `tfsdk:"accept_isv_eula"`
 	LanguageID                        types.String `tfsdk:"language_id"`
+	IgnoreUpdateWindow                types.Bool   `tfsdk:"ignore_update_window"`
 	Name                              types.String `tfsdk:"name"`
 	Publisher                         types.String `tfsdk:"publisher"`
 	PublishedAs                       types.String `tfsdk:"published_as"`
@@ -146,6 +147,12 @@ func (r *EnvironmentAppResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+			},
+			"ignore_update_window": schema.BoolAttribute{
+				MarkdownDescription: "When `true`, bypasses the configured update window for update and uninstall operations. Defaults to `false`.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the app (read from the API).",
@@ -355,6 +362,7 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 	updateReq := &UpdateAppRequest{
 		AllowPreviewVersion:               plan.AllowPreviewVersion.ValueBool(),
 		InstallOrUpdateNeededDependencies: plan.InstallOrUpdateNeededDependencies.ValueBool(),
+		IgnoreUpdateWindow:                plan.IgnoreUpdateWindow.ValueBool(),
 	}
 	if !plan.TargetVersion.IsNull() && !plan.TargetVersion.IsUnknown() && plan.TargetVersion.ValueString() != "" {
 		updateReq.TargetVersion = plan.TargetVersion.ValueString()
@@ -419,6 +427,7 @@ func (r *EnvironmentAppResource) Delete(ctx context.Context, req resource.Delete
 	uninstallReq := &UninstallAppRequest{
 		DoNotSaveData:       false,
 		UninstallDependents: false,
+		IgnoreUpdateWindow:  state.IgnoreUpdateWindow.ValueBool(),
 	}
 
 	operation, err := svc.Uninstall(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString(), uninstallReq)

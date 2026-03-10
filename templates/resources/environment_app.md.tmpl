@@ -79,6 +79,7 @@ terraform import bcadmincenter_environment_app.contoso_app \
 - Omit `target_version` to always track the latest available version.
 - Use `install_or_update_needed_dependencies = true` (default) to avoid dependency conflicts.
 - Use `allow_preview_version = false` (default) for production environments.
+- Set `ignore_update_window = true` to bypass configured update windows for urgent updates or uninstalls.
 - If an app enters `"installFailed"` or `"updateFailed"` status, the next `terraform plan` will propose a replacement — run `terraform apply` to recover.
 
 ## Related Resources
