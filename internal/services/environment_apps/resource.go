@@ -51,7 +51,9 @@ type EnvironmentAppResourceModel struct {
 	InstallOrUpdateNeededDependencies types.Bool   `tfsdk:"install_or_update_needed_dependencies"`
 	AcceptIsvEula                     types.Bool   `tfsdk:"accept_isv_eula"`
 	LanguageID                        types.String `tfsdk:"language_id"`
-	IgnoreUpdateWindow                types.Bool   `tfsdk:"ignore_update_window"`
+	UseEnvironmentUpdateWindow        types.Bool   `tfsdk:"use_environment_update_window"`
+	PendingTargetVersion              types.String `tfsdk:"pending_target_version"`
+	PendingOperationID                types.String `tfsdk:"pending_operation_id"`
 	Name                              types.String `tfsdk:"name"`
 	Publisher                         types.String `tfsdk:"publisher"`
 	PublishedAs                       types.String `tfsdk:"published_as"`
@@ -148,11 +150,23 @@ func (r *EnvironmentAppResource) Schema(_ context.Context, _ resource.SchemaRequ
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"ignore_update_window": schema.BoolAttribute{
-				MarkdownDescription: "When `true`, bypasses the configured update window for update and uninstall operations. Defaults to `false`.",
+			"use_environment_update_window": schema.BoolAttribute{
+				MarkdownDescription: "When `true` (default), update and uninstall operations respect the environment's configured update window. Set to `false` to bypass the update window and apply the operation immediately.",
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				Default:             booldefault.StaticBool(true),
+			},
+			"pending_target_version": schema.StringAttribute{
+				MarkdownDescription: "The target version of a currently scheduled or running update. " +
+					"Non-empty when an update has been deferred to the environment's update window. " +
+					"While non-empty, `target_version` is suppressed to this value so no drift is reported.",
+				Computed: true,
+			},
+			"pending_operation_id": schema.StringAttribute{
+				MarkdownDescription: "The BC operation ID of a currently scheduled (deferred) update. " +
+					"Non-empty when an update has been deferred to the environment's update window. " +
+					"Used internally to cancel and reschedule the operation when `use_environment_update_window` changes.",
+				Computed: true,
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the app (read from the API).",
@@ -274,7 +288,7 @@ func (r *EnvironmentAppResource) Create(ctx context.Context, req resource.Create
 
 	timeout := 60 * time.Minute
 
-	if err := svc.WaitForOperation(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), operation.ID, timeout); err != nil {
+	if _, err := svc.WaitForOperation(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), operation.ID, timeout, false); err != nil {
 		resp.Diagnostics.AddError(
 			"Error waiting for app installation",
 			fmt.Sprintf("App installation failed: %s", err),
@@ -336,7 +350,37 @@ func (r *EnvironmentAppResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
+	// Capture the pending target version and operation ID before updateModelFromApp resets them.
+	priorTargetVersion := state.TargetVersion
+	priorPending := state.PendingTargetVersion
+	priorPendingOpID := state.PendingOperationID
+
 	updateModelFromApp(&state, app)
+
+	// Drift suppression — mirrors the environment resource's applyUpdatesDriftDetection.
+	// Use pending_target_version from state as the "selected update" signal, since
+	// the app API has no equivalent of the /updates endpoint.
+	pendingVersion := priorPending.ValueString()
+	switch {
+	case pendingVersion != "" && (app.Status == AppStatusInstallFailed || app.Status == AppStatusUpdateFailed):
+		// Update failed — clear pending, let Terraform see the actual version and retry.
+		state.PendingTargetVersion = types.StringValue("")
+		state.PendingOperationID = types.StringValue("")
+	case pendingVersion != "" && app.Version == pendingVersion:
+		// Update completed successfully — clear pending, use actual version.
+		state.PendingTargetVersion = types.StringValue("")
+		state.PendingOperationID = types.StringValue("")
+	case pendingVersion != "":
+		// Update is still in flight (in window queue or running) — suppress drift.
+		state.TargetVersion = priorTargetVersion
+		state.PendingTargetVersion = priorPending
+		state.PendingOperationID = priorPendingOpID
+	default:
+		// No pending update tracked in state — clear (already cleared by updateModelFromApp).
+		state.PendingTargetVersion = types.StringValue("")
+		state.PendingOperationID = types.StringValue("")
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -359,10 +403,60 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 
 	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
+	// Option C: if use_environment_update_window changed while an update is pending,
+	// cancel the existing scheduled operation first so we can re-submit with the new
+	// flag value.  The BC cancel endpoint requires the scheduled operation ID in the
+	// request body; use the stored pending_operation_id if available, otherwise look
+	// it up from the app operations list.
+	cancelFailed := false
+	pendingInState := state.PendingOperationID.ValueString() != "" || state.PendingTargetVersion.ValueString() != ""
+	if pendingInState && !plan.UseEnvironmentUpdateWindow.Equal(state.UseEnvironmentUpdateWindow) {
+		// Obtain the scheduled operation ID.
+		scheduledOpID := state.PendingOperationID.ValueString()
+		if scheduledOpID == "" {
+			var lookupErr error
+			scheduledOpID, lookupErr = svc.GetScheduledUpdateOperationID(ctx,
+				state.ApplicationFamily.ValueString(),
+				state.EnvironmentName.ValueString(),
+				state.AppID.ValueString(),
+			)
+			if lookupErr != nil {
+				cancelFailed = true
+				tflog.Debug(ctx, "Could not look up scheduled operation ID, skipping cancel", map[string]interface{}{
+					"app_id":       state.AppID.ValueString(),
+					"lookup_error": lookupErr.Error(),
+				})
+			}
+		}
+
+		if !cancelFailed {
+			tflog.Debug(ctx, "Cancelling scheduled app update to reschedule with new window setting", map[string]interface{}{
+				"app_id":         state.AppID.ValueString(),
+				"operation_id":   scheduledOpID,
+				"new_use_window": plan.UseEnvironmentUpdateWindow.ValueBool(),
+			})
+			cancelErr := svc.CancelUpdate(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString(), scheduledOpID)
+			if cancelErr != nil {
+				// Log and proceed: the re-submit below may still succeed if BC accepts it.
+				// If cancel failed AND the re-submit returns "already scheduled" we know the
+				// original operation is still alive with the old window setting — tracked via cancelFailed.
+				cancelFailed = true
+				tflog.Debug(ctx, "Could not cancel scheduled app update, proceeding with re-submit", map[string]interface{}{
+					"app_id":       state.AppID.ValueString(),
+					"operation_id": scheduledOpID,
+					"cancel_error": cancelErr.Error(),
+				})
+			}
+		}
+		// Clear the pending signals regardless — we're about to re-submit.
+		state.PendingOperationID = types.StringValue("")
+		state.PendingTargetVersion = types.StringValue("")
+	}
+
 	updateReq := &UpdateAppRequest{
 		AllowPreviewVersion:               plan.AllowPreviewVersion.ValueBool(),
 		InstallOrUpdateNeededDependencies: plan.InstallOrUpdateNeededDependencies.ValueBool(),
-		IgnoreUpdateWindow:                plan.IgnoreUpdateWindow.ValueBool(),
+		UseEnvironmentUpdateWindow:        plan.UseEnvironmentUpdateWindow.ValueBool(),
 	}
 	if !plan.TargetVersion.IsNull() && !plan.TargetVersion.IsUnknown() && plan.TargetVersion.ValueString() != "" {
 		updateReq.TargetVersion = plan.TargetVersion.ValueString()
@@ -370,6 +464,58 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 
 	operation, err := svc.Update(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString(), updateReq)
 	if err != nil {
+		if IsAlreadyScheduledError(err) {
+			if cancelFailed {
+				// The cancel didn't take effect and BC rejected our re-submit because the
+				// original operation (with the old use_environment_update_window value) is
+				// still scheduled.  Surface a clear error so the user knows the setting
+				// was not changed; they can retry once the scheduled update completes.
+				resp.Diagnostics.AddError(
+					"Could not change update window setting: existing scheduled update could not be cancelled",
+					fmt.Sprintf(
+						"App %s has a scheduled update that BC rejected the cancellation of, "+
+							"and the re-submit was also rejected because the update is already queued. "+
+							"The scheduled update retains its original `use_environment_update_window` setting. "+
+							"Wait for the scheduled update to complete, then apply again.",
+						state.AppID.ValueString()),
+				)
+				return
+			}
+			// An update to the same target version is already queued in BC's update
+			// window — nothing to do. Treat this as a deferred success so the state
+			// is written consistently and the next refresh resolves it.
+			tflog.Debug(ctx, "App update already scheduled, treating as deferred success", map[string]interface{}{
+				"app_id":         state.AppID.ValueString(),
+				"target_version": plan.TargetVersion.ValueString(),
+			})
+			plan.ID = state.ID
+			plan.AADTenantID = state.AADTenantID
+			intendedVersion := plan.TargetVersion
+			app, readErr := svc.GetByID(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString())
+			if readErr != nil {
+				resp.Diagnostics.AddError(
+					"Error reading app after already-scheduled conflict",
+					fmt.Sprintf("Could not read app %s: %s", state.AppID.ValueString(), readErr),
+				)
+				return
+			}
+			if app != nil {
+				updateModelFromApp(&plan, app)
+			} else {
+				// App not visible yet (update in flight) — carry over computed fields from state.
+				plan.Name = state.Name
+				plan.Publisher = state.Publisher
+				plan.PublishedAs = state.PublishedAs
+				plan.Status = state.Status
+			}
+			// Preserve the intended target version and mark the update as pending.
+			// No operation ID is available for the already-scheduled case.
+			plan.TargetVersion = intendedVersion
+			plan.PendingTargetVersion = intendedVersion
+			plan.PendingOperationID = types.StringValue("")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error updating app",
 			fmt.Sprintf("Could not update app %s: %s", state.AppID.ValueString(), err),
@@ -379,7 +525,8 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 
 	timeout := 60 * time.Minute
 
-	if err := svc.WaitForOperation(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), operation.ID, timeout); err != nil {
+	deferred, err := svc.WaitForOperation(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), operation.ID, timeout, plan.UseEnvironmentUpdateWindow.ValueBool())
+	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error waiting for app update",
 			fmt.Sprintf("App update failed: %s", err),
@@ -390,6 +537,9 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 	// Preserve the ID and tenant from state.
 	plan.ID = state.ID
 	plan.AADTenantID = state.AADTenantID
+
+	// Capture the intended target version before updateModelFromApp can overwrite it.
+	intendedTargetVersion := plan.TargetVersion
 
 	// Refresh state from API.
 	app, err := svc.GetByID(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString())
@@ -402,6 +552,14 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 	}
 	if app != nil {
 		updateModelFromApp(&plan, app)
+		if deferred {
+			// The update was deferred to the environment's update window. Set
+			// pending_target_version as the persistent "selected update" signal so
+			// Read can suppress drift on every subsequent refresh until the window runs.
+			plan.TargetVersion = intendedTargetVersion
+			plan.PendingTargetVersion = intendedTargetVersion
+			plan.PendingOperationID = types.StringValue(operation.ID)
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -425,9 +583,9 @@ func (r *EnvironmentAppResource) Delete(ctx context.Context, req resource.Delete
 	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
 
 	uninstallReq := &UninstallAppRequest{
-		DoNotSaveData:       false,
-		UninstallDependents: false,
-		IgnoreUpdateWindow:  state.IgnoreUpdateWindow.ValueBool(),
+		DoNotSaveData:              false,
+		UninstallDependents:        false,
+		UseEnvironmentUpdateWindow: state.UseEnvironmentUpdateWindow.ValueBool(),
 	}
 
 	operation, err := svc.Uninstall(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString(), uninstallReq)
@@ -443,7 +601,7 @@ func (r *EnvironmentAppResource) Delete(ctx context.Context, req resource.Delete
 	// but if the API returns 202 with an operation we still wait for it.
 	if operation != nil {
 		timeout := 60 * time.Minute
-		if err := svc.WaitForOperation(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), operation.ID, timeout); err != nil {
+		if _, err := svc.WaitForOperation(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), operation.ID, timeout, state.UseEnvironmentUpdateWindow.ValueBool()); err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for app uninstall",
 				fmt.Sprintf("App uninstall failed: %s", err),
@@ -474,11 +632,16 @@ func (r *EnvironmentAppResource) ImportState(ctx context.Context, req resource.I
 }
 
 // updateModelFromApp populates the resource model from an App API response.
+// It always updates status, name, publisher, published_as and target_version.
+// Callers that need drift suppression (Read, deferred Update) must adjust
+// target_version and pending_target_version after this call.
 func updateModelFromApp(model *EnvironmentAppResourceModel, app *App) {
 	model.Name = types.StringValue(app.Name)
 	model.Publisher = types.StringValue(app.Publisher)
 	model.PublishedAs = types.StringValue(app.PublishedAs)
 	model.Status = types.StringValue(app.Status)
+	model.PendingTargetVersion = types.StringValue("")
+	model.PendingOperationID = types.StringValue("")
 	if app.Version != "" {
 		model.TargetVersion = types.StringValue(app.Version)
 	}

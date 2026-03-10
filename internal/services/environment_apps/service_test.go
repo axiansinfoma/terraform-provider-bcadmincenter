@@ -6,8 +6,10 @@ package environmentapps
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -256,6 +258,193 @@ func TestService_Update(t *testing.T) {
 			}
 			if !tt.wantErr && op == nil {
 				t.Error("Update() returned nil operation on success")
+			}
+		})
+	}
+}
+
+func TestService_CancelUpdate(t *testing.T) {
+	const testOpID = "scheduled-op-id-123"
+	tests := []struct {
+		name           string
+		responseStatus int
+		wantErr        bool
+	}{
+		{
+			name:           "success 200",
+			responseStatus: http.StatusOK,
+			wantErr:        false,
+		},
+		{
+			name:           "success 202",
+			responseStatus: http.StatusAccepted,
+			wantErr:        false,
+		},
+		{
+			name:           "success 204",
+			responseStatus: http.StatusNoContent,
+			wantErr:        false,
+		},
+		{
+			name:           "not allowed 400",
+			responseStatus: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "not allowed 409",
+			responseStatus: http.StatusConflict,
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Errorf("CancelUpdate() method = %v, want POST", r.Method)
+				}
+				if !strings.HasSuffix(r.URL.Path, "/update/cancel") {
+					t.Errorf("CancelUpdate() path = %v, want .../update/cancel", r.URL.Path)
+				}
+				// Verify the ScheduledOperationId is sent in the body.
+				var body CancelUpdateRequest
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Errorf("CancelUpdate() could not decode request body: %v", err)
+				}
+				if body.ScheduledOperationID != testOpID {
+					t.Errorf("CancelUpdate() ScheduledOperationId = %q, want %q", body.ScheduledOperationID, testOpID)
+				}
+				w.WriteHeader(tt.responseStatus)
+			}))
+			defer server.Close()
+
+			c := newTestClient(t, server.URL)
+			svc := NewService(c)
+
+			err := svc.CancelUpdate(context.Background(), "BusinessCentral", "my-env", "app-id-1", testOpID)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CancelUpdate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestService_GetScheduledUpdateOperationID(t *testing.T) {
+	tests := []struct {
+		name           string
+		responseBody   interface{}
+		responseStatus int
+		wantID         string
+		wantErr        bool
+	}{
+		{
+			name: "returns scheduled update operation ID",
+			responseBody: AppOperationsResponse{
+				Value: []AppOperation{
+					{ID: "op-scheduled-1", Status: "Scheduled", Type: "update"},
+					{ID: "op-succeeded-1", Status: "Succeeded", Type: "update"},
+				},
+			},
+			responseStatus: http.StatusOK,
+			wantID:         "op-scheduled-1",
+			wantErr:        false,
+		},
+		{
+			name: "case insensitive status match",
+			responseBody: AppOperationsResponse{
+				Value: []AppOperation{
+					{ID: "op-scheduled-2", Status: "scheduled", Type: "Update"},
+				},
+			},
+			responseStatus: http.StatusOK,
+			wantID:         "op-scheduled-2",
+			wantErr:        false,
+		},
+		{
+			name: "no scheduled update operation",
+			responseBody: AppOperationsResponse{
+				Value: []AppOperation{
+					{ID: "op-running-1", Status: "Running", Type: "update"},
+				},
+			},
+			responseStatus: http.StatusOK,
+			wantID:         "",
+			wantErr:        true,
+		},
+		{
+			name:           "empty operations list",
+			responseBody:   AppOperationsResponse{Value: []AppOperation{}},
+			responseStatus: http.StatusOK,
+			wantID:         "",
+			wantErr:        true,
+		},
+		{
+			name:           "api error",
+			responseBody:   map[string]string{"code": "NotFound", "message": "not found"},
+			responseStatus: http.StatusNotFound,
+			wantID:         "",
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					t.Errorf("GetScheduledUpdateOperationID() method = %v, want GET", r.Method)
+				}
+				if !strings.Contains(r.URL.Path, "/operations") {
+					t.Errorf("GetScheduledUpdateOperationID() path = %v, want .../operations", r.URL.Path)
+				}
+				w.WriteHeader(tt.responseStatus)
+				_ = json.NewEncoder(w).Encode(tt.responseBody)
+			}))
+			defer server.Close()
+
+			c := newTestClient(t, server.URL)
+			svc := NewService(c)
+
+			gotID, err := svc.GetScheduledUpdateOperationID(context.Background(), "BusinessCentral", "my-env", "app-id-1")
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetScheduledUpdateOperationID() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if gotID != tt.wantID {
+				t.Errorf("GetScheduledUpdateOperationID() = %q, want %q", gotID, tt.wantID)
+			}
+		})
+	}
+}
+
+func TestIsCancelNotAllowedError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "AdminCenterError",
+			err:  &client.AdminCenterError{Code: "EntityValidationFailed", Message: "cannot be cancelled"},
+			want: true,
+		},
+		{
+			name: "plain error",
+			err:  errors.New("network error"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsCancelNotAllowedError(tt.err)
+			if got != tt.want {
+				t.Errorf("IsCancelNotAllowedError() = %v, want %v", got, tt.want)
 			}
 		})
 	}

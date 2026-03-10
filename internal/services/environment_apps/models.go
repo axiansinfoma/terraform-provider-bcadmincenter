@@ -32,14 +32,14 @@ type UpdateAppRequest struct {
 	TargetVersion                     string `json:"targetVersion,omitempty"`
 	AllowPreviewVersion               bool   `json:"allowPreviewVersion"`
 	InstallOrUpdateNeededDependencies bool   `json:"installOrUpdateNeededDependencies"`
-	IgnoreUpdateWindow                bool   `json:"ignoreUpdateWindow,omitempty"`
+	UseEnvironmentUpdateWindow        bool   `json:"useEnvironmentUpdateWindow"`
 }
 
 // UninstallAppRequest represents the request body for uninstalling an app.
 type UninstallAppRequest struct {
-	DoNotSaveData       bool `json:"doNotSaveData"`
-	UninstallDependents bool `json:"uninstallDependents"`
-	IgnoreUpdateWindow  bool `json:"ignoreUpdateWindow,omitempty"`
+	DoNotSaveData              bool `json:"doNotSaveData"`
+	UninstallDependents        bool `json:"uninstallDependents"`
+	UseEnvironmentUpdateWindow bool `json:"useEnvironmentUpdateWindow"`
 }
 
 // Operation represents an asynchronous operation returned by the app lifecycle API.
@@ -48,6 +48,29 @@ type Operation struct {
 	Type         string `json:"type"`
 	Status       string `json:"status"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
+}
+
+// CancelUpdateRequest represents the request body for cancelling a scheduled app update.
+type CancelUpdateRequest struct {
+	ScheduledOperationID string `json:"ScheduledOperationId"`
+}
+
+// AppOperation represents a single operation entry returned by the app operations endpoint.
+type AppOperation struct {
+	ID            string `json:"id"`
+	CreatedOn     string `json:"createdOn"`
+	StartedOn     string `json:"startedOn,omitempty"`
+	CompletedOn   string `json:"completedOn,omitempty"`
+	Status        string `json:"status"`
+	SourceVersion string `json:"sourceVersion,omitempty"`
+	TargetVersion string `json:"targetVersion,omitempty"`
+	Type          string `json:"type"`
+	ErrorMessage  string `json:"errorMessage,omitempty"`
+}
+
+// AppOperationsResponse represents the paginated list returned by the app operations endpoint.
+type AppOperationsResponse struct {
+	Value []AppOperation `json:"value"`
 }
 
 // OperationStatus constants for app operations.

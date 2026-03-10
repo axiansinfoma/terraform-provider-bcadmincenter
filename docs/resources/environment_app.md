@@ -29,6 +29,25 @@ Manages the install/update/uninstall lifecycle of a Business Central app in an e
 
 -> **Note:** All identity attributes (`application_family`, `environment_name`, `app_id`) are `ForceNew`. Changing any of them destroys the existing app installation and installs the new app.
 
+## Deferred Updates and the Environment Update Window
+
+When `use_environment_update_window = true` (the default), the Business Central API does not execute the update immediately. Instead, it schedules the operation to run during the environment's configured [update window](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/tenant-admin-center-update-management#set-the-update-window). The operation appears in the `"scheduled"` state until the window opens.
+
+Because the operation has not yet completed, Terraform cannot verify the final installed version at apply time. The resource handles this transparently:
+
+- `pending_target_version` — set to the version requested during a deferred apply. On subsequent `terraform plan` / `terraform refresh` runs, this value suppresses false drift: Terraform will not report the installed version as changed until the scheduled operation completes and `pending_target_version` is cleared.
+- `pending_operation_id` — the ID of the scheduled BC operation, used internally if you later change `use_environment_update_window` and the resource needs to cancel the existing scheduled operation before resubmitting.
+
+**Typical workflow with update windows:**
+
+1. Run `terraform apply` — BC accepts the update and schedules it. State records `pending_target_version`.
+2. Wait for the environment's update window to pass and BC to execute the update.
+3. Run `terraform apply` again (or `terraform refresh`) — BC reports the installed version now matches `target_version`, `pending_target_version` is cleared, and state converges.
+
+**Changing `use_environment_update_window` while an update is pending:**
+
+If you toggle `use_environment_update_window` while `pending_target_version` is set, the resource will automatically cancel the existing scheduled operation and resubmit the update with the new setting. The cancellation requires the scheduled operation ID from the BC App Operations API (`/apps/{appId}/operations`). If cancellation is rejected by BC (for example, because the operation has already started running), a descriptive error is returned and you should wait for the update to complete before applying again.
+
 ## Example Usage
 
 ### Install a Specific App Version
@@ -125,16 +144,18 @@ resource "bcadmincenter_environment_app" "my_app" {
 - `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.
 - `accept_isv_eula` (Boolean) When `true`, accepts the ISV End User License Agreement (EULA) for the app. Required for some ISV apps. Defaults to `false`. Changing this forces a new resource to be created.
 - `allow_preview_version` (Boolean) When `true`, allows installing preview versions of the app. Defaults to `false`.
-- `ignore_update_window` (Boolean) When `true`, bypasses the configured update window for update and uninstall operations. Defaults to `false`.
 - `install_or_update_needed_dependencies` (Boolean) When `true`, automatically installs or updates app dependencies. Defaults to `true`.
 - `language_id` (String) The language identifier for the app installation (e.g. `"en-US"`). If not specified, the default language is used. Changing this forces a new resource to be created.
 - `target_version` (String) The target app version to install or update to (e.g. `"1.2.3.4"`). Omit or leave null to install the latest available version. Changing this to a higher version schedules an in-place update. Downgrading is blocked at plan time.
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
+- `use_environment_update_window` (Boolean) When `true` (default), update and uninstall operations respect the environment's configured update window. Set to `false` to bypass the update window and apply the operation immediately.
 
 ### Read-Only
 
 - `id` (String) The ARM-like resource ID (format: /tenants/{tenantId}/providers/Microsoft.Dynamics365.BusinessCentral/applications/{applicationFamily}/environments/{environmentName}/apps/{appId})
 - `name` (String) The display name of the app (read from the API).
+- `pending_operation_id` (String) The BC operation ID of a currently scheduled (deferred) update. Non-empty when an update has been deferred to the environment's update window. Used internally to cancel and reschedule the operation when `use_environment_update_window` changes.
+- `pending_target_version` (String) The target version of a currently scheduled or running update. Non-empty when an update has been deferred to the environment's update window. While non-empty, `target_version` is suppressed to this value so no drift is reported.
 - `published_as` (String) How the app is published (e.g. `"Global"`).
 - `publisher` (String) The publisher of the app (read from the API).
 - `status` (String) The current install status of the app (e.g. `"installed"`, `"installFailed"`, `"updateFailed"`). When the status is `"installFailed"` or `"updateFailed"`, the resource will be replaced on the next apply.
@@ -168,7 +189,8 @@ terraform import bcadmincenter_environment_app.contoso_app \
 - Omit `target_version` to always track the latest available version.
 - Use `install_or_update_needed_dependencies = true` (default) to avoid dependency conflicts.
 - Use `allow_preview_version = false` (default) for production environments.
-- Set `ignore_update_window = true` to bypass configured update windows for urgent updates or uninstalls.
+- Leave `use_environment_update_window = true` (default) to respect the environment's configured update window. Set it to `false` only for urgent updates where you want immediate execution.
+- The `pending_target_version` and `pending_operation_id` attributes are managed automatically — do not set them manually.
 - If an app enters `"installFailed"` or `"updateFailed"` status, the next `terraform plan` will propose a replacement — run `terraform apply` to recover.
 
 ## Related Resources
