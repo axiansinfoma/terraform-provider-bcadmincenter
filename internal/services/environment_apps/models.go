@@ -50,6 +50,7 @@ type Operation struct {
 
 // OperationStatus constants for app operations.
 const (
+	OperationStatusScheduled = "scheduled"
 	OperationStatusQueued    = "queued"
 	OperationStatusRunning   = "running"
 	OperationStatusSucceeded = "succeeded"

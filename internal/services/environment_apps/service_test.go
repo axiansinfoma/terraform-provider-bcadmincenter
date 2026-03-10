@@ -138,6 +138,16 @@ func TestService_Install(t *testing.T) {
 			wantErr:        false,
 		},
 		{
+			name: "success 200",
+			responseBody: Operation{
+				ID:     "op-123",
+				Type:   "install",
+				Status: OperationStatusScheduled,
+			},
+			responseStatus: http.StatusOK,
+			wantErr:        false,
+		},
+		{
 			name:           "unexpected status 400",
 			responseBody:   map[string]string{"error": "bad request"},
 			responseStatus: http.StatusBadRequest,
@@ -195,6 +205,16 @@ func TestService_Update(t *testing.T) {
 				Status: OperationStatusRunning,
 			},
 			responseStatus: http.StatusAccepted,
+			wantErr:        false,
+		},
+		{
+			name: "success 200",
+			responseBody: Operation{
+				ID:     "op-456",
+				Type:   "update",
+				Status: OperationStatusScheduled,
+			},
+			responseStatus: http.StatusOK,
 			wantErr:        false,
 		},
 		{
@@ -256,6 +276,16 @@ func TestService_Uninstall(t *testing.T) {
 				Status: OperationStatusRunning,
 			},
 			responseStatus: http.StatusAccepted,
+			wantErr:        false,
+		},
+		{
+			name: "success 200",
+			responseBody: Operation{
+				ID:     "op-789",
+				Type:   "uninstall",
+				Status: OperationStatusScheduled,
+			},
+			responseStatus: http.StatusOK,
 			wantErr:        false,
 		},
 		{

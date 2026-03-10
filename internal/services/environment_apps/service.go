@@ -69,7 +69,7 @@ func (s *Service) Install(ctx context.Context, applicationFamily, environmentNam
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
 	}
 
@@ -97,7 +97,7 @@ func (s *Service) Update(ctx context.Context, applicationFamily, environmentName
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
 	}
 
@@ -125,7 +125,7 @@ func (s *Service) Uninstall(ctx context.Context, applicationFamily, environmentN
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
 	}
 
@@ -200,7 +200,7 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 				return fmt.Errorf("operation failed: %s", operation.ErrorMessage)
 			case OperationStatusCancelled:
 				return fmt.Errorf("operation was cancelled")
-			case OperationStatusQueued, OperationStatusRunning:
+			case OperationStatusQueued, OperationStatusRunning, OperationStatusScheduled:
 				// Continue polling.
 				continue
 			default:
