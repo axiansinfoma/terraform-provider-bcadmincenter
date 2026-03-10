@@ -113,7 +113,7 @@ type EnvironmentUpdate struct {
 type UpdateScheduleDetails struct {
 	LatestSelectableDateTime string `json:"latestSelectableDateTime,omitempty"`
 	SelectedDateTime         string `json:"selectedDateTime,omitempty"`
-	IgnoreUpdateWindow       bool   `json:"ignoreUpdateWindow"`
+	IgnoreUpdateWindow       bool   `json:"ignoreUpdateWindow,omitempty"`
 	RolloutStatus            string `json:"rolloutStatus,omitempty"`
 }
 
