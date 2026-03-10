@@ -100,7 +100,7 @@ terraform plan -target=data.bcadmincenter_available_applications.apps \
                -target=data.bcadmincenter_timezones.available
 ```
 
-## Step 4: Create the Production Environment
+## Step 4: Create the Production Environment with Settings
 
 Create a `main.tf` file that references the data source outputs:
 
@@ -115,6 +115,17 @@ resource "bcadmincenter_environment" "production" {
   ring_name          = local.production_ring.name
   azure_region       = "westus2"
 
+  # Configure environment settings inline
+  settings {
+    # Schedule updates during off-peak hours (window must be at least 6 hours)
+    update_window_start_time = "22:00"
+    update_window_end_time   = "06:00"
+    update_window_timezone   = local.pacific_tz.id
+
+    # Only accept updates during major upgrades (conservative cadence)
+    app_update_cadence = "DuringMajorUpgrade"
+  }
+
   timeouts {
     create = "90m"
     delete = "60m"
@@ -125,28 +136,7 @@ resource "bcadmincenter_environment" "production" {
 ~> **Warning:** Environment creation is an asynchronous operation that typically takes 15–30 minutes.
 The provider polls the API and blocks until the environment reaches `Active` status or the timeout expires.
 
-## Step 5: Configure Environment Settings
-
-Once the environment exists, configure its update window and timezone:
-
-```terraform
-# main.tf (continued)
-
-resource "bcadmincenter_environment_settings" "production" {
-  application_family = bcadmincenter_environment.production.application_family
-  environment_name   = bcadmincenter_environment.production.name
-
-  # Schedule updates during off-peak hours (window must be at least 6 hours)
-  update_window_start_time = "22:00"
-  update_window_end_time   = "06:00"
-  update_window_timezone   = local.pacific_tz.id
-
-  # Only accept updates during major upgrades (conservative cadence)
-  app_update_cadence = "DuringMajorUpgrade"
-}
-```
-
-## Step 6: Set a Support Contact
+## Step 5: Set a Support Contact
 
 ```terraform
 # main.tf (continued)
@@ -161,7 +151,7 @@ resource "bcadmincenter_environment_support_contact" "production" {
 }
 ```
 
-## Step 7: Add Outputs
+## Step 6: Add Outputs
 
 ```terraform
 # outputs.tf
@@ -187,7 +177,7 @@ output "ring_used" {
 }
 ```
 
-## Step 8: Apply the Configuration
+## Step 7: Apply the Configuration
 
 Preview the planned changes:
 
@@ -212,7 +202,7 @@ ring_used           = "PROD"
 web_client_url      = "https://businesscentral.dynamics.com/00000000-0000-0000-0000-000000000000/production"
 ```
 
-## Step 9: Import an Existing Environment
+## Step 8: Import an Existing Environment
 
 If you have an environment that was created outside Terraform, you can import it into state:
 
@@ -261,19 +251,17 @@ resource "bcadmincenter_environment" "production" {
   ring_name          = local.production_ring.name
   azure_region       = "westus2"
 
+  settings {
+    update_window_start_time = "22:00"
+    update_window_end_time   = "06:00"
+    update_window_timezone   = local.pacific_tz.id
+    app_update_cadence       = "DuringMajorUpgrade"
+  }
+
   timeouts {
     create = "90m"
     delete = "60m"
   }
-}
-
-resource "bcadmincenter_environment_settings" "production" {
-  application_family       = bcadmincenter_environment.production.application_family
-  environment_name         = bcadmincenter_environment.production.name
-  update_window_start_time = "22:00"
-  update_window_end_time   = "06:00"
-  update_window_timezone   = local.pacific_tz.id
-  app_update_cadence       = "DuringMajorUpgrade"
 }
 
 resource "bcadmincenter_environment_support_contact" "production" {
@@ -314,5 +302,5 @@ Verify that:
 ## Next Steps
 
 - [Multi-Tenant Management Tutorial](./multi-tenant-management.md) – iterate over multiple tenants
-- [Environment Settings resource](../docs/resources/environment_settings.md) – full attribute reference
+- [Environment resource](../docs/resources/environment.md) – full attribute reference including the `settings` block
 - [Environment Support Contact resource](../docs/resources/environment_support_contact.md) – full attribute reference

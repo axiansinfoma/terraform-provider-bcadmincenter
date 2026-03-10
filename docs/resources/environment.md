@@ -140,9 +140,7 @@ resource "bcadmincenter_environment" "sandbox" {
 }
 ```
 
--> **Note:** The `settings` block is an alternative to the separate `bcadmincenter_environment_settings` resource. Using both on the same environment is not recommended as they will conflict. When the `settings` block is removed from the configuration, the settings remain on the environment (they are not reset to defaults).
-
--> **Migration:** To migrate from a separate `bcadmincenter_environment_settings` resource to the inline `settings` block: (1) add the `settings` block to the environment resource with the same attributes, (2) run `terraform plan` to verify no unintended changes, (3) remove the `bcadmincenter_environment_settings` resource from your configuration, and (4) run `terraform state rm` to remove it from state.
+-> **Note:** When the `settings` block is removed from the configuration, the settings remain on the environment (they are not reset to defaults).
 
 ### Environment with Version
 
@@ -271,7 +269,7 @@ output "environment_urls" {
 - `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.
 - `ignore_update_window` (Boolean) When `true`, the version upgrade scheduled via `application_version` may start immediately without waiting for the environment's configured update window. When `false` (default), the upgrade waits for the next update window. This setting applies only to platform/environment version updates — it has no effect on app installations or updates.
 - `ring_name` (String) The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Changing this forces a new Business Central Environment to be created.
-- `settings` (Attributes) Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline. This is an alternative to using the separate `bcadmincenter_environment_settings` resource. (see [below for nested schema](#nestedatt--settings))
+- `settings` (Attributes) Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline. (see [below for nested schema](#nestedatt--settings))
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
 
 ### Read-Only
@@ -477,5 +475,4 @@ If an environment remains in "Creating" status:
 ## Related Resources
 
 - `bcadmincenter_available_applications` data source - Query available application families and rings
-- `bcadmincenter_environment_settings` resource - Configure environment-specific settings (standalone alternative to the `settings` block)
 - `bcadmincenter_environment_app` resource - Manage app installations

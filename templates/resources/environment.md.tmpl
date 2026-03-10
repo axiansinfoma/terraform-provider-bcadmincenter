@@ -63,9 +63,7 @@ resource "bcadmincenter_environment" "sandbox" {
 }
 ```
 
--> **Note:** The `settings` block is an alternative to the separate `bcadmincenter_environment_settings` resource. Using both on the same environment is not recommended as they will conflict. When the `settings` block is removed from the configuration, the settings remain on the environment (they are not reset to defaults).
-
--> **Migration:** To migrate from a separate `bcadmincenter_environment_settings` resource to the inline `settings` block: (1) add the `settings` block to the environment resource with the same attributes, (2) run `terraform plan` to verify no unintended changes, (3) remove the `bcadmincenter_environment_settings` resource from your configuration, and (4) run `terraform state rm` to remove it from state.
+-> **Note:** When the `settings` block is removed from the configuration, the settings remain on the environment (they are not reset to defaults).
 
 ### Environment with Version
 
@@ -347,5 +345,4 @@ If an environment remains in "Creating" status:
 ## Related Resources
 
 - `bcadmincenter_available_applications` data source - Query available application families and rings
-- `bcadmincenter_environment_settings` resource - Configure environment-specific settings (standalone alternative to the `settings` block)
 - `bcadmincenter_environment_app` resource - Manage app installations

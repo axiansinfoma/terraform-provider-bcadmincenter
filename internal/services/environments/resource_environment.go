@@ -241,8 +241,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed: true,
 			},
 			"settings": schema.SingleNestedAttribute{
-				MarkdownDescription: "Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline. " +
-					"This is an alternative to using the separate `bcadmincenter_environment_settings` resource.",
+				MarkdownDescription: "Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline.",
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
 					"update_window_start_time": schema.StringAttribute{

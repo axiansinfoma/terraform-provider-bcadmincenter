@@ -197,8 +197,7 @@ The app may be authorized but lacks specific permission sets in environments. As
 ## Related Resources
 
 - `bcadmincenter_authorized_entra_apps` - Data source to list all authorized apps
-- `bcadmincenter_environment` - Manage Business Central environments
-- `bcadmincenter_environment_settings` - Configure environment settings
+- `bcadmincenter_environment` - Manage Business Central environments (includes `settings` block for environment configuration)
 
 ## See Also
 

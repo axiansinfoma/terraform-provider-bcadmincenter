@@ -111,7 +111,6 @@ To complete the provider implementation, consider:
    - `bcadmincenter_available_applications` - List available application versions
 
 2. **Additional Resources**:
-   - `bcadmincenter_environment_settings` - Configure environment settings
    - `bcadmincenter_environment_app` - Manage app installations
    - `bcadmincenter_notification_settings` - Configure notifications
 
