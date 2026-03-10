@@ -46,7 +46,7 @@ type EnvironmentAppResourceModel struct {
 	ApplicationFamily                 types.String `tfsdk:"application_family"`
 	EnvironmentName                   types.String `tfsdk:"environment_name"`
 	AppID                             types.String `tfsdk:"app_id"`
-	Version                           types.String `tfsdk:"version"`
+	TargetVersion                     types.String `tfsdk:"target_version"`
 	AllowPreviewVersion               types.Bool   `tfsdk:"allow_preview_version"`
 	InstallOrUpdateNeededDependencies types.Bool   `tfsdk:"install_or_update_needed_dependencies"`
 	AcceptIsvEula                     types.Bool   `tfsdk:"accept_isv_eula"`
@@ -108,7 +108,7 @@ func (r *EnvironmentAppResource) Schema(_ context.Context, _ resource.SchemaRequ
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"version": schema.StringAttribute{
+			"target_version": schema.StringAttribute{
 				MarkdownDescription: "The target app version to install or update to (e.g. `\"1.2.3.4\"`). " +
 					"Omit or leave null to install the latest available version. " +
 					"Changing this to a higher version schedules an in-place update. " +
@@ -249,8 +249,8 @@ func (r *EnvironmentAppResource) Create(ctx context.Context, req resource.Create
 		InstallOrUpdateNeededDependencies: plan.InstallOrUpdateNeededDependencies.ValueBool(),
 		AcceptIsvEula:                     plan.AcceptIsvEula.ValueBool(),
 	}
-	if !plan.Version.IsNull() && !plan.Version.IsUnknown() && plan.Version.ValueString() != "" {
-		installReq.TargetVersion = plan.Version.ValueString()
+	if !plan.TargetVersion.IsNull() && !plan.TargetVersion.IsUnknown() && plan.TargetVersion.ValueString() != "" {
+		installReq.TargetVersion = plan.TargetVersion.ValueString()
 	}
 	if !plan.LanguageID.IsNull() && !plan.LanguageID.IsUnknown() && plan.LanguageID.ValueString() != "" {
 		installReq.LanguageID = plan.LanguageID.ValueString()
@@ -347,7 +347,7 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 		"application_family": state.ApplicationFamily.ValueString(),
 		"environment_name":   state.EnvironmentName.ValueString(),
 		"app_id":             state.AppID.ValueString(),
-		"target_version":     plan.Version.ValueString(),
+		"target_version":     plan.TargetVersion.ValueString(),
 	})
 
 	svc := NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
@@ -356,8 +356,8 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 		AllowPreviewVersion:               plan.AllowPreviewVersion.ValueBool(),
 		InstallOrUpdateNeededDependencies: plan.InstallOrUpdateNeededDependencies.ValueBool(),
 	}
-	if !plan.Version.IsNull() && !plan.Version.IsUnknown() && plan.Version.ValueString() != "" {
-		updateReq.TargetVersion = plan.Version.ValueString()
+	if !plan.TargetVersion.IsNull() && !plan.TargetVersion.IsUnknown() && plan.TargetVersion.ValueString() != "" {
+		updateReq.TargetVersion = plan.TargetVersion.ValueString()
 	}
 
 	operation, err := svc.Update(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString(), updateReq)
@@ -471,6 +471,6 @@ func updateModelFromApp(model *EnvironmentAppResourceModel, app *App) {
 	model.PublishedAs = types.StringValue(app.PublishedAs)
 	model.Status = types.StringValue(app.Status)
 	if app.Version != "" {
-		model.Version = types.StringValue(app.Version)
+		model.TargetVersion = types.StringValue(app.Version)
 	}
 }

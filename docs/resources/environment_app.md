@@ -16,14 +16,14 @@ Manages the install/update/uninstall lifecycle of a Business Central app in an e
 
 - Installs the specified app (optionally at a pinned version) via the Admin Center API.
 - Monitors the asynchronous install/update/uninstall operation until completion.
-- Supports in-place version upgrades by changing the `version` attribute.
+- Supports in-place version upgrades by changing the `target_version` attribute.
 - Automatically removes from state if the app is no longer installed.
 
 ## Important Notes
 
 ~> **Warning:** App install, update, and uninstall are asynchronous operations that can take several minutes to complete.
 
-~> **Warning:** Downgrading `version` to a lower value is blocked at plan time. Only version upgrades are supported via this resource.
+~> **Warning:** Downgrading `target_version` to a lower value is blocked at plan time. Only version upgrades are supported via this resource.
 
 -> **Note:** When the app reaches a terminal failure state (`"installFailed"` or `"updateFailed"`), Terraform will automatically plan a replacement (destroy + recreate) on the next `terraform plan`, allowing the environment to converge without manual state manipulation.
 
@@ -69,8 +69,8 @@ resource "bcadmincenter_environment_app" "contoso_app" {
   application_family = bcadmincenter_environment.sandbox.application_family
   environment_name   = bcadmincenter_environment.sandbox.name
 
-  app_id  = "00000000-0000-0000-0000-000000000000"
-  version = "1.0.0.0" # Omit to install the latest available version.
+  app_id         = "00000000-0000-0000-0000-000000000000"
+  target_version = "1.0.0.0" # Omit to install the latest available version.
 
   install_or_update_needed_dependencies = true
   allow_preview_version                 = false
@@ -83,7 +83,7 @@ output "app_status" {
 
 output "app_version" {
   description = "The installed version of the app."
-  value       = bcadmincenter_environment_app.contoso_app.version
+  value       = bcadmincenter_environment_app.contoso_app.target_version
 }
 ```
 
@@ -94,20 +94,20 @@ resource "bcadmincenter_environment_app" "my_app" {
   application_family = "BusinessCentral"
   environment_name   = "my-sandbox"
   app_id             = "00000000-0000-0000-0000-000000000000"
-  # version omitted — installs the latest available version
+  # target_version omitted — installs the latest available version
 }
 ```
 
 ### In-Place Version Upgrade
 
-Changing `version` from `"1.0.0.0"` to `"1.1.0.0"` on a subsequent apply triggers an in-place update without recreating the resource:
+Changing `target_version` from `"1.0.0.0"` to `"1.1.0.0"` on a subsequent apply triggers an in-place update without recreating the resource:
 
 ```terraform
 resource "bcadmincenter_environment_app" "my_app" {
   application_family = "BusinessCentral"
   environment_name   = "my-sandbox"
   app_id             = "00000000-0000-0000-0000-000000000000"
-  version            = "1.1.0.0"  # changed from "1.0.0.0" → in-place update
+  target_version     = "1.1.0.0"  # changed from "1.0.0.0" → in-place update
 }
 ```
 
@@ -127,8 +127,8 @@ resource "bcadmincenter_environment_app" "my_app" {
 - `allow_preview_version` (Boolean) When `true`, allows installing preview versions of the app. Defaults to `false`.
 - `install_or_update_needed_dependencies` (Boolean) When `true`, automatically installs or updates app dependencies. Defaults to `true`.
 - `language_id` (String) The language identifier for the app installation (e.g. `"en-US"`). If not specified, the default language is used. Changing this forces a new resource to be created.
+- `target_version` (String) The target app version to install or update to (e.g. `"1.2.3.4"`). Omit or leave null to install the latest available version. Changing this to a higher version schedules an in-place update. Downgrading is blocked at plan time.
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
-- `version` (String) The target app version to install or update to (e.g. `"1.2.3.4"`). Omit or leave null to install the latest available version. Changing this to a higher version schedules an in-place update. Downgrading is blocked at plan time.
 
 ### Read-Only
 
@@ -163,8 +163,8 @@ terraform import bcadmincenter_environment_app.contoso_app \
 
 ## Best Practices
 
-- Pin `version` to a specific value to ensure deterministic deployments.
-- Omit `version` to always track the latest available version.
+- Pin `target_version` to a specific value to ensure deterministic deployments.
+- Omit `target_version` to always track the latest available version.
 - Use `install_or_update_needed_dependencies = true` (default) to avoid dependency conflicts.
 - Use `allow_preview_version = false` (default) for production environments.
 - If an app enters `"installFailed"` or `"updateFailed"` status, the next `terraform plan` will propose a replacement — run `terraform apply` to recover.

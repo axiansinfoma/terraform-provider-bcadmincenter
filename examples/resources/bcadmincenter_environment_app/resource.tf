@@ -33,8 +33,8 @@ resource "bcadmincenter_environment_app" "contoso_app" {
   application_family = bcadmincenter_environment.sandbox.application_family
   environment_name   = bcadmincenter_environment.sandbox.name
 
-  app_id  = "00000000-0000-0000-0000-000000000000"
-  version = "1.0.0.0" # Omit to install the latest available version.
+  app_id         = "00000000-0000-0000-0000-000000000000"
+  target_version = "1.0.0.0" # Omit to install the latest available version.
 
   install_or_update_needed_dependencies = true
   allow_preview_version                 = false
@@ -47,5 +47,5 @@ output "app_status" {
 
 output "app_version" {
   description = "The installed version of the app."
-  value       = bcadmincenter_environment_app.contoso_app.version
+  value       = bcadmincenter_environment_app.contoso_app.target_version
 }

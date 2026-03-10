@@ -42,7 +42,7 @@ func TestEnvironmentAppResource_Schema(t *testing.T) {
 		"application_family",
 		"environment_name",
 		"app_id",
-		"version",
+		"target_version",
 		"allow_preview_version",
 		"install_or_update_needed_dependencies",
 		"accept_isv_eula",
