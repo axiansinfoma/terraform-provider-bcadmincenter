@@ -45,7 +45,7 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 	}
 
 	// Verify optional attributes exist.
-	optionalAttrs := []string{"application_family", "ring_name", "application_version", "ignore_update_window", "azure_region", "aad_tenant_id", "settings"}
+	optionalAttrs := []string{"application_family", "ring_name", "application_version", "ignore_update_window", "azure_region", "aad_tenant_id"}
 	for _, attr := range optionalAttrs {
 		if _, ok := resp.Schema.Attributes[attr]; !ok {
 			t.Errorf("Schema missing optional attribute: %s", attr)
@@ -60,8 +60,8 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 		}
 	}
 
-	// Verify settings nested block attributes exist.
-	if _, ok := resp.Schema.Attributes["settings"]; !ok {
+	// Verify settings nested block exists in the Blocks map (block syntax: settings { ... }).
+	if _, ok := resp.Schema.Blocks["settings"]; !ok {
 		t.Fatal("Schema missing 'settings' nested block")
 	}
 }

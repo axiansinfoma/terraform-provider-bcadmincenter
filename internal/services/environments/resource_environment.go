@@ -240,9 +240,24 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"Empty when the upgrade will run at the next update window or when no upgrade is pending.",
 				Computed: true,
 			},
-			"settings": schema.SingleNestedAttribute{
-				MarkdownDescription: "Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline.",
+			"timeouts": schema.SingleNestedAttribute{
+				MarkdownDescription: "Timeout configuration for the resource operations.",
 				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"create": schema.StringAttribute{
+						MarkdownDescription: "Timeout for create operations. Defaults to 60 minutes.",
+						Optional:            true,
+					},
+					"delete": schema.StringAttribute{
+						MarkdownDescription: "Timeout for delete operations. Defaults to 60 minutes.",
+						Optional:            true,
+					},
+				},
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"settings": schema.SingleNestedBlock{
+				MarkdownDescription: "Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline.",
 				Attributes: map[string]schema.Attribute{
 					"update_window_start_time": schema.StringAttribute{
 						MarkdownDescription: "Start time for the update window in HH:mm format (24-hour). Requires `update_window_timezone` to be set.",
@@ -300,20 +315,6 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 						MarkdownDescription: "List of partner tenant IDs allowed to access the environment. Only used when `partner_access_status` is `AllowSelectedPartnerTenants`.",
 						Optional:            true,
 						ElementType:         types.StringType,
-					},
-				},
-			},
-			"timeouts": schema.SingleNestedAttribute{
-				MarkdownDescription: "Timeout configuration for the resource operations.",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"create": schema.StringAttribute{
-						MarkdownDescription: "Timeout for create operations. Defaults to 60 minutes.",
-						Optional:            true,
-					},
-					"delete": schema.StringAttribute{
-						MarkdownDescription: "Timeout for delete operations. Defaults to 60 minutes.",
-						Optional:            true,
 					},
 				},
 			},
