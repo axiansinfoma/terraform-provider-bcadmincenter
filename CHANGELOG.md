@@ -13,6 +13,7 @@ FEATURES:
 * **New Resource:** `bcadmincenter_environment_support_contact` ([#1](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/1))
 * **New Resource:** `bcadmincenter_environment_update_schedule` ([#35](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues/35))
 * **New Resource:** `bcadmincenter_notification_recipient` ([#1](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/1))
+* **New Resource:** `bcadmincenter_per_tenant_extension` — manage Per-Tenant Extension (PTE) lifecycle via the BC Automation API: upload `.app` package, install, update, uninstall, and optionally unpublish ([#4](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues/4))
 * **New Data Source:** `bcadmincenter_application_family` ([#1](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/1))
 * **New Data Source:** `bcadmincenter_authorized_entra_apps` ([#1](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/1))
 * **New Data Source:** `bcadmincenter_available_applications` ([#1](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/1))

@@ -23,6 +23,7 @@ import (
 	environmentsupportcontact "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_support_contact"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environments"
 	notificationrecipients "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/notification_recipients"
+	pertenantextensions "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/per_tenant_extensions"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/quotas"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/timezones"
 )
@@ -166,6 +167,7 @@ func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource
 		environmentapps.NewEnvironmentAppResource,
 		environmentsupportcontact.NewEnvironmentSupportContactResource,
 		notificationrecipients.NewNotificationRecipientResource,
+		pertenantextensions.NewPerTenantExtensionResource,
 	}
 }
 
