@@ -241,11 +241,12 @@ func validateFileInputs(data *PerTenantExtensionResourceModel) error {
 }
 
 // uploadAndInstall performs the 3-step PTE upload/install sequence and waits for completion.
-// Returns the packageId of the uploaded extension.
-func (r *PerTenantExtensionResource) uploadAndInstall(ctx context.Context, data *PerTenantExtensionResourceModel, svc *Service) (string, error) {
+// Returns the deployment status from extensionDeploymentStatus, which contains the extension
+// name and publisher needed to look up the installed extension from the extensions collection.
+func (r *PerTenantExtensionResource) uploadAndInstall(ctx context.Context, data *PerTenantExtensionResourceModel, svc *Service) (*ExtensionDeploymentStatus, error) {
 	fileBytes, err := resolveFileBytes(data)
 	if err != nil {
-		return "", fmt.Errorf("failed to read extension file: %w", err)
+		return nil, fmt.Errorf("failed to read extension file: %w", err)
 	}
 
 	// Step 1: Create upload record.
@@ -256,43 +257,52 @@ func (r *PerTenantExtensionResource) uploadAndInstall(ctx context.Context, data 
 
 	uploadID, err := svc.CreateExtensionUpload(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), uploadReq)
 	if err != nil {
-		return "", fmt.Errorf("failed to create extension upload record: %w", err)
+		return nil, fmt.Errorf("failed to create extension upload record: %w", err)
 	}
 
 	tflog.Debug(ctx, "Created extension upload record", map[string]interface{}{"upload_id": uploadID})
 
 	// Step 2: Stream the .app file.
 	if err := svc.UploadExtensionContent(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), uploadID, fileBytes); err != nil {
-		return "", fmt.Errorf("failed to upload extension content: %w", err)
+		return nil, fmt.Errorf("failed to upload extension content: %w", err)
 	}
 
 	tflog.Debug(ctx, "Uploaded extension content")
 
 	// Step 3: Trigger install.
 	if err := svc.TriggerInstall(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), uploadID); err != nil {
-		return "", fmt.Errorf("failed to trigger extension install: %w", err)
+		return nil, fmt.Errorf("failed to trigger extension install: %w", err)
 	}
 
 	tflog.Debug(ctx, "Triggered extension install")
 
-	// Step 4: Poll for completion.
-	if _, err := svc.WaitForDeployment(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), 30*time.Minute); err != nil {
-		return "", err
+	// Step 4: Poll for completion. The returned deployment status carries the extension
+	// name and publisher that we use to look up the installed extension afterwards.
+	deploymentStatus, err := svc.WaitForDeployment(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), 30*time.Minute)
+	if err != nil {
+		return nil, err
 	}
 
-	return uploadID, nil
+	return deploymentStatus, nil
 }
 
-// populateComputedFields reads extension details from BC and populates computed state fields.
-func (r *PerTenantExtensionResource) populateComputedFields(ctx context.Context, data *PerTenantExtensionResourceModel, svc *Service, packageID string) error {
-	ext, err := svc.GetExtensionByPackageID(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), packageID)
+// populateComputedFields reads extension details from BC using the deployment status
+// (name + publisher) returned after the install/update completes, and populates all
+// computed state fields. Returns an error if the extension cannot be found.
+func (r *PerTenantExtensionResource) populateComputedFields(ctx context.Context, data *PerTenantExtensionResourceModel, svc *Service, deploymentStatus *ExtensionDeploymentStatus) error {
+	if deploymentStatus == nil {
+		return fmt.Errorf("deployment status is nil; cannot look up installed extension")
+	}
+
+	ext, err := svc.GetInstalledExtensionByNameAndPublisher(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), deploymentStatus.Name, deploymentStatus.Publisher)
 	if err != nil {
 		return fmt.Errorf("failed to read extension details: %w", err)
 	}
 
 	if ext == nil {
-		tflog.Warn(ctx, "Extension not found by packageId after install", map[string]interface{}{"package_id": packageID})
-		return nil
+		return fmt.Errorf("extension with name %q and publisher %q was not found in the extensions list after a successful deployment; "+
+			"the extension may still be processing — check the BC environment and retry if needed",
+			deploymentStatus.Name, deploymentStatus.Publisher)
 	}
 
 	data.PackageID = types.StringValue(ext.PackageID)
@@ -337,13 +347,13 @@ func (r *PerTenantExtensionResource) Create(ctx context.Context, req resource.Cr
 		data.CompanyID = types.StringValue(companyID)
 	}
 
-	uploadID, err := r.uploadAndInstall(ctx, &data, svc)
+	deploymentStatus, err := r.uploadAndInstall(ctx, &data, svc)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to install per-tenant extension", err.Error())
 		return
 	}
 
-	if err := r.populateComputedFields(ctx, &data, svc, uploadID); err != nil {
+	if err := r.populateComputedFields(ctx, &data, svc, deploymentStatus); err != nil {
 		resp.Diagnostics.AddError("Failed to read extension details after install", err.Error())
 		return
 	}
@@ -430,13 +440,13 @@ func (r *PerTenantExtensionResource) Update(ctx context.Context, req resource.Up
 
 	oldPackageID := state.PackageID.ValueString()
 
-	uploadID, err := r.uploadAndInstall(ctx, &data, svc)
+	deploymentStatus, err := r.uploadAndInstall(ctx, &data, svc)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update per-tenant extension", err.Error())
 		return
 	}
 
-	if err := r.populateComputedFields(ctx, &data, svc, uploadID); err != nil {
+	if err := r.populateComputedFields(ctx, &data, svc, deploymentStatus); err != nil {
 		resp.Diagnostics.AddError("Failed to read extension details after update", err.Error())
 		return
 	}

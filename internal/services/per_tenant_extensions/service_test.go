@@ -329,6 +329,99 @@ func TestService_GetExtensionByPackageID(t *testing.T) {
 	}
 }
 
+func TestService_GetInstalledExtensionByNameAndPublisher(t *testing.T) {
+	tests := []struct {
+		name           string
+		extName        string
+		publisher      string
+		responseBody   interface{}
+		responseStatus int
+		wantErr        bool
+		wantNil        bool
+		wantPackageID  string
+	}{
+		{
+			name:      "extension found",
+			extName:   "My Extension",
+			publisher: "Contoso",
+			responseBody: ExtensionListResponse{
+				Value: []Extension{
+					{PackageID: "pkg-id-1", ID: "app-id-1", DisplayName: "My Extension", Publisher: "Contoso", IsInstalled: true},
+					{PackageID: "pkg-id-2", ID: "app-id-2", DisplayName: "Other Extension", Publisher: "Contoso", IsInstalled: true},
+				},
+			},
+			responseStatus: http.StatusOK,
+			wantErr:        false,
+			wantNil:        false,
+			wantPackageID:  "pkg-id-1",
+		},
+		{
+			name:      "skips uninstalled extension with same name",
+			extName:   "My Extension",
+			publisher: "Contoso",
+			responseBody: ExtensionListResponse{
+				Value: []Extension{
+					{PackageID: "old-pkg", ID: "app-id-1", DisplayName: "My Extension", Publisher: "Contoso", IsInstalled: false},
+					{PackageID: "new-pkg", ID: "app-id-1", DisplayName: "My Extension", Publisher: "Contoso", IsInstalled: true},
+				},
+			},
+			responseStatus: http.StatusOK,
+			wantErr:        false,
+			wantNil:        false,
+			wantPackageID:  "new-pkg",
+		},
+		{
+			name:      "extension not found",
+			extName:   "Missing Extension",
+			publisher: "Contoso",
+			responseBody: ExtensionListResponse{
+				Value: []Extension{
+					{PackageID: "pkg-id-1", ID: "app-id-1", DisplayName: "Other Extension", Publisher: "Contoso", IsInstalled: true},
+				},
+			},
+			responseStatus: http.StatusOK,
+			wantErr:        false,
+			wantNil:        true,
+		},
+		{
+			name:           "HTTP error",
+			extName:        "My Extension",
+			publisher:      "Contoso",
+			responseBody:   map[string]interface{}{"code": "Error", "message": "error"},
+			responseStatus: http.StatusInternalServerError,
+			wantErr:        true,
+			wantNil:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.responseStatus)
+				_ = json.NewEncoder(w).Encode(tt.responseBody)
+			}))
+			defer server.Close()
+
+			c := newTestClient(t, server.URL)
+			svc := NewService(c)
+
+			ext, err := svc.GetInstalledExtensionByNameAndPublisher(context.Background(), "Production", "company-1", tt.extName, tt.publisher)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetInstalledExtensionByNameAndPublisher() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if (ext == nil) != tt.wantNil {
+				t.Errorf("GetInstalledExtensionByNameAndPublisher() nil = %v, want nil = %v", ext == nil, tt.wantNil)
+				return
+			}
+			if !tt.wantNil && ext.PackageID != tt.wantPackageID {
+				t.Errorf("GetInstalledExtensionByNameAndPublisher() PackageID = %v, want %v", ext.PackageID, tt.wantPackageID)
+			}
+		})
+	}
+}
+
+
 func TestService_Uninstall(t *testing.T) {
 	tests := []struct {
 		name           string

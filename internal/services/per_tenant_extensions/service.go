@@ -170,7 +170,33 @@ func (s *Service) getLatestDeploymentStatus(ctx context.Context, environmentName
 	return &list.Value[0], nil
 }
 
-// GetExtensionByPackageID looks up an extension from the extensions collection by packageId.
+// GetInstalledExtensionByNameAndPublisher looks up an installed extension by display name and publisher.
+// Returns (nil, nil) when no matching installed extension is found.
+func (s *Service) GetInstalledExtensionByNameAndPublisher(ctx context.Context, environmentName, companyID, displayName, publisher string) (*Extension, error) {
+	path := fmt.Sprintf("companies(%s)/extensions", companyID)
+
+	resp, err := s.client.DoAutomationRequest(ctx, http.MethodGet, environmentName, path, nil, "", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list extensions: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var list ExtensionListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
+		return nil, fmt.Errorf("failed to decode extensions response: %w", err)
+	}
+
+	for i := range list.Value {
+		if list.Value[i].DisplayName == displayName &&
+			list.Value[i].Publisher == publisher &&
+			list.Value[i].IsInstalled {
+			return &list.Value[i], nil
+		}
+	}
+
+	return nil, nil
+}
+
 // Returns (nil, nil) when no matching extension is found.
 func (s *Service) GetExtensionByPackageID(ctx context.Context, environmentName, companyID, packageID string) (*Extension, error) {
 	path := fmt.Sprintf("companies(%s)/extensions", companyID)
