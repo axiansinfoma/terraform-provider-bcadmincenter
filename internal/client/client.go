@@ -209,6 +209,60 @@ func (c *Client) Patch(ctx context.Context, path string, body io.Reader) (*http.
 	return c.DoRequest(ctx, http.MethodPatch, path, body)
 }
 
+// DoAutomationRequest performs an authenticated HTTP request to the Business Central Automation API.
+// The Automation API uses a different base URL pattern:
+// {baseURL}/v2.0/{environmentName}/api/microsoft/automation/v2.0/{path}
+// contentType overrides the default "application/json" when non-empty.
+// extraHeaders contains additional headers (e.g. If-Match for PATCH requests).
+func (c *Client) DoAutomationRequest(ctx context.Context, method, environmentName, path string, body io.Reader, contentType string, extraHeaders map[string]string) (*http.Response, error) {
+	// Get authentication token.
+	token, err := c.GetToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build Automation API URL.
+	url := fmt.Sprintf("%s/v2.0/%s/api/microsoft/automation/v2.0/%s", c.baseURL, environmentName, path)
+
+	// Create request.
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create automation request: %w", err)
+	}
+
+	// Set headers.
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	} else {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("Accept", "application/json")
+	for k, v := range extraHeaders {
+		req.Header.Set(k, v)
+	}
+
+	// Execute request.
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute automation request: %w", err)
+	}
+
+	// Check for error responses.
+	if resp.StatusCode >= 400 {
+		defer resp.Body.Close()
+
+		var apiError AdminCenterError
+		if err := json.NewDecoder(resp.Body).Decode(&apiError); err != nil {
+			return nil, fmt.Errorf("automation API returned status %d: %s", resp.StatusCode, resp.Status)
+		}
+
+		return nil, &apiError
+	}
+
+	return resp, nil
+}
+
 // SetCredential sets the credential for testing purposes.
 func (c *Client) SetCredential(credential azcore.TokenCredential) {
 	c.credential = credential
