@@ -269,7 +269,9 @@ func (r *PerTenantExtensionResource) uploadAndInstall(ctx context.Context, data 
 
 	tflog.Debug(ctx, "Uploaded extension content")
 
-	// Step 3: Trigger install.
+	// Step 3: Trigger install. Record notBefore *before* the call so that WaitForDeployment
+	// can filter out any status entries from previous runs that pre-date this deployment.
+	notBefore := time.Now()
 	if err := svc.TriggerInstall(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), uploadID); err != nil {
 		return nil, fmt.Errorf("failed to trigger extension install: %w", err)
 	}
@@ -278,7 +280,7 @@ func (r *PerTenantExtensionResource) uploadAndInstall(ctx context.Context, data 
 
 	// Step 4: Poll for completion. The returned deployment status carries the extension
 	// name and publisher that we use to look up the installed extension afterwards.
-	deploymentStatus, err := svc.WaitForDeployment(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), 30*time.Minute)
+	deploymentStatus, err := svc.WaitForDeployment(ctx, data.EnvironmentName.ValueString(), data.CompanyID.ValueString(), notBefore, 30*time.Minute)
 	if err != nil {
 		return nil, err
 	}

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -421,7 +422,6 @@ func TestService_GetInstalledExtensionByNameAndPublisher(t *testing.T) {
 	}
 }
 
-
 func TestService_Uninstall(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -525,5 +525,153 @@ func TestService_Unpublish(t *testing.T) {
 				t.Errorf("Unpublish() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestService_WaitForDeployment_StaleEntryFiltered(t *testing.T) {
+	// A "Failed" status entry that started BEFORE notBefore must be ignored.
+	// WaitForDeployment should return nil (keep waiting) until a fresh entry appears.
+	staleTime := time.Now().Add(-60 * time.Second)
+	freshTime := time.Now().Add(-1 * time.Second) // fresh entry starts 1 s ago
+
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		var entries []ExtensionDeploymentStatus
+		if callCount == 1 {
+			// First poll: only a stale failed entry exists.
+			entries = []ExtensionDeploymentStatus{
+				{Name: "MyPTE", Publisher: "Me", OperationType: "Upload", Status: DeploymentStatusFailed, StartedOn: staleTime.UTC().Format(time.RFC3339)},
+			}
+		} else {
+			// Second poll: fresh completed entry appears.
+			entries = []ExtensionDeploymentStatus{
+				{Name: "MyPTE", Publisher: "Me", OperationType: "Upload", Status: DeploymentStatusCompleted, StartedOn: freshTime.UTC().Format(time.RFC3339)},
+				{Name: "MyPTE", Publisher: "Me", OperationType: "Upload", Status: DeploymentStatusFailed, StartedOn: staleTime.UTC().Format(time.RFC3339)},
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(ExtensionDeploymentStatusListResponse{Value: entries})
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server.URL)
+	svc := NewService(c)
+
+	// notBefore is the zero time for staleTime but after it; any entry before notBefore is stale.
+	notBefore := staleTime.Add(30 * time.Second) // between stale and fresh
+
+	// Use a very short initial delay / ticker for the test by overriding the timeout.
+	// We can't easily shorten the 5 s initial delay in tests without refactoring, but we
+	// can use a short timeout and just verify the stale-filter behaviour via the low-level helper.
+	result, err := svc.getLatestDeploymentStatus(context.Background(), "Production", "company-1", notBefore)
+	if err != nil {
+		t.Fatalf("getLatestDeploymentStatus() error = %v", err)
+	}
+	if result != nil {
+		t.Errorf("getLatestDeploymentStatus() expected nil (stale entry filtered), got status=%s startedOn=%s", result.Status, result.StartedOn)
+	}
+}
+
+func TestService_WaitForDeployment_FreshCompletedEntry(t *testing.T) {
+	// A "Completed" entry started AFTER notBefore should be returned immediately.
+	freshTime := time.Now().Add(-1 * time.Second)
+	notBefore := freshTime.Add(-2 * time.Second)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		entries := []ExtensionDeploymentStatus{
+			{Name: "MyPTE", Publisher: "Me", OperationType: "Upload", Status: DeploymentStatusCompleted, StartedOn: freshTime.UTC().Format(time.RFC3339)},
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(ExtensionDeploymentStatusListResponse{Value: entries})
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server.URL)
+	svc := NewService(c)
+
+	result, err := svc.getLatestDeploymentStatus(context.Background(), "Production", "company-1", notBefore)
+	if err != nil {
+		t.Fatalf("getLatestDeploymentStatus() error = %v", err)
+	}
+	if result == nil {
+		t.Fatal("getLatestDeploymentStatus() expected non-nil result for fresh completed entry")
+	}
+	if result.Status != DeploymentStatusCompleted {
+		t.Errorf("getLatestDeploymentStatus() status = %v, want %v", result.Status, DeploymentStatusCompleted)
+	}
+}
+
+func TestService_WaitForDeployment_FreshFailedEntry(t *testing.T) {
+	// A "Failed" entry started AFTER notBefore should be returned (not filtered).
+	freshTime := time.Now().Add(-1 * time.Second)
+	notBefore := freshTime.Add(-2 * time.Second)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		entries := []ExtensionDeploymentStatus{
+			{Name: "MyPTE", Publisher: "Me", OperationType: "Upload", Status: DeploymentStatusFailed, StartedOn: freshTime.UTC().Format(time.RFC3339)},
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(ExtensionDeploymentStatusListResponse{Value: entries})
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server.URL)
+	svc := NewService(c)
+
+	result, err := svc.getLatestDeploymentStatus(context.Background(), "Production", "company-1", notBefore)
+	if err != nil {
+		t.Fatalf("getLatestDeploymentStatus() error = %v", err)
+	}
+	if result == nil {
+		t.Fatal("getLatestDeploymentStatus() expected non-nil result for fresh failed entry")
+	}
+	if result.Status != DeploymentStatusFailed {
+		t.Errorf("getLatestDeploymentStatus() status = %v, want %v", result.Status, DeploymentStatusFailed)
+	}
+}
+
+func TestService_WaitForDeployment_EmptyList(t *testing.T) {
+	// An empty deployment status list should return (nil, nil) — keep waiting.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(ExtensionDeploymentStatusListResponse{Value: []ExtensionDeploymentStatus{}})
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server.URL)
+	svc := NewService(c)
+
+	result, err := svc.getLatestDeploymentStatus(context.Background(), "Production", "company-1", time.Now().Add(-5*time.Second))
+	if err != nil {
+		t.Fatalf("getLatestDeploymentStatus() error = %v", err)
+	}
+	if result != nil {
+		t.Errorf("getLatestDeploymentStatus() expected nil for empty list, got %+v", result)
+	}
+}
+
+func TestService_WaitForDeployment_UnparsableTimestampSkipped(t *testing.T) {
+	// An entry with an unparseable StartedOn timestamp should be skipped conservatively.
+	notBefore := time.Now().Add(-60 * time.Second)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		entries := []ExtensionDeploymentStatus{
+			{Name: "MyPTE", Publisher: "Me", OperationType: "Upload", Status: DeploymentStatusCompleted, StartedOn: "not-a-timestamp"},
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(ExtensionDeploymentStatusListResponse{Value: entries})
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server.URL)
+	svc := NewService(c)
+
+	result, err := svc.getLatestDeploymentStatus(context.Background(), "Production", "company-1", notBefore)
+	if err != nil {
+		t.Fatalf("getLatestDeploymentStatus() error = %v", err)
+	}
+	if result != nil {
+		t.Errorf("getLatestDeploymentStatus() expected nil for unparseable timestamp (conservative skip), got %+v", result)
 	}
 }

@@ -106,18 +106,26 @@ func (s *Service) TriggerInstall(ctx context.Context, environmentName, companyID
 }
 
 // WaitForDeployment polls extensionDeploymentStatus until the deployment reaches a terminal state.
-// It matches by name (or publisher+name) because the API does not return an operation ID from the
-// install trigger. Returns the final status entry on success, or an error on failure/timeout.
-func (s *Service) WaitForDeployment(ctx context.Context, environmentName, companyID string, timeout time.Duration) (*ExtensionDeploymentStatus, error) {
+// notBefore is the time recorded just before TriggerInstall was called; any status entry whose
+// StartedOn is at or before that time is considered stale (from a previous run) and skipped.
+// This prevents picking up a failed historical entry before BC has registered the new deployment.
+func (s *Service) WaitForDeployment(ctx context.Context, environmentName, companyID string, notBefore time.Time, timeout time.Duration) (*ExtensionDeploymentStatus, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	// Give BC a few seconds to register the new deployment before the first poll.
+	select {
+	case <-time.After(5 * time.Second):
+	case <-ctx.Done():
+		return nil, fmt.Errorf("timed out waiting for extension deployment after %v", timeout)
+	}
 
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
-	// Poll immediately first, then at intervals.
+	// Poll immediately after the initial delay, then at intervals.
 	for {
-		status, err := s.getLatestDeploymentStatus(ctx, environmentName, companyID)
+		status, err := s.getLatestDeploymentStatus(ctx, environmentName, companyID, notBefore)
 		if err != nil {
 			return nil, fmt.Errorf("failed to poll deployment status: %w", err)
 		}
@@ -147,8 +155,10 @@ func (s *Service) WaitForDeployment(ctx context.Context, environmentName, compan
 	}
 }
 
-// getLatestDeploymentStatus returns the most recently started non-terminal or terminal deployment status entry.
-func (s *Service) getLatestDeploymentStatus(ctx context.Context, environmentName, companyID string) (*ExtensionDeploymentStatus, error) {
+// getLatestDeploymentStatus returns the most recently started deployment status entry whose
+// StartedOn is strictly after notBefore. Entries at or before notBefore are from previous runs
+// and are ignored. Returns (nil, nil) when no eligible entry has been registered yet.
+func (s *Service) getLatestDeploymentStatus(ctx context.Context, environmentName, companyID string, notBefore time.Time) (*ExtensionDeploymentStatus, error) {
 	path := fmt.Sprintf("companies(%s)/extensionDeploymentStatus", companyID)
 
 	resp, err := s.client.DoAutomationRequest(ctx, http.MethodGet, environmentName, path, nil, "", nil)
@@ -162,12 +172,21 @@ func (s *Service) getLatestDeploymentStatus(ctx context.Context, environmentName
 		return nil, fmt.Errorf("failed to decode deployment status response: %w", err)
 	}
 
-	if len(list.Value) == 0 {
-		return nil, nil
+	// BC returns entries in reverse-chronological order. Walk the list and return the first
+	// entry whose StartedOn is strictly after notBefore (i.e. belongs to this deployment).
+	for i := range list.Value {
+		startedOn, err := time.Parse(time.RFC3339, list.Value[i].StartedOn)
+		if err != nil {
+			// If we cannot parse the timestamp, conservatively skip the entry so that
+			// stale records with unparseable dates don't cause false failures.
+			continue
+		}
+		if startedOn.After(notBefore) {
+			return &list.Value[i], nil
+		}
 	}
 
-	// Return the first entry – BC returns entries in reverse-chronological order.
-	return &list.Value[0], nil
+	return nil, nil
 }
 
 // GetInstalledExtensionByNameAndPublisher looks up an installed extension by display name and publisher.

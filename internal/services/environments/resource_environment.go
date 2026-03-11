@@ -234,11 +234,17 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"Empty when no upgrade is in progress. " +
 					"While non-empty, `application_version` is suppressed to this value so no drift is reported.",
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"pending_upgrade_scheduled_for": schema.StringAttribute{
 				MarkdownDescription: "The RFC3339 datetime at which the pending upgrade is scheduled to run. " +
 					"Empty when the upgrade will run at the next update window or when no upgrade is pending.",
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"timeouts": schema.SingleNestedAttribute{
 				MarkdownDescription: "Timeout configuration for the resource operations.",
