@@ -269,7 +269,7 @@ output "environment_urls" {
 - `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.
 - `ignore_update_window` (Boolean) When `true`, the version upgrade scheduled via `application_version` may start immediately without waiting for the environment's configured update window. When `false` (default), the upgrade waits for the next update window. This setting applies only to platform/environment version updates — it has no effect on app installations or updates.
 - `ring_name` (String) The release ring for the environment. Must be one of 'PROD', 'PREVIEW', or 'FAST'. Defaults to 'PROD'. Changing this forces a new Business Central Environment to be created.
-- `settings` (Attributes) Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline. (see [below for nested schema](#nestedatt--settings))
+- `settings` (Block, Optional) Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline. (see [below for nested schema](#nestedblock--settings))
 - `timeouts` (Attributes) Timeout configuration for the resource operations. (see [below for nested schema](#nestedatt--timeouts))
 
 ### Read-Only
@@ -283,7 +283,7 @@ output "environment_urls" {
 - `web_client_login_url` (String) The URL for accessing the web client.
 - `web_service_url` (String) The URL for web service access.
 
-<a id="nestedatt--settings"></a>
+<a id="nestedblock--settings"></a>
 ### Nested Schema for `settings`
 
 Optional:
