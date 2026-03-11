@@ -46,13 +46,13 @@ func TestBuildPerTenantExtensionID(t *testing.T) {
 
 func TestParsePerTenantExtensionID(t *testing.T) {
 	tests := []struct {
-		name              string
-		id                string
-		wantTenantID      string
-		wantAppFamily     string
-		wantEnvName       string
-		wantAppID         string
-		wantErr           bool
+		name          string
+		id            string
+		wantTenantID  string
+		wantAppFamily string
+		wantEnvName   string
+		wantAppID     string
+		wantErr       bool
 	}{
 		{
 			name:          "valid ID",
