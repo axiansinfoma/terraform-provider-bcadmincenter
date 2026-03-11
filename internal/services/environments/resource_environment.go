@@ -242,7 +242,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"settings": schema.SingleNestedAttribute{
 				MarkdownDescription: "Optional environment settings block. When specified, the settings are applied to the environment after creation and managed inline.",
-				Optional: true,
+				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"update_window_start_time": schema.StringAttribute{
 						MarkdownDescription: "Start time for the update window in HH:mm format (24-hour). Requires `update_window_timezone` to be set.",
