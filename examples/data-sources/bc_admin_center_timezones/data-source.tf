@@ -35,12 +35,16 @@ output "pacific_timezone_info" {
   }
 }
 
-# Use in environment settings
-resource "bcadmincenter_environment_settings" "example" {
+# Use the timezone in the environment settings block
+resource "bcadmincenter_environment" "example" {
+  name               = "production"
   application_family = "BusinessCentral"
-  environment_name   = "production"
+  type               = "Production"
+  country_code       = "US"
 
-  update_window_start_time = "22:00"
-  update_window_end_time   = "06:00"
-  update_window_timezone   = local.pacific_timezone.id
+  settings {
+    update_window_start_time = "22:00"
+    update_window_end_time   = "06:00"
+    update_window_timezone   = local.pacific_timezone.id
+  }
 }

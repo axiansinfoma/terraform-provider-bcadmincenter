@@ -102,7 +102,7 @@ The provider will automatically detect and use workload identity credentials whe
 ### Example Usage
 
 ```hcl
-# Create a sandbox environment
+# Create a sandbox environment with inline settings
 resource "bc_environment" "sandbox" {
   name               = "my-sandbox"
   application_family = "BusinessCentral"
@@ -110,18 +110,18 @@ resource "bc_environment" "sandbox" {
   country_code       = "US"
   ring_name          = "Production"
   azure_region       = "westus2"
+
+  # Optional: configure environment settings inline
+  settings {
+    update_window_start_time = "22:00"
+    update_window_end_time   = "06:00"
+    update_window_timezone   = "Pacific Standard Time"
+  }
 }
 
 # The application_version is read-only and assigned by the API
 output "sandbox_version" {
   value = bc_environment.sandbox.application_version
-}
-
-# Configure environment settings
-resource "bc_environment_settings" "sandbox_settings" {
-  environment_name = bc_environment.sandbox.name
-  
-  # Add settings configuration here
 }
 ```
 

@@ -36,7 +36,36 @@ Manages the lifecycle of Business Central environments (Production or Sandbox). 
 
 {{tffile "examples/resources/bc_admin_center_environment/resource.tf"}}
 
-### Environment with Specific Version
+### Environment with Inline Settings
+
+```terraform
+resource "bcadmincenter_environment" "sandbox" {
+  name               = "sandbox-1"
+  application_family = "BusinessCentral"
+  type               = "Sandbox"
+  country_code       = "US"
+  ring_name          = "PROD"
+  azure_region       = "eastus"
+
+  settings {
+    # Configure update window (must be at least 6 hours apart)
+    update_window_start_time = "22:00" # 10 PM
+    update_window_end_time   = "06:00" # 6 AM
+    update_window_timezone   = "Pacific Standard Time"
+
+    # Enable Application Insights telemetry
+    # Note: Setting this triggers an automatic environment restart
+    app_insights_key = "InstrumentationKey=your-key;IngestionEndpoint=https://westus2-1.in.applicationinsights.azure.com/"
+
+    # Configure app update cadence
+    app_update_cadence = "DuringMajorUpgrade"
+  }
+}
+```
+
+-> **Note:** When the `settings` block is removed from the configuration, the settings remain on the environment (they are not reset to defaults).
+
+### Environment with Version
 
 ```terraform
 resource "bcadmincenter_environment" "prod" {
@@ -316,5 +345,4 @@ If an environment remains in "Creating" status:
 ## Related Resources
 
 - `bcadmincenter_available_applications` data source - Query available application families and rings
-- `bcadmincenter_environment_settings` resource - Configure environment-specific settings
 - `bcadmincenter_environment_app` resource - Manage app installations

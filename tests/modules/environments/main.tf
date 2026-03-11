@@ -8,14 +8,3 @@ resource "bcadmincenter_environment" "test" {
   type         = "Sandbox"
   country_code = "DE"
 }
-
-resource "bcadmincenter_environment_settings" "test" {
-  application_family = bcadmincenter_environment.test.application_family
-  environment_name   = bcadmincenter_environment.test.name
-
-  update_window_start_time  = "21:00"
-  update_window_end_time    = "03:00"
-  update_window_timezone    = "Central European Standard Time"
-  app_update_cadence        = "Default"
-  access_with_m365_licenses = true
-}

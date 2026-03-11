@@ -23,12 +23,37 @@ resource "bcadmincenter_environment" "production" {
   application_family = "BusinessCentral"
   type               = "Production"
   country_code       = "US"
-  ring_name          = "Production"
+  ring_name          = "PROD"
   azure_region       = "westus2"
 
   timeouts {
     create = "90m"
     delete = "60m"
+  }
+}
+
+# Example: Sandbox environment with inline settings
+
+resource "bcadmincenter_environment" "sandbox" {
+  name               = "sandbox-1"
+  application_family = "BusinessCentral"
+  type               = "Sandbox"
+  country_code       = "US"
+  ring_name          = "PROD"
+  azure_region       = "eastus"
+
+  settings {
+    # Configure update window (must be at least 6 hours)
+    update_window_start_time = "22:00" # 10 PM
+    update_window_end_time   = "06:00" # 6 AM
+    update_window_timezone   = "Pacific Standard Time"
+
+    # Enable Application Insights telemetry
+    # Note: Setting this triggers an automatic environment restart
+    app_insights_key = "InstrumentationKey=your-app-insights-key;IngestionEndpoint=https://westus2-1.in.applicationinsights.azure.com/"
+
+    # Configure app update cadence
+    app_update_cadence = "DuringMajorUpgrade"
   }
 }
 

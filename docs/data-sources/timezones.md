@@ -53,14 +53,18 @@ output "pacific_timezone_info" {
   }
 }
 
-# Use in environment settings
-resource "bcadmincenter_environment_settings" "example" {
+# Use the timezone in the environment settings block
+resource "bcadmincenter_environment" "example" {
+  name               = "production"
   application_family = "BusinessCentral"
-  environment_name   = "production"
+  type               = "Production"
+  country_code       = "US"
 
-  update_window_start_time = "22:00"
-  update_window_end_time   = "06:00"
-  update_window_timezone   = local.pacific_timezone.id
+  settings {
+    update_window_start_time = "22:00"
+    update_window_end_time   = "06:00"
+    update_window_timezone   = local.pacific_timezone.id
+  }
 }
 ```
 
@@ -87,15 +91,19 @@ output "cet_info" {
 ```terraform
 data "bcadmincenter_timezones" "available" {}
 
-# Use timezone in environment settings
-resource "bcadmincenter_environment_settings" "prod" {
+# Use timezone in the environment settings block
+resource "bcadmincenter_environment" "prod" {
+  name               = "production"
   application_family = "BusinessCentral"
-  environment_name   = "production"
+  type               = "Production"
+  country_code       = "US"
 
-  update_window_start_time = "21:00"
-  update_window_end_time   = "03:00"
-  # Use a timezone from the data source
-  update_window_timezone   = data.bcadmincenter_timezones.available.timezones[0].id
+  settings {
+    update_window_start_time = "21:00"
+    update_window_end_time   = "03:00"
+    # Use a timezone from the data source
+    update_window_timezone = data.bcadmincenter_timezones.available.timezones[0].id
+  }
 }
 ```
 
@@ -131,4 +139,4 @@ Some commonly used time zone identifiers include:
 
 ## Related Resources
 
-- [`bcadmincenter_environment_settings`](../resources/environment_settings.md) - Configure environment settings including update windows
+- [`bcadmincenter_environment`](../resources/environment.md) - Manage Business Central environments (includes `settings` block for update windows)

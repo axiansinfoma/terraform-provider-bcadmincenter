@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func TestEnvironmentResource_Metadata(t *testing.T) {
@@ -58,6 +59,11 @@ func TestEnvironmentResource_Schema(t *testing.T) {
 			t.Errorf("Schema missing computed attribute: %s", attr)
 		}
 	}
+
+	// Verify settings nested block exists in the Blocks map (block syntax: settings { ... }).
+	if _, ok := resp.Schema.Blocks["settings"]; !ok {
+		t.Fatal("Schema missing 'settings' nested block")
+	}
 }
 
 func TestEnvironmentResource_Configure(t *testing.T) {
@@ -102,6 +108,7 @@ func TestEnvironmentResourceModel(t *testing.T) {
 	_ = model.AADTenantID
 	_ = model.PendingUpgradeVersion
 	_ = model.PendingUpgradeScheduledFor
+	_ = model.Settings
 	_ = model.Timeouts
 }
 
@@ -462,6 +469,109 @@ func TestNormalizeApplicationVersion(t *testing.T) {
 			got := normalizeApplicationVersion(tt.priorVersion, tt.apiVersion)
 			if got != tt.want {
 				t.Errorf("normalizeApplicationVersion(%q, %q) = %q, want %q", tt.priorVersion, tt.apiVersion, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEnvironmentSettingsNestedModel(t *testing.T) {
+	// Test that the nested settings model struct can be created and populated.
+	m := EnvironmentSettingsNestedModel{}
+	_ = m.UpdateWindowStartTime
+	_ = m.UpdateWindowEndTime
+	_ = m.UpdateWindowTimeZone
+	_ = m.AppInsightsKey
+	_ = m.SecurityGroupID
+	_ = m.AccessWithM365Licenses
+	_ = m.AppUpdateCadence
+	_ = m.PartnerAccessStatus
+	_ = m.AllowedPartnerTenantIDs
+}
+
+func TestSettingsBlockChanged(t *testing.T) {
+	tests := []struct {
+		name     string
+		plan     *EnvironmentSettingsNestedModel
+		state    *EnvironmentSettingsNestedModel
+		expected bool
+	}{
+		{
+			name:     "both nil - no change",
+			plan:     nil,
+			state:    nil,
+			expected: false,
+		},
+		{
+			name:     "plan nil, state non-nil - changed (removed)",
+			plan:     nil,
+			state:    &EnvironmentSettingsNestedModel{},
+			expected: true,
+		},
+		{
+			name:     "plan non-nil, state nil - changed (added)",
+			plan:     &EnvironmentSettingsNestedModel{},
+			state:    nil,
+			expected: true,
+		},
+		{
+			name: "identical settings - no change",
+			plan: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolNull(),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			state: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolNull(),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			expected: false,
+		},
+		{
+			name: "start time changed",
+			plan: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("20:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolNull(),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			state: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolNull(),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := settingsBlockChanged(tt.plan, tt.state)
+			if got != tt.expected {
+				t.Errorf("settingsBlockChanged() = %v, want %v", got, tt.expected)
 			}
 		})
 	}

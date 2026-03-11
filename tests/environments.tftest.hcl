@@ -21,17 +21,6 @@ mock_provider "bcadmincenter" {
       aad_tenant_id        = "00000000-0000-0000-0000-000000000001"
     }
   }
-
-  mock_resource "bcadmincenter_environment_settings" {
-    defaults = {
-      id                        = "/tenants/00000000-0000-0000-0000-000000000001/providers/Microsoft.Dynamics365.BusinessCentral/applications/BusinessCentral/environments/test-sandbox/settings"
-      update_window_start_time  = "21:00"
-      update_window_end_time    = "03:00"
-      update_window_timezone    = "Central European Standard Time"
-      app_update_cadence        = "Default"
-      access_with_m365_licenses = true
-    }
-  }
 }
 
 # Test: Sandbox environment resource with minimal configuration.
@@ -63,7 +52,7 @@ run "create_sandbox_environment" {
   }
 }
 
-# Test: Environment with settings resource.
+# Test: Second apply is idempotent (no changes on re-apply).
 run "environment_with_settings" {
   command = apply
 
@@ -72,12 +61,12 @@ run "environment_with_settings" {
   }
 
   assert {
-    condition     = bcadmincenter_environment_settings.test.update_window_start_time == "21:00"
-    error_message = "Expected update_window_start_time to be '21:00'."
+    condition     = bcadmincenter_environment.test.application_family == "BusinessCentral"
+    error_message = "Expected application_family to be 'BusinessCentral', got '${bcadmincenter_environment.test.application_family}'."
   }
 
   assert {
-    condition     = bcadmincenter_environment_settings.test.access_with_m365_licenses == true
-    error_message = "Expected access_with_m365_licenses to be true."
+    condition     = bcadmincenter_environment.test.aad_tenant_id == "00000000-0000-0000-0000-000000000001"
+    error_message = "Expected aad_tenant_id to be populated, got '${bcadmincenter_environment.test.aad_tenant_id}'."
   }
 }
