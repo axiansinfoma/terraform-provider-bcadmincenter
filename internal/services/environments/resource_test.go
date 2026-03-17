@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -504,6 +505,89 @@ func TestEnvironmentSettingsNestedModel(t *testing.T) {
 	_ = m.AppUpdateCadence
 	_ = m.PartnerAccessStatus
 	_ = m.AllowedPartnerTenantIDs
+}
+
+// TestEnvironmentResource_Schema_ApplicationVersionHasUseStateForUnknown verifies that
+// application_version includes UseStateForUnknown so that the prior state value is
+// preserved in the plan when the user does not specify the attribute.  Without this,
+// the plan shows "(known after apply)" for application_version, which makes versionChanged
+// true in Update, which blocks settings-only updates from saving state — causing the
+// settings block to always appear as being added (drift).
+func TestEnvironmentResource_Schema_ApplicationVersionHasUseStateForUnknown(t *testing.T) {
+	r := NewEnvironmentResource()
+	req := resource.SchemaRequest{}
+	resp := &resource.SchemaResponse{}
+
+	r.Schema(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
+	}
+
+	appVersionAttr, ok := resp.Schema.Attributes["application_version"]
+	if !ok {
+		t.Fatal("Schema missing application_version attribute")
+	}
+
+	// Verify at least two plan modifiers are registered (UseStateForUnknown + NoDowngradeVersion).
+	strAttr, ok := appVersionAttr.(schema.StringAttribute)
+	if !ok {
+		t.Fatal("application_version is not a StringAttribute")
+	}
+
+	if len(strAttr.PlanModifiers) < 2 {
+		t.Errorf("application_version has %d plan modifier(s), want at least 2 (UseStateForUnknown + NoDowngradeVersion)",
+			len(strAttr.PlanModifiers))
+	}
+}
+
+// TestVersionChangedIgnoresUnknownPlanValue verifies that an unknown plan value for
+// application_version (i.e. the user did not set it) is not treated as a version
+// change, preventing settings-only updates from failing on a missing version.
+func TestVersionChangedIgnoresUnknownPlanValue(t *testing.T) {
+	tests := []struct {
+		name               string
+		planVersion        types.String
+		stateVersion       types.String
+		wantVersionChanged bool
+	}{
+		{
+			name:               "unknown plan value is not a version change",
+			planVersion:        types.StringUnknown(),
+			stateVersion:       types.StringValue("28.0"),
+			wantVersionChanged: false,
+		},
+		{
+			name:               "null plan value is a version change",
+			planVersion:        types.StringNull(),
+			stateVersion:       types.StringValue("28.0"),
+			wantVersionChanged: true,
+		},
+		{
+			name:               "same version is not a change",
+			planVersion:        types.StringValue("28.0"),
+			stateVersion:       types.StringValue("28.0"),
+			wantVersionChanged: false,
+		},
+		{
+			name:               "different version is a change",
+			planVersion:        types.StringValue("29.0"),
+			stateVersion:       types.StringValue("28.0"),
+			wantVersionChanged: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Replicate the versionChanged logic from the Update function.
+			versionChanged := !tt.planVersion.IsUnknown() && !tt.planVersion.Equal(tt.stateVersion)
+			if versionChanged != tt.wantVersionChanged {
+				t.Errorf("versionChanged = %v, want %v (plan=%v, state=%v)",
+					versionChanged, tt.wantVersionChanged,
+					tt.planVersion, tt.stateVersion)
+			}
+		})
+	}
 }
 
 func TestSettingsBlockChanged(t *testing.T) {

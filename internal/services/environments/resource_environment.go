@@ -165,6 +165,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional: true,
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					utils.NoDowngradeVersion(),
 				},
 			},
@@ -611,7 +612,9 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Only application_version and ignore_update_window support in-place updates.
-	versionChanged := !plan.ApplicationVersion.Equal(state.ApplicationVersion)
+	// An unknown plan value for application_version means the user did not set it; treat
+	// it as no version change so that settings-only updates do not block on a missing version.
+	versionChanged := !plan.ApplicationVersion.IsUnknown() && !plan.ApplicationVersion.Equal(state.ApplicationVersion)
 	windowChanged := !plan.IgnoreUpdateWindow.Equal(state.IgnoreUpdateWindow)
 	settingsChanged := settingsBlockChanged(plan.Settings, state.Settings)
 
