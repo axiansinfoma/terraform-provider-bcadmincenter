@@ -28,6 +28,7 @@ To use this provider, you need:
 - **AdminCenter.ReadWrite.All** permission on the "Dynamics 365 Business Central administration center" API (Application ID: `996def3d-b36c-4153-8607-a6fd3c01b89f`)
 - Membership in the **AdminAgents** group for delegated admin access to Business Central tenants
 - Appropriate Azure AD tenant access
+- The service principal must be added to the **Authorized Microsoft Entra Apps** list in the Business Central Admin Center before the provider can make API calls.
 
 ### Setting Up an Azure AD Application
 
@@ -47,8 +48,6 @@ az ad app permission add --id $APP_ID \
   --api-permissions 2e3cf0a5-be71-42b6-8b82-6f50da52005d=Role
 az ad app permission admin-consent --id $APP_ID
 ```
-
-Then add the service principal to the **AdminAgents** group in the [Business Central Admin Center](https://businesscentral.dynamics.com/admin).
 
 ### Service Principal with Client Secret
 

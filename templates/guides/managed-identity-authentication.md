@@ -137,9 +137,24 @@ az rest --method POST \
 
 > **Note**: This requires Azure AD Global Administrator or Privileged Role Administrator privileges.
 
-## Step 3: Add Managed Identity to AdminAgents Group
+## Step 3: Configure Business Central Admin Center Access
 
-Add the managed identity to the AdminAgents group in Business Central Admin Center:
+Two actions are required in the Business Central Admin Center before the provider can make any API calls.
+
+### Add Managed Identity to Authorized Entra Apps
+
+~> **Important:** This step is required before running any Terraform commands. The provider will fail with an authorization error if the managed identity has not been added here first.
+
+1. Navigate to the [Business Central Admin Center](https://businesscentral.dynamics.com/admin)
+2. Go to **Settings** > **Authorized Microsoft Entra Apps**
+3. Click **New**
+4. Enter the Client ID of your managed identity (`$CLIENT_ID`) and click **OK**
+
+> **Note:** This step requires Business Central Admin Center administrator privileges and cannot be performed through the provider itself.
+
+### Add Managed Identity to AdminAgents Group
+
+For delegated admin access across tenants, also add the managed identity to the AdminAgents group:
 
 1. Navigate to the [Business Central Admin Center](https://businesscentral.dynamics.com/admin)
 2. Go to **Settings** > **Admin Center API**
