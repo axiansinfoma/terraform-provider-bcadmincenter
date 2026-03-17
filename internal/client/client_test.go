@@ -7,10 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
+
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -106,7 +108,7 @@ func TestNewClient(t *testing.T) {
 				OIDCToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test.sig",
 			},
 			wantErr: true,
-			errMsg:  "client_id is required when using OIDC with a direct token (oidc_token)",
+			errMsg:  "client_id is required for OIDC authentication",
 		},
 		{
 			name: "OIDC workload identity with token file path",
@@ -126,6 +128,49 @@ func TestNewClient(t *testing.T) {
 				OIDCToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test.sig",
 			},
 			wantErr: false,
+		},
+		{
+			name: "OIDC with GitHub Actions request URL",
+			config: &Config{
+				TenantID:         "test-tenant-id",
+				ClientID:         "test-client-id",
+				UseOIDC:          true,
+				OIDCRequestURL:   "https://token.actions.githubusercontent.com/token",
+				OIDCRequestToken: "gha-bearer-token",
+			},
+			wantErr: false,
+		},
+		{
+			name: "OIDC with GitHub Actions request URL but missing client_id",
+			config: &Config{
+				TenantID:       "test-tenant-id",
+				UseOIDC:        true,
+				OIDCRequestURL: "https://token.actions.githubusercontent.com/token",
+			},
+			wantErr: true,
+			errMsg:  "client_id is required for OIDC authentication",
+		},
+		{
+			name: "OIDC with ADO pipeline service connection",
+			config: &Config{
+				TenantID:                       "test-tenant-id",
+				ClientID:                       "test-client-id",
+				UseOIDC:                        true,
+				OIDCRequestURL:                 "https://dev.azure.com/org/_apis/distributedtask/hubs/build/plans/plan-id/jobs/job-id/oidctoken",
+				OIDCRequestToken:               "ado-system-access-token",
+				ADOPipelineServiceConnectionID: "service-conn-id",
+			},
+			wantErr: false,
+		},
+		{
+			name: "OIDC use_oidc=true with no token source",
+			config: &Config{
+				TenantID: "test-tenant-id",
+				ClientID: "test-client-id",
+				UseOIDC:  true,
+			},
+			wantErr: true,
+			errMsg:  "OIDC authentication requires one of: oidc_token, oidc_request_url, oidc_token_file_path, or AZURE_FEDERATED_TOKEN_FILE",
 		},
 	}
 
@@ -532,4 +577,147 @@ func (c *capturingTokenCredential) GetToken(_ context.Context, opts policy.Token
 		c.onGetToken(opts)
 	}
 	return azcore.AccessToken{Token: "captured-token"}, nil
+}
+
+func TestBuildOIDCAssertionCallback(t *testing.T) {
+	t.Run("static token", func(t *testing.T) {
+		cb, err := buildOIDCAssertionCallback(&Config{OIDCToken: "static-jwt"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got, err := cb(context.Background())
+		if err != nil || got != "static-jwt" {
+			t.Errorf("callback() = %q, %v; want %q, nil", got, err, "static-jwt")
+		}
+	})
+
+	t.Run("token file", func(t *testing.T) {
+		f, err := os.CreateTemp(t.TempDir(), "oidc-token-*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.WriteString("  file-jwt\n"); err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+
+		cb, err := buildOIDCAssertionCallback(&Config{OIDCTokenFilePath: f.Name()})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got, err := cb(context.Background())
+		if err != nil || got != "file-jwt" {
+			t.Errorf("callback() = %q, %v; want %q, nil", got, err, "file-jwt")
+		}
+
+		// Simulate token rotation: overwrite file and check new value is returned.
+		if err := os.WriteFile(f.Name(), []byte("rotated-jwt"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		got2, err := cb(context.Background())
+		if err != nil || got2 != "rotated-jwt" {
+			t.Errorf("after rotation callback() = %q, %v; want %q, nil", got2, err, "rotated-jwt")
+		}
+	})
+
+	t.Run("token file via AZURE_FEDERATED_TOKEN_FILE env", func(t *testing.T) {
+		f, err := os.CreateTemp(t.TempDir(), "oidc-token-*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.WriteString("env-jwt"); err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+		t.Setenv("AZURE_FEDERATED_TOKEN_FILE", f.Name())
+
+		cb, err := buildOIDCAssertionCallback(&Config{UseOIDC: true})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got, err := cb(context.Background())
+		if err != nil || got != "env-jwt" {
+			t.Errorf("callback() = %q, %v; want %q, nil", got, err, "env-jwt")
+		}
+	})
+
+	t.Run("no source returns error", func(t *testing.T) {
+		_, err := buildOIDCAssertionCallback(&Config{UseOIDC: true})
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
+}
+
+func TestBuildGitHubOIDCCallback(t *testing.T) {
+	t.Run("fetches and returns token value", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Bearer test-bearer" {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			if r.URL.Query().Get("audience") != "api://AzureADTokenExchange" {
+				http.Error(w, "missing audience", http.StatusBadRequest)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte(`{"value":"fresh-oidc-jwt"}`)); err != nil {
+				t.Errorf("writing response: %v", err)
+			}
+		}))
+		defer server.Close()
+
+		cb := buildGitHubOIDCCallback(server.URL+"/token", "test-bearer")
+		got, err := cb(context.Background())
+		if err != nil || got != "fresh-oidc-jwt" {
+			t.Errorf("callback() = %q, %v; want %q, nil", got, err, "fresh-oidc-jwt")
+		}
+	})
+
+	t.Run("appends audience to URL with existing query params", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			q := r.URL.Query()
+			if q.Get("audience") != "api://AzureADTokenExchange" || q.Get("existing") != "param" {
+				http.Error(w, "bad query: "+r.URL.RawQuery, http.StatusBadRequest)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte(`{"value":"jwt"}`)); err != nil {
+				t.Errorf("writing response: %v", err)
+			}
+		}))
+		defer server.Close()
+
+		cb := buildGitHubOIDCCallback(server.URL+"/token?existing=param", "")
+		if _, err := cb(context.Background()); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("non-200 response returns error", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+		}))
+		defer server.Close()
+
+		cb := buildGitHubOIDCCallback(server.URL+"/token", "bad-token")
+		if _, err := cb(context.Background()); err == nil {
+			t.Error("expected error for non-200 response, got nil")
+		}
+	})
+
+	t.Run("empty value field returns error", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte(`{"value":""}`)); err != nil {
+				t.Errorf("writing response: %v", err)
+			}
+		}))
+		defer server.Close()
+
+		cb := buildGitHubOIDCCallback(server.URL+"/token", "")
+		if _, err := cb(context.Background()); err == nil {
+			t.Error("expected error for empty value, got nil")
+		}
+	})
 }

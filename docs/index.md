@@ -212,15 +212,18 @@ provider "bcadmincenter" {
 
 ### Optional
 
+- `ado_pipeline_service_connection_id` (String) The Azure DevOps service connection ID used when authenticating via Azure DevOps Pipeline OIDC (`SYSTEM_OIDCREQUESTURI`). When set, the provider uses the ADO OIDC endpoint protocol (POST with `serviceConnectionId` and `api-version` query parameters) instead of the GitHub Actions endpoint. Can also be set via `ARM_ADO_PIPELINE_SERVICE_CONNECTION_ID` or `ARM_OIDC_AZURE_SERVICE_CONNECTION_ID` environment variable.
 - `auxiliary_tenant_ids` (List of String) List of auxiliary tenant IDs for multi-tenant scenarios.
 - `base_url` (String) Override the base URL for the Business Central Admin Center API. Can also be set via BCADMINCENTER_BASE_URL environment variable. Primarily used for testing.
 - `client_id` (String) The Client ID (Application ID) for Azure AD authentication. Can also be set via AZURE_CLIENT_ID environment variable.
 - `client_secret` (String, Sensitive) The Client Secret for Azure AD authentication. Can also be set via AZURE_CLIENT_SECRET environment variable.
 - `environment` (String) The Azure environment to use (public, usgovernment, china). Defaults to 'public'. Can also be set via AZURE_ENVIRONMENT environment variable.
-- `oidc_token` (String, Sensitive) A JWT bearer token to use as the OIDC client assertion. Useful when the token is provided directly by the CI/CD platform. Can also be set via `AZURE_OIDC_TOKEN` environment variable. Setting this implies `use_oidc = true`.
-- `oidc_token_file_path` (String) Path to a file containing the OIDC / federated token. Defaults to the `AZURE_FEDERATED_TOKEN_FILE` environment variable when not set. Used when `use_oidc = true`.
+- `oidc_request_token` (String, Sensitive) The bearer token used to authenticate requests to `oidc_request_url`. In GitHub Actions this is set automatically via `ACTIONS_ID_TOKEN_REQUEST_TOKEN`; in Azure DevOps via `SYSTEM_ACCESSTOKEN`. Can also be set via `ARM_OIDC_REQUEST_TOKEN`, `ACTIONS_ID_TOKEN_REQUEST_TOKEN`, or `SYSTEM_ACCESSTOKEN` environment variable.
+- `oidc_request_url` (String) The URL of the OIDC token endpoint. In GitHub Actions this is set automatically via `ACTIONS_ID_TOKEN_REQUEST_URL`; in Azure DevOps via `SYSTEM_OIDCREQUESTURI`. A fresh JWT is fetched from this endpoint on every Azure AD token refresh, so short-lived tokens are automatically renewed during long Terraform runs. Can also be set via `ARM_OIDC_REQUEST_URL`, `ACTIONS_ID_TOKEN_REQUEST_URL`, or `SYSTEM_OIDCREQUESTURI` environment variable.
+- `oidc_token` (String, Sensitive) A JWT bearer token to use as the OIDC client assertion. Useful when the token is provided directly by the CI/CD platform. Can also be set via `ARM_OIDC_TOKEN` or `AZURE_OIDC_TOKEN` environment variable. Setting this implies `use_oidc = true`.
+- `oidc_token_file_path` (String) Path to a file containing the OIDC / federated token. The file is re-read on every Azure AD token refresh so platform-rotated tokens (e.g. Kubernetes projected volumes) are picked up automatically. Can also be set via `ARM_OIDC_TOKEN_FILE_PATH` or `AZURE_FEDERATED_TOKEN_FILE` environment variable. Used when `use_oidc = true`.
 - `tenant_id` (String) The Tenant ID for Azure AD authentication. Can also be set via AZURE_TENANT_ID environment variable.
-- `use_oidc` (Boolean) Force the use of OIDC / Workload Identity (federated credential) authentication. When true, the provider uses `WorkloadIdentityCredential` from the Azure SDK, which reads the federated token from the file specified by `oidc_token_file_path` (or `AZURE_FEDERATED_TOKEN_FILE`). Can also be set via `AZURE_USE_OIDC=true` environment variable.
+- `use_oidc` (Boolean) Force the use of OIDC / Workload Identity (federated credential) authentication. When true, the provider uses `WorkloadIdentityCredential` from the Azure SDK, which reads the federated token from the file specified by `oidc_token_file_path` (or `AZURE_FEDERATED_TOKEN_FILE`). Can also be set via `ARM_USE_OIDC` or `AZURE_USE_OIDC` environment variable.
 
 ## Environment Variables
 
