@@ -678,3 +678,129 @@ func TestSettingsBlockChanged(t *testing.T) {
 		})
 	}
 }
+
+// TestEnvironmentResource_Schema_AccessWithM365LicensesHasUseStateForUnknown verifies that
+// access_with_m365_licenses inside the settings block includes UseStateForUnknown so that
+// the prior state value is preserved in the plan when the user does not set the attribute.
+// Without this, every plan shows "access_with_m365_licenses = (known after apply)", which
+// makes settingsBlockChanged return true on every cycle, causing perpetual update drift.
+func TestEnvironmentResource_Schema_AccessWithM365LicensesHasUseStateForUnknown(t *testing.T) {
+	r := NewEnvironmentResource()
+	req := resource.SchemaRequest{}
+	resp := &resource.SchemaResponse{}
+
+	r.Schema(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
+	}
+
+	settingsBlock, ok := resp.Schema.Blocks["settings"]
+	if !ok {
+		t.Fatal("Schema missing 'settings' block")
+	}
+
+	nestedBlock, ok := settingsBlock.(schema.SingleNestedBlock)
+	if !ok {
+		t.Fatal("'settings' block is not a SingleNestedBlock")
+	}
+
+	m365Attr, ok := nestedBlock.Attributes["access_with_m365_licenses"]
+	if !ok {
+		t.Fatal("settings block missing 'access_with_m365_licenses' attribute")
+	}
+
+	boolAttr, ok := m365Attr.(schema.BoolAttribute)
+	if !ok {
+		t.Fatal("access_with_m365_licenses is not a BoolAttribute")
+	}
+
+	// Verify that UseStateForUnknown is present by checking for a modifier whose description
+	// matches the well-known description of boolplanmodifier.UseStateForUnknown().
+	const wantDesc = "Once set, the value of this attribute in state will not change."
+	found := false
+	for _, mod := range boolAttr.PlanModifiers {
+		if mod.Description(context.Background()) == wantDesc {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("access_with_m365_licenses is missing the UseStateForUnknown() plan modifier (expected description %q)", wantDesc)
+	}
+}
+
+// TestSettingsBlockChanged_UnknownM365DoesNotTriggerChange verifies that an unknown
+// plan value for access_with_m365_licenses is not treated as a settings change.
+// This prevents perpetual re-apply cycles caused by Computed attributes showing as
+// "(known after apply)" in plans.
+func TestSettingsBlockChanged_UnknownM365DoesNotTriggerChange(t *testing.T) {
+	tests := []struct {
+		name     string
+		plan     *EnvironmentSettingsNestedModel
+		state    *EnvironmentSettingsNestedModel
+		expected bool
+	}{
+		{
+			name: "unknown access_with_m365_licenses in plan is NOT a change",
+			plan: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolUnknown(),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			state: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolValue(false),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			expected: false,
+		},
+		{
+			name: "explicit false-to-true change for access_with_m365_licenses IS a change",
+			plan: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolValue(true),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			state: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolValue(false),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := settingsBlockChanged(tt.plan, tt.state)
+			if got != tt.expected {
+				t.Errorf("settingsBlockChanged() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
