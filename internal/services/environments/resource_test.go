@@ -421,22 +421,22 @@ func TestNormalizeApplicationVersion(t *testing.T) {
 			want:         "27.1.41698.41831",
 		},
 		{
-			name:         "different minor version triggers drift",
+			name:         "external auto-upgrade: API returns higher minor, preserve user config",
 			priorVersion: "27.1",
 			apiVersion:   "27.2.12345.67890",
-			want:         "27.2.12345.67890",
+			want:         "27.1",
 		},
 		{
-			name:         "different major version triggers drift",
+			name:         "external auto-upgrade: API returns higher major, preserve user config",
 			priorVersion: "27.1",
 			apiVersion:   "28.1.12345.67890",
-			want:         "28.1.12345.67890",
+			want:         "27.1",
 		},
 		{
-			name:         "prefix collision avoided via dot separator: 27.1 does not match 27.10",
+			name:         "external auto-upgrade avoids prefix collision: 27.1 vs 27.10",
 			priorVersion: "27.1",
 			apiVersion:   "27.10.12345.67890",
-			want:         "27.10.12345.67890",
+			want:         "27.1",
 		},
 		{
 			name:         "empty prior version returns api version",
@@ -461,6 +461,24 @@ func TestNormalizeApplicationVersion(t *testing.T) {
 			priorVersion: "27.1.41698.41831",
 			apiVersion:   "27.1.42000.00000",
 			want:         "27.1.42000.00000",
+		},
+		{
+			name:         "external auto-upgrade: API returns higher minor, preserve user config",
+			priorVersion: "27.5",
+			apiVersion:   "27.6",
+			want:         "27.5",
+		},
+		{
+			name:         "external auto-upgrade: API returns higher major, preserve user config",
+			priorVersion: "27.5",
+			apiVersion:   "28.0",
+			want:         "27.5",
+		},
+		{
+			name:         "external auto-upgrade with full build version: higher major, preserve user config",
+			priorVersion: "27.5",
+			apiVersion:   "28.0.12345.67890",
+			want:         "27.5",
 		},
 	}
 
