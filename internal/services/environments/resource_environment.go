@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -904,20 +905,65 @@ func normalizeRingName(apiRingName string) string {
 	}
 }
 
-// normalizeApplicationVersion returns the short form of priorVersion when the API returned
-// the full build version. This prevents spurious drift when users configure versions in
-// "major.minor" format (e.g., "27.1") while the API stores the full build version
-// (e.g., "27.1.41698.41831").
+// normalizeApplicationVersion returns priorVersion when the API-reported version should
+// not cause drift in Terraform state. Two cases are handled:
 //
-// A "." separator check is used to avoid incorrectly matching "27.1" against "27.10.xxx".
+//  1. Short-form preservation: user configured "27.1" and API returned the full build
+//     version "27.1.41698.41831" — keep "27.1" to avoid spurious drift.
+//
+//  2. External auto-upgrade suppression: Microsoft upgraded the environment from "27.5"
+//     to "28.0" without Terraform's involvement. In that case the API version is higher
+//     than what the user configured, but no config change was made, so we preserve the
+//     user-configured prior version in state. This prevents the plan from showing a
+//     false "28.0 → 27.5" downgrade diff on the next run.
+//
+// A "." separator check is used in case 1 to avoid incorrectly matching "27.1" against
+// "27.10.xxx".
 func normalizeApplicationVersion(priorVersion, apiVersion string) string {
 	if priorVersion == "" || apiVersion == "" {
 		return apiVersion
 	}
+	// Case 1: full-build form of the same major.minor.
 	if apiVersion == priorVersion || strings.HasPrefix(apiVersion, priorVersion+".") {
 		return priorVersion
 	}
+	// Case 2: API version is higher at the major.minor level — external auto-upgrade.
+	// Preserve the user's configured version to suppress spurious drift.
+	if isAPIVersionHigher(apiVersion, priorVersion) {
+		return priorVersion
+	}
 	return apiVersion
+}
+
+// isAPIVersionHigher returns true when apiVersion is strictly greater than priorVersion
+// at the major.minor level. Unparseable versions return false (do not suppress).
+func isAPIVersionHigher(apiVersion, priorVersion string) bool {
+	apiParts := strings.SplitN(apiVersion, ".", 3)
+	priorParts := strings.SplitN(priorVersion, ".", 3)
+	if len(apiParts) < 2 || len(priorParts) < 2 {
+		return false
+	}
+	apiMajor, err := strconv.Atoi(apiParts[0])
+	if err != nil {
+		return false
+	}
+	priorMajor, err := strconv.Atoi(priorParts[0])
+	if err != nil {
+		return false
+	}
+	if apiMajor != priorMajor {
+		return apiMajor > priorMajor
+	}
+	// Same major — compare minor (take only the first numeric segment).
+	apiMinor, err := strconv.Atoi(strings.SplitN(apiParts[1], ".", 2)[0])
+	if err != nil {
+		return false
+	}
+	priorMinor, err := strconv.Atoi(strings.SplitN(priorParts[1], ".", 2)[0])
+	if err != nil {
+		return false
+	}
+	return apiMinor > priorMinor
 }
 
 // settingsBlockChanged returns true if the settings block differs between plan and state.
