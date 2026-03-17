@@ -410,15 +410,11 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	// TODO: Parse timeout from plan.Timeouts if needed.
 	timeout := 60 * time.Minute // default
 
-	// Wait for the operation to complete.
-	// Use ProductFamily from operation response if available, otherwise use the plan value.
-	appFamily := operation.ProductFamily
-	if appFamily == "" {
-		appFamily = operation.ApplicationFamily
-	}
-	if appFamily == "" {
-		appFamily = plan.ApplicationFamily.ValueString()
-	}
+	// Always use the application_family from the plan when constructing API paths.
+	// The operation response fields (productFamily, applicationFamily) are internal API
+	// concepts that differ from the applicationFamily URL parameter (e.g. the API may
+	// return productFamily="Financials" while the correct path segment is "BusinessCentral").
+	appFamily := plan.ApplicationFamily.ValueString()
 
 	envName := operation.EnvironmentName
 	if envName == "" {

@@ -128,9 +128,24 @@ az ad app permission add \
 az ad app permission admin-consent --id $APP_ID
 ```
 
-## Step 4: Add Service Principal to AdminAgents Group
+## Step 4: Configure Business Central Admin Center Access
 
-Add the service principal to the AdminAgents group in Business Central Admin Center:
+Two actions are required in the Business Central Admin Center before the provider can make any API calls.
+
+### Add Service Principal to Authorized Entra Apps
+
+~> **Important:** This step is required before running any Terraform commands. The provider will fail with an authorization error if the service principal has not been added here first.
+
+1. Navigate to the [Business Central Admin Center](https://businesscentral.dynamics.com/admin)
+2. Go to **Settings** > **Authorized Microsoft Entra Apps**
+3. Click **New**
+4. Enter the Application (client) ID of your service principal (`$APP_ID`) and click **OK**
+
+> **Note:** This step requires Business Central Admin Center administrator privileges and cannot be performed through the provider itself.
+
+### Add Service Principal to AdminAgents Group
+
+For delegated admin access across tenants, also add the service principal to the AdminAgents group:
 
 1. Navigate to the [Business Central Admin Center](https://businesscentral.dynamics.com/admin)
 2. Go to **Settings** > **Admin Center API**

@@ -17,7 +17,8 @@ Use this approach when workload identity federation is not yet available in your
 
 - Azure DevOps project with permission to create service connections.
 - Azure AD application (service principal) with `AdminCenter.ReadWrite.All` permission for Business Central Admin Center API.
-- Service principal added to the **AdminAgents** group in Business Central Admin Center.
+- Service principal added to **Authorized Microsoft Entra Apps** in Business Central Admin Center (**Settings** > **Authorized Microsoft Entra Apps**). This is required before the provider can make any API calls.
+- Optionally, service principal added to the **AdminAgents** group in Business Central Admin Center for delegated admin access.
 
 ## Step 1: Create a service principal secret
 
