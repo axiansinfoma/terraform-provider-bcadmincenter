@@ -29,9 +29,9 @@ By the end of this tutorial you will have:
 Export your service principal credentials as environment variables so they are not stored in source code:
 
 ```bash
-export AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
-export AZURE_CLIENT_SECRET="your-client-secret"
-export AZURE_TENANT_ID="00000000-0000-0000-0000-000000000000"
+export ARM_CLIENT_ID="00000000-0000-0000-0000-000000000000"
+export ARM_CLIENT_SECRET="your-client-secret"
+export ARM_TENANT_ID="00000000-0000-0000-0000-000000000000"
 ```
 
 ## Step 2: Initialize the Provider
@@ -52,7 +52,7 @@ terraform {
 }
 
 provider "bcadmincenter" {
-  # Credentials are read from AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
+  # Credentials are read from ARM_CLIENT_ID, ARM_CLIENT_SECRET, ARM_TENANT_ID
 }
 ```
 

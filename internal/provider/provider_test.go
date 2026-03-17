@@ -54,6 +54,12 @@ func TestBCAdminCenterProvider_Schema(t *testing.T) {
 		"environment",
 		"auxiliary_tenant_ids",
 		"base_url",
+		"use_oidc",
+		"oidc_token",
+		"oidc_token_file_path",
+		"oidc_request_url",
+		"oidc_request_token",
+		"ado_pipeline_service_connection_id",
 	}
 
 	for _, attrName := range requiredAttrs {
@@ -303,9 +309,58 @@ func TestGetConfigValue(t *testing.T) {
 	}
 }
 
+func TestGetConfigBoolValue(t *testing.T) {
+	tests := []struct {
+		name        string
+		configValue *bool // nil means types.BoolNull()
+		envVarValue string
+		want        bool
+	}{
+		// Explicit config value takes precedence.
+		{name: "config true overrides env", configValue: boolPtr(true), envVarValue: "false", want: true},
+		{name: "config false overrides env", configValue: boolPtr(false), envVarValue: "true", want: false},
+		// Env var truthy values.
+		{name: "env true", envVarValue: "true", want: true},
+		{name: "env TRUE", envVarValue: "TRUE", want: true},
+		{name: "env True", envVarValue: "True", want: true},
+		{name: "env 1", envVarValue: "1", want: true},
+		{name: "env yes", envVarValue: "yes", want: true},
+		{name: "env YES", envVarValue: "YES", want: true},
+		{name: "env on", envVarValue: "on", want: true},
+		{name: "env ON", envVarValue: "ON", want: true},
+		// Env var falsy / unset values.
+		{name: "env false", envVarValue: "false", want: false},
+		{name: "env 0", envVarValue: "0", want: false},
+		{name: "env no", envVarValue: "no", want: false},
+		{name: "env empty", envVarValue: "", want: false},
+		{name: "env unset", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			const envVarName = "TEST_BOOL_VAR"
+			if tt.envVarValue != "" {
+				t.Setenv(envVarName, tt.envVarValue)
+			}
+
+			var configVal types.Bool
+			if tt.configValue != nil {
+				configVal = types.BoolValue(*tt.configValue)
+			} else {
+				configVal = types.BoolNull()
+			}
+
+			got := getConfigBoolValue(configVal, envVarName)
+			if got != tt.want {
+				t.Errorf("getConfigBoolValue() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func boolPtr(b bool) *bool { return &b }
+
 func TestTenantIDFlowToClient(t *testing.T) {
-	// This test verifies that tenant ID from AZURE_TENANT_ID environment variable
-	// is properly used for both authentication and resources (via client.GetTenantID()).
 
 	// Set environment variables
 	expectedTenantID := "00000000-0000-0000-0000-111111111111"

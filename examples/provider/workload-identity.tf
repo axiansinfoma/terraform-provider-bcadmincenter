@@ -5,9 +5,9 @@
 # on GitHub Actions, Azure DevOps, and Kubernetes with Azure Workload Identity.
 #
 # The following environment variables must be set by your CI/CD platform:
-#   AZURE_CLIENT_ID            – application (client) ID
-#   AZURE_TENANT_ID            – Azure AD tenant ID
-#   AZURE_FEDERATED_TOKEN_FILE – path to the OIDC token file
+#   ARM_CLIENT_ID              – application (client) ID
+#   ARM_TENANT_ID              – Azure AD tenant ID
+#   AZURE_FEDERATED_TOKEN_FILE – path to the OIDC token file (set automatically by the Azure SDK)
 
 terraform {
   required_providers {

@@ -1,9 +1,10 @@
-## 0.1.0 (Unreleased)
+## 0.1.3
 
 BREAKING CHANGES:
 * **Resource `bcadmincenter_environment_settings` has been removed.** Use the `settings` nested block on `bcadmincenter_environment` instead ([#42](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues/42))
 
 ENHANCEMENTS:
+* provider: `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_TENANT_ID`, and `ARM_ENVIRONMENT` environment variables are now supported, matching the `azurerm` provider convention; the existing `AZURE_*` variables remain supported for backward compatibility ([#57](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/pull/57))
 * resource/bcadmincenter_environment: add optional `settings` nested block to manage environment settings inline ([#42](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues/42))
 
 FEATURES:

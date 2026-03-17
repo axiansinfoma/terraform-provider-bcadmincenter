@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -38,6 +41,27 @@ type Config struct {
 	// AccessToken is a static token used for testing to bypass Azure AD authentication.
 	// This should only be set in test environments.
 	AccessToken string
+	// UseOIDC forces Workload Identity / federated credential authentication.
+	// Equivalent to setting AZURE_USE_OIDC=true.
+	UseOIDC bool
+	// OIDCToken is a static JWT bearer token used as the OIDC client assertion.
+	// Setting this implies UseOIDC=true.
+	OIDCToken string
+	// OIDCTokenFilePath is the path to a file containing the federated OIDC token.
+	// Falls back to AZURE_FEDERATED_TOKEN_FILE when empty.
+	OIDCTokenFilePath string
+	// OIDCRequestURL is the URL of the OIDC token endpoint (e.g. the GitHub Actions
+	// OIDC endpoint provided via ACTIONS_ID_TOKEN_REQUEST_URL). A fresh token is
+	// fetched from this endpoint on every Azure AD token refresh, which prevents
+	// failures caused by short-lived OIDC JWTs expiring mid-run.
+	OIDCRequestURL string
+	// OIDCRequestToken is the bearer token used to authenticate requests to
+	// OIDCRequestURL (e.g. ACTIONS_ID_TOKEN_REQUEST_TOKEN in GitHub Actions).
+	OIDCRequestToken string
+	// ADOPipelineServiceConnectionID is the Azure DevOps service connection ID used
+	// when authenticating via ADO Pipeline OIDC (SYSTEM_OIDCREQUESTURI / SYSTEM_ACCESSTOKEN).
+	// When set together with OIDCRequestURL, the ADO OIDC endpoint is used instead of GitHub.
+	ADOPipelineServiceConnectionID string
 }
 
 // staticTokenCredential is a token credential that returns a static pre-obtained token.
@@ -95,6 +119,29 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create client secret credential: %w", err)
 		}
+	} else if config.UseOIDC || config.OIDCToken != "" || config.OIDCTokenFilePath != "" || config.OIDCRequestURL != "" {
+		// Workload Identity / OIDC (federated credential) authentication.
+		// All OIDC variants use ClientAssertionCredential with a callback so the
+		// Azure SDK can obtain a fresh assertion on every token refresh, preventing
+		// failures caused by short-lived OIDC JWTs expiring during long runs.
+		if config.ClientID == "" {
+			return nil, fmt.Errorf("client_id is required for OIDC authentication")
+		}
+		callback, cbErr := buildOIDCAssertionCallback(config)
+		if cbErr != nil {
+			return nil, cbErr
+		}
+		credential, err = azidentity.NewClientAssertionCredential(
+			config.TenantID,
+			config.ClientID,
+			callback,
+			&azidentity.ClientAssertionCredentialOptions{
+				AdditionallyAllowedTenants: []string{"*"},
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OIDC credential: %w", err)
+		}
 	} else {
 		// Otherwise, use DefaultAzureCredential for other auth methods.
 		// Pass the tenant ID to ensure it's used for Azure CLI, Azure Developer CLI, and workload identity.
@@ -128,6 +175,155 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	}
 
 	return client, nil
+}
+
+// buildOIDCAssertionCallback returns the assertion callback used by ClientAssertionCredential.
+// Source priority:
+//  1. Static oidc_token – returned as-is (caller is responsible for keeping it valid).
+//  2. GitHub Actions OIDC endpoint – a fresh JWT is fetched on every invocation.
+//  3. Token file (oidc_token_file_path / AZURE_FEDERATED_TOKEN_FILE) – re-read on every
+//     invocation so that token rotation by the platform is picked up automatically.
+func buildOIDCAssertionCallback(config *Config) (func(context.Context) (string, error), error) {
+	switch {
+	case config.OIDCToken != "":
+		return func(_ context.Context) (string, error) {
+			return config.OIDCToken, nil
+		}, nil
+
+	case config.OIDCRequestURL != "":
+		if config.ADOPipelineServiceConnectionID != "" {
+			return buildADOOIDCCallback(config.OIDCRequestURL, config.OIDCRequestToken, config.ADOPipelineServiceConnectionID), nil
+		}
+		return buildGitHubOIDCCallback(config.OIDCRequestURL, config.OIDCRequestToken), nil
+
+	default:
+		// File-based: resolve path now (env var is typically static), re-read contents
+		// on every invocation so a rotating token file is always current.
+		filePath := config.OIDCTokenFilePath
+		if filePath == "" {
+			filePath = os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
+		}
+		if filePath == "" {
+			return nil, fmt.Errorf("OIDC authentication requires one of: oidc_token, oidc_request_url, oidc_token_file_path, or AZURE_FEDERATED_TOKEN_FILE")
+		}
+		return func(_ context.Context) (string, error) {
+			data, readErr := os.ReadFile(filePath)
+			if readErr != nil {
+				return "", fmt.Errorf("reading OIDC token file %q: %w", filePath, readErr)
+			}
+			return strings.TrimSpace(string(data)), nil
+		}, nil
+	}
+}
+
+// buildGitHubOIDCCallback returns a callback that fetches a fresh OIDC JWT from the
+// GitHub Actions (or compatible) OIDC endpoint on every invocation.
+// The audience parameter required by Azure AD token exchange is appended automatically.
+func buildGitHubOIDCCallback(requestURL, bearerToken string) func(context.Context) (string, error) {
+	return func(ctx context.Context) (string, error) {
+		parsedURL, parseErr := url.Parse(requestURL)
+		if parseErr != nil {
+			return "", fmt.Errorf("parsing GitHub OIDC request URL: %w", parseErr)
+		}
+		query, _ := url.ParseQuery(parsedURL.RawQuery)
+		if query.Get("audience") == "" {
+			query.Set("audience", "api://AzureADTokenExchange")
+			parsedURL.RawQuery = query.Encode()
+		}
+
+		req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
+		if reqErr != nil {
+			return "", fmt.Errorf("building GitHub OIDC token request: %w", reqErr)
+		}
+		req.Header.Set("Authorization", "Bearer "+bearerToken)
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		resp, doErr := http.DefaultClient.Do(req)
+		if doErr != nil {
+			return "", fmt.Errorf("fetching GitHub OIDC token: %w", doErr)
+		}
+		defer resp.Body.Close()
+
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		if readErr != nil {
+			return "", fmt.Errorf("reading GitHub OIDC token response: %w", readErr)
+		}
+
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			return "", fmt.Errorf("GitHub OIDC token request failed (HTTP %d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
+
+		var result struct {
+			Count *int    `json:"count"`
+			Value *string `json:"value"`
+		}
+		if decodeErr := json.Unmarshal(body, &result); decodeErr != nil {
+			return "", fmt.Errorf("decoding GitHub OIDC token response: %w", decodeErr)
+		}
+		if result.Value == nil || *result.Value == "" {
+			return "", fmt.Errorf("GitHub OIDC token response contained empty value field")
+		}
+		return *result.Value, nil
+	}
+}
+
+// buildADOOIDCCallback returns a callback that fetches a fresh OIDC JWT from an Azure DevOps
+// Pipeline OIDC endpoint on every invocation. The service connection ID and required
+// query parameters are appended automatically, matching the behaviour of go-azure-sdk's
+// ADOPipelineOIDCAuthorizer.
+func buildADOOIDCCallback(requestURL, bearerToken, serviceConnectionID string) func(context.Context) (string, error) {
+	return func(ctx context.Context) (string, error) {
+		parsedURL, parseErr := url.Parse(requestURL)
+		if parseErr != nil {
+			return "", fmt.Errorf("parsing ADO OIDC request URL: %w", parseErr)
+		}
+		query, _ := url.ParseQuery(parsedURL.RawQuery)
+		if query.Get("api-version") == "" {
+			query.Set("api-version", "7.1")
+		}
+		if query.Get("serviceConnectionId") == "" {
+			query.Set("serviceConnectionId", serviceConnectionID)
+		}
+		if query.Get("audience") == "" {
+			query.Set("audience", "api://AzureADTokenExchange")
+		}
+		parsedURL.RawQuery = query.Encode()
+
+		req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, parsedURL.String(), nil)
+		if reqErr != nil {
+			return "", fmt.Errorf("building ADO OIDC token request: %w", reqErr)
+		}
+		req.Header.Set("Authorization", "Bearer "+bearerToken)
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, doErr := http.DefaultClient.Do(req)
+		if doErr != nil {
+			return "", fmt.Errorf("fetching ADO OIDC token: %w", doErr)
+		}
+		defer resp.Body.Close()
+
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		if readErr != nil {
+			return "", fmt.Errorf("reading ADO OIDC token response: %w", readErr)
+		}
+
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			return "", fmt.Errorf("ADO OIDC token request failed (HTTP %d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
+
+		var result struct {
+			OIDCToken *string `json:"oidcToken"`
+		}
+		if decodeErr := json.Unmarshal(body, &result); decodeErr != nil {
+			return "", fmt.Errorf("decoding ADO OIDC token response: %w", decodeErr)
+		}
+		if result.OIDCToken == nil || *result.OIDCToken == "" {
+			return "", fmt.Errorf("ADO OIDC token response contained empty oidcToken field")
+		}
+		return *result.OIDCToken, nil
+	}
 }
 
 // GetToken retrieves an access token for the Business Central Admin Center API.

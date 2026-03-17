@@ -264,8 +264,8 @@ stages:
                 cd $(terraformWorkingDirectory)
                 
                 # Export Azure credentials for Terraform provider
-                export AZURE_CLIENT_ID=$servicePrincipalId
-                export AZURE_TENANT_ID=$tenantId
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_TENANT_ID=$tenantId
                 export AZURE_FEDERATED_TOKEN_FILE=$AZURE_FEDERATED_TOKEN_FILE
                 
                 terraform init
@@ -315,8 +315,8 @@ stages:
                       cd $(terraformWorkingDirectory)
                       
                       # Export Azure credentials for Terraform provider
-                      export AZURE_CLIENT_ID=$servicePrincipalId
-                      export AZURE_TENANT_ID=$tenantId
+                      export ARM_CLIENT_ID=$servicePrincipalId
+                      export ARM_TENANT_ID=$tenantId
                       export AZURE_FEDERATED_TOKEN_FILE=$AZURE_FEDERATED_TOKEN_FILE
                       
                       terraform init
@@ -346,12 +346,12 @@ provider "bcadmincenter" {
   # No client_secret needed!
   
   # These are automatically set by AzureCLI@2 task with addSpnToEnvironment: true
-  # AZURE_CLIENT_ID
-  # AZURE_TENANT_ID
+  # ARM_CLIENT_ID
+  # ARM_TENANT_ID
   # AZURE_FEDERATED_TOKEN_FILE
   
   # The provider will automatically detect workload identity when:
-  # 1. AZURE_CLIENT_ID and AZURE_TENANT_ID are set
+  # 1. ARM_CLIENT_ID and ARM_TENANT_ID are set
   # 2. AZURE_FEDERATED_TOKEN_FILE is present
   # 3. No client_secret is provided
 }
@@ -420,8 +420,8 @@ stages:
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
-                      export AZURE_CLIENT_ID=$servicePrincipalId
-                      export AZURE_TENANT_ID=$tenantId
+                      export ARM_CLIENT_ID=$servicePrincipalId
+                      export ARM_TENANT_ID=$tenantId
                       export AZURE_FEDERATED_TOKEN_FILE=$AZURE_FEDERATED_TOKEN_FILE
                       
                       cd terraform/environments/dev
@@ -450,8 +450,8 @@ stages:
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
-                      export AZURE_CLIENT_ID=$servicePrincipalId
-                      export AZURE_TENANT_ID=$tenantId
+                      export ARM_CLIENT_ID=$servicePrincipalId
+                      export ARM_TENANT_ID=$tenantId
                       export AZURE_FEDERATED_TOKEN_FILE=$AZURE_FEDERATED_TOKEN_FILE
                       
                       cd terraform/environments/prod

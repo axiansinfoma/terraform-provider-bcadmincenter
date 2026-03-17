@@ -4,7 +4,7 @@ schema: 1.1
 partition: tf-ecosystem
 
 summary:
-  owner: Michael Villani
+  owner: Axians Infoma
   description: |
     Terraform provider for managing Business Central Admin Center resources.
   visibility: public
