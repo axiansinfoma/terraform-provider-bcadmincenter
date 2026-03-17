@@ -59,9 +59,9 @@ Then add the service principal to the **AdminAgents** group in the [Business Cen
 Set credentials as environment variables and leave the provider block empty:
 
 ```bash
-export AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
-export AZURE_CLIENT_SECRET="your-client-secret"
-export AZURE_TENANT_ID="00000000-0000-0000-0000-000000000000"
+export ARM_CLIENT_ID="00000000-0000-0000-0000-000000000000"
+export ARM_CLIENT_SECRET="your-client-secret"
+export ARM_TENANT_ID="00000000-0000-0000-0000-000000000000"
 ```
 
 {{tffile "examples/provider/env-vars.tf"}}
@@ -104,10 +104,10 @@ The following environment variables can be used to configure the provider:
 
 | Variable | Description |
 |----------|-------------|
-| `AZURE_CLIENT_ID` | The client ID for service principal authentication |
-| `AZURE_CLIENT_SECRET` | The client secret for service principal authentication |
-| `AZURE_TENANT_ID` | The Azure AD tenant ID |
-| `AZURE_ENVIRONMENT` | The Azure cloud environment (`public`, `usgovernment`, `china`) |
+| `ARM_CLIENT_ID` | The client ID for service principal authentication (also accepted: `AZURE_CLIENT_ID`) |
+| `ARM_CLIENT_SECRET` | The client secret for service principal authentication (also accepted: `AZURE_CLIENT_SECRET`) |
+| `ARM_TENANT_ID` | The Azure AD tenant ID (also accepted: `AZURE_TENANT_ID`) |
+| `ARM_ENVIRONMENT` | The Azure cloud environment (`public`, `usgovernment`, `china`) (also accepted: `AZURE_ENVIRONMENT`) |
 | `AZURE_FEDERATED_TOKEN_FILE` | Path to federated token file (for workload identity) |
 | `AZURE_AUTHORITY_HOST` | Azure AD authority host URL |
 | `AZURE_CLIENT_ASSERTION` | Client assertion for federated identity credentials |

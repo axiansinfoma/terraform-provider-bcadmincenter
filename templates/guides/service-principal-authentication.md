@@ -124,9 +124,9 @@ provider "bcadmincenter" {
 For better security, use environment variables instead of hardcoding credentials:
 
 ```bash
-export AZURE_CLIENT_ID="$APP_ID"
-export AZURE_CLIENT_SECRET="$SECRET_OUTPUT"
-export AZURE_TENANT_ID="$TENANT_ID"
+export ARM_CLIENT_ID="$APP_ID"
+export ARM_CLIENT_SECRET="$SECRET_OUTPUT"
+export ARM_TENANT_ID="$TENANT_ID"
 ```
 
 Then use a simplified provider configuration:

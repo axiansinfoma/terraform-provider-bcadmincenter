@@ -68,20 +68,20 @@ func (p *BCAdminCenterProvider) Schema(ctx context.Context, req provider.SchemaR
 		MarkdownDescription: "Provider for managing Microsoft Dynamics 365 Business Central environments through the Business Central Admin Center API.",
 		Attributes: map[string]schema.Attribute{
 			"client_id": schema.StringAttribute{
-				MarkdownDescription: "The Client ID (Application ID) for Azure AD authentication. Can also be set via AZURE_CLIENT_ID environment variable.",
+				MarkdownDescription: "The Client ID (Application ID) for Azure AD authentication. Can also be set via the `ARM_CLIENT_ID` environment variable (or `AZURE_CLIENT_ID` for backward compatibility).",
 				Optional:            true,
 			},
 			"client_secret": schema.StringAttribute{
-				MarkdownDescription: "The Client Secret for Azure AD authentication. Can also be set via AZURE_CLIENT_SECRET environment variable.",
+				MarkdownDescription: "The Client Secret for Azure AD authentication. Can also be set via the `ARM_CLIENT_SECRET` environment variable (or `AZURE_CLIENT_SECRET` for backward compatibility).",
 				Optional:            true,
 				Sensitive:           true,
 			},
 			"tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Tenant ID for Azure AD authentication. Can also be set via AZURE_TENANT_ID environment variable.",
+				MarkdownDescription: "The Tenant ID for Azure AD authentication. Can also be set via the `ARM_TENANT_ID` environment variable (or `AZURE_TENANT_ID` for backward compatibility).",
 				Optional:            true,
 			},
 			"environment": schema.StringAttribute{
-				MarkdownDescription: "The Azure environment to use (public, usgovernment, china). Defaults to 'public'. Can also be set via AZURE_ENVIRONMENT environment variable.",
+				MarkdownDescription: "The Azure environment to use (public, usgovernment, china). Defaults to 'public'. Can also be set via the `ARM_ENVIRONMENT` environment variable (or `AZURE_ENVIRONMENT` for backward compatibility).",
 				Optional:            true,
 			},
 			"auxiliary_tenant_ids": schema.ListAttribute{
@@ -133,10 +133,12 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 	}
 
 	// Get configuration values from provider config or environment variables.
-	clientID := getConfigValue(data.ClientID, "AZURE_CLIENT_ID")
-	clientSecret := getConfigValue(data.ClientSecret, "AZURE_CLIENT_SECRET")
-	tenantID := getConfigValue(data.TenantID, "AZURE_TENANT_ID")
-	environment := getConfigValue(data.Environment, "AZURE_ENVIRONMENT")
+	// ARM_ prefixed variables take precedence (matching the azurerm provider convention);
+	// AZURE_ prefixed variables are supported for backward compatibility.
+	clientID := getConfigValue(data.ClientID, "ARM_CLIENT_ID", "AZURE_CLIENT_ID")
+	clientSecret := getConfigValue(data.ClientSecret, "ARM_CLIENT_SECRET", "AZURE_CLIENT_SECRET")
+	tenantID := getConfigValue(data.TenantID, "ARM_TENANT_ID", "AZURE_TENANT_ID")
+	environment := getConfigValue(data.Environment, "ARM_ENVIRONMENT", "AZURE_ENVIRONMENT")
 	baseURL := getConfigValue(data.BaseURL, "BCADMINCENTER_BASE_URL")
 	useOIDC := getConfigBoolValue(data.UseOIDC, "ARM_USE_OIDC", "AZURE_USE_OIDC")
 	oidcToken := getConfigValue(data.OIDCToken, "ARM_OIDC_TOKEN", "AZURE_OIDC_TOKEN")
@@ -151,7 +153,7 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 	if tenantID == "" {
 		resp.Diagnostics.AddError(
 			"Missing Tenant ID",
-			"Tenant ID must be provided either through the provider configuration or AZURE_TENANT_ID environment variable",
+			"Tenant ID must be provided either through the provider configuration or the ARM_TENANT_ID (or AZURE_TENANT_ID) environment variable",
 		)
 		return
 	}
