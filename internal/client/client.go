@@ -38,6 +38,15 @@ type Config struct {
 	// AccessToken is a static token used for testing to bypass Azure AD authentication.
 	// This should only be set in test environments.
 	AccessToken string
+	// UseOIDC forces Workload Identity / federated credential authentication.
+	// Equivalent to setting AZURE_USE_OIDC=true.
+	UseOIDC bool
+	// OIDCToken is a static JWT bearer token used as the OIDC client assertion.
+	// Setting this implies UseOIDC=true.
+	OIDCToken string
+	// OIDCTokenFilePath is the path to a file containing the federated OIDC token.
+	// Falls back to AZURE_FEDERATED_TOKEN_FILE when empty.
+	OIDCTokenFilePath string
 }
 
 // staticTokenCredential is a token credential that returns a static pre-obtained token.
@@ -94,6 +103,42 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create client secret credential: %w", err)
+		}
+	} else if config.UseOIDC || config.OIDCToken != "" {
+		// Workload Identity / OIDC (federated credential) authentication.
+		if config.OIDCToken != "" {
+			// Static token assertion – the caller already obtained the JWT.
+			if config.ClientID == "" {
+				return nil, fmt.Errorf("client_id is required when using OIDC with a direct token (oidc_token)")
+			}
+			token := config.OIDCToken
+			credential, err = azidentity.NewClientAssertionCredential(
+				config.TenantID,
+				config.ClientID,
+				func(_ context.Context) (string, error) {
+					return token, nil
+				},
+				&azidentity.ClientAssertionCredentialOptions{
+					AdditionallyAllowedTenants: []string{"*"},
+				},
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create OIDC client assertion credential: %w", err)
+			}
+		} else {
+			// File-based federated token – WorkloadIdentityCredential reads
+			// ClientID/TenantID/TokenFilePath from env vars when not set explicitly.
+			credential, err = azidentity.NewWorkloadIdentityCredential(
+				&azidentity.WorkloadIdentityCredentialOptions{
+					ClientID:                   config.ClientID,
+					TenantID:                   config.TenantID,
+					TokenFilePath:              config.OIDCTokenFilePath,
+					AdditionallyAllowedTenants: []string{"*"},
+				},
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create workload identity credential: %w", err)
+			}
 		}
 	} else {
 		// Otherwise, use DefaultAzureCredential for other auth methods.

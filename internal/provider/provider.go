@@ -49,6 +49,9 @@ type BCAdminCenterProviderModel struct {
 	Environment        types.String `tfsdk:"environment"`
 	AuxiliaryTenantIDs types.List   `tfsdk:"auxiliary_tenant_ids"`
 	BaseURL            types.String `tfsdk:"base_url"`
+	UseOIDC            types.Bool   `tfsdk:"use_oidc"`
+	OIDCToken          types.String `tfsdk:"oidc_token"`
+	OIDCTokenFilePath  types.String `tfsdk:"oidc_token_file_path"`
 }
 
 func (p *BCAdminCenterProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -86,6 +89,19 @@ func (p *BCAdminCenterProvider) Schema(ctx context.Context, req provider.SchemaR
 				MarkdownDescription: "Override the base URL for the Business Central Admin Center API. Can also be set via BCADMINCENTER_BASE_URL environment variable. Primarily used for testing.",
 				Optional:            true,
 			},
+			"use_oidc": schema.BoolAttribute{
+				MarkdownDescription: "Force the use of OIDC / Workload Identity (federated credential) authentication. When true, the provider uses `WorkloadIdentityCredential` from the Azure SDK, which reads the federated token from the file specified by `oidc_token_file_path` (or `AZURE_FEDERATED_TOKEN_FILE`). Can also be set via `AZURE_USE_OIDC=true` environment variable.",
+				Optional:            true,
+			},
+			"oidc_token": schema.StringAttribute{
+				MarkdownDescription: "A JWT bearer token to use as the OIDC client assertion. Useful when the token is provided directly by the CI/CD platform. Can also be set via `AZURE_OIDC_TOKEN` environment variable. Setting this implies `use_oidc = true`.",
+				Optional:            true,
+				Sensitive:           true,
+			},
+			"oidc_token_file_path": schema.StringAttribute{
+				MarkdownDescription: "Path to a file containing the OIDC / federated token. Defaults to the `AZURE_FEDERATED_TOKEN_FILE` environment variable when not set. Used when `use_oidc = true`.",
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -105,6 +121,9 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 	tenantID := getConfigValue(data.TenantID, "AZURE_TENANT_ID")
 	environment := getConfigValue(data.Environment, "AZURE_ENVIRONMENT")
 	baseURL := getConfigValue(data.BaseURL, "BCADMINCENTER_BASE_URL")
+	useOIDC := getConfigBoolValue(data.UseOIDC, "AZURE_USE_OIDC")
+	oidcToken := getConfigValue(data.OIDCToken, "AZURE_OIDC_TOKEN")
+	oidcTokenFilePath := getConfigValue(data.OIDCTokenFilePath, "AZURE_FEDERATED_TOKEN_FILE")
 	// accessToken allows bypassing Azure AD authentication for testing purposes.
 	accessToken := os.Getenv("BCADMINCENTER_TEST_TOKEN")
 
@@ -129,12 +148,15 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 
 	// Create the client.
 	config := &client.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		TenantID:     tenantID,
-		Environment:  environment,
-		BaseURL:      baseURL,
-		AccessToken:  accessToken,
+		ClientID:          clientID,
+		ClientSecret:      clientSecret,
+		TenantID:          tenantID,
+		Environment:       environment,
+		BaseURL:           baseURL,
+		AccessToken:       accessToken,
+		UseOIDC:           useOIDC,
+		OIDCToken:         oidcToken,
+		OIDCTokenFilePath: oidcTokenFilePath,
 	}
 
 	bcClient, err := client.NewClient(ctx, config)
@@ -157,6 +179,15 @@ func getConfigValue(configValue types.String, envVar string) string {
 		return configValue.ValueString()
 	}
 	return os.Getenv(envVar)
+}
+
+// getConfigBoolValue returns the config bool value if set, otherwise parses the environment variable.
+func getConfigBoolValue(configValue types.Bool, envVar string) bool {
+	if !configValue.IsNull() {
+		return configValue.ValueBool()
+	}
+	v := os.Getenv(envVar)
+	return v == "true" || v == "1"
 }
 
 func (p *BCAdminCenterProvider) Resources(ctx context.Context) []func() resource.Resource {

@@ -217,7 +217,10 @@ provider "bcadmincenter" {
 - `client_id` (String) The Client ID (Application ID) for Azure AD authentication. Can also be set via AZURE_CLIENT_ID environment variable.
 - `client_secret` (String, Sensitive) The Client Secret for Azure AD authentication. Can also be set via AZURE_CLIENT_SECRET environment variable.
 - `environment` (String) The Azure environment to use (public, usgovernment, china). Defaults to 'public'. Can also be set via AZURE_ENVIRONMENT environment variable.
+- `oidc_token` (String, Sensitive) A JWT bearer token to use as the OIDC client assertion. Useful when the token is provided directly by the CI/CD platform. Can also be set via `AZURE_OIDC_TOKEN` environment variable. Setting this implies `use_oidc = true`.
+- `oidc_token_file_path` (String) Path to a file containing the OIDC / federated token. Defaults to the `AZURE_FEDERATED_TOKEN_FILE` environment variable when not set. Used when `use_oidc = true`.
 - `tenant_id` (String) The Tenant ID for Azure AD authentication. Can also be set via AZURE_TENANT_ID environment variable.
+- `use_oidc` (Boolean) Force the use of OIDC / Workload Identity (federated credential) authentication. When true, the provider uses `WorkloadIdentityCredential` from the Azure SDK, which reads the federated token from the file specified by `oidc_token_file_path` (or `AZURE_FEDERATED_TOKEN_FILE`). Can also be set via `AZURE_USE_OIDC=true` environment variable.
 
 ## Environment Variables
 

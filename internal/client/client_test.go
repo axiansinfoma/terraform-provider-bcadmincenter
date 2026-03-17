@@ -88,6 +88,45 @@ func TestNewClient(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "OIDC with static token",
+			config: &Config{
+				TenantID:  "test-tenant-id",
+				ClientID:  "test-client-id",
+				UseOIDC:   true,
+				OIDCToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test.sig",
+			},
+			wantErr: false,
+		},
+		{
+			name: "OIDC with static token but missing client_id",
+			config: &Config{
+				TenantID:  "test-tenant-id",
+				UseOIDC:   true,
+				OIDCToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test.sig",
+			},
+			wantErr: true,
+			errMsg:  "client_id is required when using OIDC with a direct token (oidc_token)",
+		},
+		{
+			name: "OIDC workload identity with token file path",
+			config: &Config{
+				TenantID:          "test-tenant-id",
+				ClientID:          "test-client-id",
+				UseOIDC:           true,
+				OIDCTokenFilePath: "/var/run/secrets/token",
+			},
+			wantErr: false,
+		},
+		{
+			name: "OIDC implied by oidc_token without use_oidc flag",
+			config: &Config{
+				TenantID:  "test-tenant-id",
+				ClientID:  "test-client-id",
+				OIDCToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test.sig",
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

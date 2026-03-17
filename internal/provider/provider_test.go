@@ -54,6 +54,9 @@ func TestBCAdminCenterProvider_Schema(t *testing.T) {
 		"environment",
 		"auxiliary_tenant_ids",
 		"base_url",
+		"use_oidc",
+		"oidc_token",
+		"oidc_token_file_path",
 	}
 
 	for _, attrName := range requiredAttrs {
