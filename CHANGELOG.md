@@ -1,3 +1,7 @@
+## 0.1.6 (Unreleased)
+
+BUG FIXES:
+* resource/bcadmincenter_environment: fix perpetual drift where the `settings` block was always shown as being added even after a successful apply ([#64](https://github.com/axiansinfoma/terraform-provider-bcadmincenter/issues/64)). Two root causes were fixed: (1) `application_version` was missing `UseStateForUnknown()`, causing the plan to show it as `(known after apply)` when unset — this made `versionChanged = true` in the Update function and prevented the settings state from being saved; (2) `access_with_m365_licenses` inside the `settings` block was also missing `UseStateForUnknown()`, causing it to appear as `(known after apply)` on every plan and triggering unnecessary update cycles even when settings were unchanged.
 ## 0.1.3
 
 BREAKING CHANGES:
