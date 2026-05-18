@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -165,6 +166,7 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional: true,
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					utils.NoDowngradeVersion(),
 				},
 			},
@@ -303,6 +305,9 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 						MarkdownDescription: "Whether users can access the environment with Microsoft 365 licenses (requires environment version 21.1+).",
 						Optional:            true,
 						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"app_update_cadence": schema.StringAttribute{
 						MarkdownDescription: "How frequently AppSource apps should be updated. Valid values: `Default`, `DuringMajorUpgrade`, `DuringMajorMinorUpgrade`.",
@@ -611,7 +616,9 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Only application_version and ignore_update_window support in-place updates.
-	versionChanged := !plan.ApplicationVersion.Equal(state.ApplicationVersion)
+	// An unknown plan value for application_version means the user did not set it; treat
+	// it as no version change so that settings-only updates do not block on a missing version.
+	versionChanged := !plan.ApplicationVersion.IsUnknown() && !plan.ApplicationVersion.Equal(state.ApplicationVersion)
 	windowChanged := !plan.IgnoreUpdateWindow.Equal(state.IgnoreUpdateWindow)
 	settingsChanged := settingsBlockChanged(plan.Settings, state.Settings)
 
@@ -968,6 +975,8 @@ func isAPIVersionHigher(apiVersion, priorVersion string) bool {
 
 // settingsBlockChanged returns true if the settings block differs between plan and state.
 // Both nil means no change. One nil and one non-nil means change (block added/removed).
+// For Computed-only fields like access_with_m365_licenses, an unknown plan value means
+// the provider will resolve it during apply — treat it as unchanged to avoid false positives.
 func settingsBlockChanged(plan, state *EnvironmentSettingsNestedModel) bool {
 	if plan == nil && state == nil {
 		return false
@@ -975,12 +984,18 @@ func settingsBlockChanged(plan, state *EnvironmentSettingsNestedModel) bool {
 	if plan == nil || state == nil {
 		return true
 	}
+	// For access_with_m365_licenses, skip the comparison when the plan value is unknown.
+	// Unknown values occur when Terraform cannot determine the plan value from config — most
+	// commonly on the first apply when the settings block is added (no prior state), but also
+	// when importing or after state corruption. UseStateForUnknown() eliminates this for all
+	// subsequent plans once the state has a value.
+	m365Changed := !plan.AccessWithM365Licenses.IsUnknown() && !plan.AccessWithM365Licenses.Equal(state.AccessWithM365Licenses)
 	return !plan.UpdateWindowStartTime.Equal(state.UpdateWindowStartTime) ||
 		!plan.UpdateWindowEndTime.Equal(state.UpdateWindowEndTime) ||
 		!plan.UpdateWindowTimeZone.Equal(state.UpdateWindowTimeZone) ||
 		!plan.AppInsightsKey.Equal(state.AppInsightsKey) ||
 		!plan.SecurityGroupID.Equal(state.SecurityGroupID) ||
-		!plan.AccessWithM365Licenses.Equal(state.AccessWithM365Licenses) ||
+		m365Changed ||
 		!plan.AppUpdateCadence.Equal(state.AppUpdateCadence) ||
 		!plan.PartnerAccessStatus.Equal(state.PartnerAccessStatus) ||
 		!plan.AllowedPartnerTenantIDs.Equal(state.AllowedPartnerTenantIDs)
@@ -1022,8 +1037,8 @@ func (r *EnvironmentResource) applyEnvironmentSettings(ctx context.Context, svc 
 		}
 	}
 
-	// Apply M365 license access if provided.
-	if !settings.AccessWithM365Licenses.IsNull() {
+	// Apply M365 license access if explicitly provided (not null and not unknown).
+	if !settings.AccessWithM365Licenses.IsNull() && !settings.AccessWithM365Licenses.IsUnknown() {
 		if err := svc.SetAccessWithM365Licenses(ctx, applicationFamily, environmentName, settings.AccessWithM365Licenses.ValueBool()); err != nil {
 			return fmt.Errorf("setting M365 license access: %w", err)
 		}
@@ -1106,8 +1121,8 @@ func (r *EnvironmentResource) applyEnvironmentSettingsChanges(ctx context.Contex
 		}
 	}
 
-	// Update M365 license access if changed.
-	if !plan.AccessWithM365Licenses.Equal(state.AccessWithM365Licenses) && !plan.AccessWithM365Licenses.IsNull() {
+	// Update M365 license access if explicitly changed (not null and not unknown).
+	if !plan.AccessWithM365Licenses.Equal(state.AccessWithM365Licenses) && !plan.AccessWithM365Licenses.IsNull() && !plan.AccessWithM365Licenses.IsUnknown() {
 		if err := svc.SetAccessWithM365Licenses(ctx, applicationFamily, environmentName, plan.AccessWithM365Licenses.ValueBool()); err != nil {
 			return fmt.Errorf("updating M365 license access: %w", err)
 		}
