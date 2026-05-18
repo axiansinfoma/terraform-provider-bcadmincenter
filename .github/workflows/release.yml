@@ -26,7 +26,7 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@v4.0.1
         with:
           terraform_wrapper: false
           terraform_version: latest
