@@ -5,10 +5,14 @@ package environments
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -506,6 +510,112 @@ func TestEnvironmentSettingsNestedModel(t *testing.T) {
 	_ = m.AllowedPartnerTenantIDs
 }
 
+// TestEnvironmentResource_Schema_ApplicationVersionHasUseStateForUnknown verifies that
+// application_version includes UseStateForUnknown so that the prior state value is
+// preserved in the plan when the user does not specify the attribute.  Without this,
+// the plan shows "(known after apply)" for application_version, which makes versionChanged
+// true in Update, which blocks settings-only updates from saving state — causing the
+// settings block to always appear as being added (drift).
+func TestEnvironmentResource_Schema_ApplicationVersionHasUseStateForUnknown(t *testing.T) {
+	r := NewEnvironmentResource()
+	req := resource.SchemaRequest{}
+	resp := &resource.SchemaResponse{}
+
+	r.Schema(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
+	}
+
+	appVersionAttr, ok := resp.Schema.Attributes["application_version"]
+	if !ok {
+		t.Fatal("Schema missing application_version attribute")
+	}
+
+	strAttr, ok := appVersionAttr.(schema.StringAttribute)
+	if !ok {
+		t.Fatal("application_version is not a StringAttribute")
+	}
+
+	wantType := reflect.TypeOf(stringplanmodifier.UseStateForUnknown())
+	found := false
+	for _, mod := range strAttr.PlanModifiers {
+		if reflect.TypeOf(mod) == wantType {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Fatal("application_version is missing UseStateForUnknown()")
+	}
+}
+
+// TestShouldScheduleVersionUpgrade verifies that only explicit application_version
+// changes trigger SelectUpdateVersion.
+func TestShouldScheduleVersionUpgrade(t *testing.T) {
+	tests := []struct {
+		name     string
+		plan     EnvironmentResourceModel
+		state    EnvironmentResourceModel
+		expected bool
+	}{
+		{
+			name: "unknown plan value is not a version change",
+			plan: EnvironmentResourceModel{
+				ApplicationVersion: types.StringUnknown(),
+				IgnoreUpdateWindow: types.BoolValue(true),
+			},
+			state: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+				IgnoreUpdateWindow: types.BoolValue(false),
+			},
+			expected: false,
+		},
+		{
+			name: "same version with ignore_update_window change does not reschedule",
+			plan: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+				IgnoreUpdateWindow: types.BoolValue(true),
+			},
+			state: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+				IgnoreUpdateWindow: types.BoolValue(false),
+			},
+			expected: false,
+		},
+		{
+			name: "null plan value is still treated as a change",
+			plan: EnvironmentResourceModel{
+				ApplicationVersion: types.StringNull(),
+			},
+			state: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+			},
+			expected: true,
+		},
+		{
+			name: "different version is a change",
+			plan: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("29.0"),
+			},
+			state: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldScheduleVersionUpgrade(tt.plan, tt.state)
+			if got != tt.expected {
+				t.Errorf("shouldScheduleVersionUpgrade() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestSettingsBlockChanged(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -577,6 +687,130 @@ func TestSettingsBlockChanged(t *testing.T) {
 				AppInsightsKey:          types.StringNull(),
 				SecurityGroupID:         types.StringNull(),
 				AccessWithM365Licenses:  types.BoolNull(),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := settingsBlockChanged(tt.plan, tt.state)
+			if got != tt.expected {
+				t.Errorf("settingsBlockChanged() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestEnvironmentResource_Schema_AccessWithM365LicensesHasUseStateForUnknown verifies that
+// access_with_m365_licenses inside the settings block includes UseStateForUnknown so that
+// the prior state value is preserved in the plan when the user does not set the attribute.
+// Without this, every plan shows "access_with_m365_licenses = (known after apply)", which
+// makes settingsBlockChanged return true on every cycle, causing perpetual update drift.
+func TestEnvironmentResource_Schema_AccessWithM365LicensesHasUseStateForUnknown(t *testing.T) {
+	r := NewEnvironmentResource()
+	req := resource.SchemaRequest{}
+	resp := &resource.SchemaResponse{}
+
+	r.Schema(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Schema() errors: %v", resp.Diagnostics)
+	}
+
+	settingsBlock, ok := resp.Schema.Blocks["settings"]
+	if !ok {
+		t.Fatal("Schema missing 'settings' block")
+	}
+
+	nestedBlock, ok := settingsBlock.(schema.SingleNestedBlock)
+	if !ok {
+		t.Fatal("'settings' block is not a SingleNestedBlock")
+	}
+
+	m365Attr, ok := nestedBlock.Attributes["access_with_m365_licenses"]
+	if !ok {
+		t.Fatal("settings block missing 'access_with_m365_licenses' attribute")
+	}
+
+	boolAttr, ok := m365Attr.(schema.BoolAttribute)
+	if !ok {
+		t.Fatal("access_with_m365_licenses is not a BoolAttribute")
+	}
+
+	wantType := reflect.TypeOf(boolplanmodifier.UseStateForUnknown())
+	found := false
+	for _, mod := range boolAttr.PlanModifiers {
+		if reflect.TypeOf(mod) == wantType {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("access_with_m365_licenses is missing UseStateForUnknown()")
+	}
+}
+
+// TestSettingsBlockChanged_UnknownM365DoesNotTriggerChange verifies that an unknown
+// plan value for access_with_m365_licenses is not treated as a settings change.
+// This prevents perpetual re-apply cycles caused by Computed attributes showing as
+// "(known after apply)" in plans.
+func TestSettingsBlockChanged_UnknownM365DoesNotTriggerChange(t *testing.T) {
+	tests := []struct {
+		name     string
+		plan     *EnvironmentSettingsNestedModel
+		state    *EnvironmentSettingsNestedModel
+		expected bool
+	}{
+		{
+			name: "unknown access_with_m365_licenses in plan is NOT a change",
+			plan: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolUnknown(),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			state: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolValue(false),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			expected: false,
+		},
+		{
+			name: "explicit false-to-true change for access_with_m365_licenses IS a change",
+			plan: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolValue(true),
+				AppUpdateCadence:        types.StringNull(),
+				PartnerAccessStatus:     types.StringNull(),
+				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+			},
+			state: &EnvironmentSettingsNestedModel{
+				UpdateWindowStartTime:   types.StringValue("22:00"),
+				UpdateWindowEndTime:     types.StringValue("06:00"),
+				UpdateWindowTimeZone:    types.StringValue("UTC"),
+				AppInsightsKey:          types.StringNull(),
+				SecurityGroupID:         types.StringNull(),
+				AccessWithM365Licenses:  types.BoolValue(false),
 				AppUpdateCadence:        types.StringNull(),
 				PartnerAccessStatus:     types.StringNull(),
 				AllowedPartnerTenantIDs: types.ListNull(types.StringType),
