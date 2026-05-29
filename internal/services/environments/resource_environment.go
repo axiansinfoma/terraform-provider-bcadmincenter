@@ -616,9 +616,7 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Only application_version and ignore_update_window support in-place updates.
-	// An unknown plan value for application_version means the user did not set it; treat
-	// it as no version change so that settings-only updates do not block on a missing version.
-	versionChanged := !plan.ApplicationVersion.IsUnknown() && !plan.ApplicationVersion.Equal(state.ApplicationVersion)
+	versionChanged := shouldScheduleVersionUpgrade(plan, state)
 	windowChanged := !plan.IgnoreUpdateWindow.Equal(state.IgnoreUpdateWindow)
 	settingsChanged := settingsBlockChanged(plan.Settings, state.Settings)
 
@@ -648,8 +646,8 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 	}
 
-	if !versionChanged && !windowChanged {
-		// Only settings changed; persist the plan (with refreshed settings).
+	if !versionChanged {
+		// Only settings and/or ignore_update_window changed; persist the plan (with refreshed settings).
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return
 	}
@@ -971,6 +969,12 @@ func isAPIVersionHigher(apiVersion, priorVersion string) bool {
 		return false
 	}
 	return apiMinor > priorMinor
+}
+
+func shouldScheduleVersionUpgrade(plan, state EnvironmentResourceModel) bool {
+	// An unknown plan value for application_version means the user did not set it; treat
+	// it as no version change so that settings-only updates do not block on a missing version.
+	return !plan.ApplicationVersion.IsUnknown() && !plan.ApplicationVersion.Equal(state.ApplicationVersion)
 }
 
 // settingsBlockChanged returns true if the settings block differs between plan and state.

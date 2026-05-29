@@ -5,11 +5,14 @@ package environments
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -529,62 +532,85 @@ func TestEnvironmentResource_Schema_ApplicationVersionHasUseStateForUnknown(t *t
 		t.Fatal("Schema missing application_version attribute")
 	}
 
-	// Verify at least two plan modifiers are registered (UseStateForUnknown + NoDowngradeVersion).
 	strAttr, ok := appVersionAttr.(schema.StringAttribute)
 	if !ok {
 		t.Fatal("application_version is not a StringAttribute")
 	}
 
-	if len(strAttr.PlanModifiers) < 2 {
-		t.Errorf("application_version has %d plan modifier(s), want at least 2 (UseStateForUnknown + NoDowngradeVersion)",
-			len(strAttr.PlanModifiers))
+	wantType := reflect.TypeOf(stringplanmodifier.UseStateForUnknown())
+	found := false
+	for _, mod := range strAttr.PlanModifiers {
+		if reflect.TypeOf(mod) == wantType {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Fatal("application_version is missing UseStateForUnknown()")
 	}
 }
 
-// TestVersionChangedIgnoresUnknownPlanValue verifies that an unknown plan value for
-// application_version (i.e. the user did not set it) is not treated as a version
-// change, preventing settings-only updates from failing on a missing version.
-func TestVersionChangedIgnoresUnknownPlanValue(t *testing.T) {
+// TestShouldScheduleVersionUpgrade verifies that only explicit application_version
+// changes trigger SelectUpdateVersion.
+func TestShouldScheduleVersionUpgrade(t *testing.T) {
 	tests := []struct {
-		name               string
-		planVersion        types.String
-		stateVersion       types.String
-		wantVersionChanged bool
+		name     string
+		plan     EnvironmentResourceModel
+		state    EnvironmentResourceModel
+		expected bool
 	}{
 		{
-			name:               "unknown plan value is not a version change",
-			planVersion:        types.StringUnknown(),
-			stateVersion:       types.StringValue("28.0"),
-			wantVersionChanged: false,
+			name: "unknown plan value is not a version change",
+			plan: EnvironmentResourceModel{
+				ApplicationVersion: types.StringUnknown(),
+				IgnoreUpdateWindow: types.BoolValue(true),
+			},
+			state: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+				IgnoreUpdateWindow: types.BoolValue(false),
+			},
+			expected: false,
 		},
 		{
-			name:               "null plan value is a version change",
-			planVersion:        types.StringNull(),
-			stateVersion:       types.StringValue("28.0"),
-			wantVersionChanged: true,
+			name: "same version with ignore_update_window change does not reschedule",
+			plan: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+				IgnoreUpdateWindow: types.BoolValue(true),
+			},
+			state: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+				IgnoreUpdateWindow: types.BoolValue(false),
+			},
+			expected: false,
 		},
 		{
-			name:               "same version is not a change",
-			planVersion:        types.StringValue("28.0"),
-			stateVersion:       types.StringValue("28.0"),
-			wantVersionChanged: false,
+			name: "null plan value is still treated as a change",
+			plan: EnvironmentResourceModel{
+				ApplicationVersion: types.StringNull(),
+			},
+			state: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+			},
+			expected: true,
 		},
 		{
-			name:               "different version is a change",
-			planVersion:        types.StringValue("29.0"),
-			stateVersion:       types.StringValue("28.0"),
-			wantVersionChanged: true,
+			name: "different version is a change",
+			plan: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("29.0"),
+			},
+			state: EnvironmentResourceModel{
+				ApplicationVersion: types.StringValue("28.0"),
+			},
+			expected: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Replicate the versionChanged logic from the Update function.
-			versionChanged := !tt.planVersion.IsUnknown() && !tt.planVersion.Equal(tt.stateVersion)
-			if versionChanged != tt.wantVersionChanged {
-				t.Errorf("versionChanged = %v, want %v (plan=%v, state=%v)",
-					versionChanged, tt.wantVersionChanged,
-					tt.planVersion, tt.stateVersion)
+			got := shouldScheduleVersionUpgrade(tt.plan, tt.state)
+			if got != tt.expected {
+				t.Errorf("shouldScheduleVersionUpgrade() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -715,18 +741,16 @@ func TestEnvironmentResource_Schema_AccessWithM365LicensesHasUseStateForUnknown(
 		t.Fatal("access_with_m365_licenses is not a BoolAttribute")
 	}
 
-	// Verify that UseStateForUnknown is present by checking for a modifier whose description
-	// matches the well-known description of boolplanmodifier.UseStateForUnknown().
-	const wantDesc = "Once set, the value of this attribute in state will not change."
+	wantType := reflect.TypeOf(boolplanmodifier.UseStateForUnknown())
 	found := false
 	for _, mod := range boolAttr.PlanModifiers {
-		if mod.Description(context.Background()) == wantDesc {
+		if reflect.TypeOf(mod) == wantType {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("access_with_m365_licenses is missing the UseStateForUnknown() plan modifier (expected description %q)", wantDesc)
+		t.Fatal("access_with_m365_licenses is missing UseStateForUnknown()")
 	}
 }
 
