@@ -5,8 +5,13 @@ package pertenantextensions
 
 import (
 	"context"
+	"encoding/base64"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -40,27 +45,49 @@ func TestPerTenantExtensionResource_Schema(t *testing.T) {
 	expectedAttrs := []string{
 		"id",
 		"aad_tenant_id",
-		"company_id",
 		"environment_name",
 		"application_family",
 		"file_path",
 		"file_content",
+		"file_name",
 		"file_sha256",
-		"schedule",
-		"schema_sync_mode",
+		"deployment_schedule",
+		"sync_mode",
+		"language_id",
+		"accept_isv_eula",
+		"install_or_update_needed_dependencies",
 		"delete_data",
-		"unpublish_on_delete",
-		"package_id",
+		"uninstall_dependents",
+		"uninstall_in_update_window",
+		"cancel_scheduled_on_destroy",
+		"timeouts",
 		"app_id",
 		"display_name",
 		"publisher",
 		"version",
+		"state",
+		"app_type",
+		"last_operation_id",
+		"pending_target_version",
+		"pending_schedule_kind",
 	}
 
 	for _, attrName := range expectedAttrs {
 		if _, ok := resp.Schema.Attributes[attrName]; !ok {
 			t.Errorf("Schema missing attribute: %s", attrName)
 		}
+	}
+
+	// Attributes that only existed in the pre-2.29 Automation API implementation.
+	removedAttrs := []string{"company_id", "schedule", "schema_sync_mode", "unpublish_on_delete", "package_id"}
+	for _, attrName := range removedAttrs {
+		if _, ok := resp.Schema.Attributes[attrName]; ok {
+			t.Errorf("Schema still defines removed Automation API attribute: %s", attrName)
+		}
+	}
+
+	if !resp.Schema.Attributes["accept_isv_eula"].IsRequired() {
+		t.Error("accept_isv_eula should be required so the EULA is accepted explicitly")
 	}
 }
 
@@ -149,4 +176,167 @@ func TestValidateFileInputs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResolveFileName(t *testing.T) {
+	tests := []struct {
+		name        string
+		fileName    string
+		filePath    string
+		fileContent string
+		want        string
+	}{
+		{
+			name:     "explicit file_name wins",
+			fileName: "Explicit.app",
+			filePath: "/tmp/FromPath.app",
+			want:     "Explicit.app",
+		},
+		{
+			name:     "derived from file_path",
+			filePath: "/tmp/extensions/MyExtension_1.0.0.0.app",
+			want:     "MyExtension_1.0.0.0.app",
+		},
+		{
+			name:        "fallback for base64 content",
+			fileContent: "Zm9v",
+			want:        "extension.app",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := &PerTenantExtensionResourceModel{
+				FileName:    stringOrNullValue(tt.fileName),
+				FilePath:    stringOrNullValue(tt.filePath),
+				FileContent: stringOrNullValue(tt.fileContent),
+			}
+
+			if got := resolveFileName(data); got != tt.want {
+				t.Errorf("resolveFileName() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveFileBytes(t *testing.T) {
+	t.Run("from file_path", func(t *testing.T) {
+		dir := t.TempDir()
+		filePath := filepath.Join(dir, "MyExtension.app")
+		if err := os.WriteFile(filePath, []byte("app-bytes"), 0o600); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
+
+		data := &PerTenantExtensionResourceModel{FilePath: types.StringValue(filePath)}
+
+		got, err := resolveFileBytes(data)
+		if err != nil {
+			t.Fatalf("resolveFileBytes() unexpected error: %v", err)
+		}
+		if string(got) != "app-bytes" {
+			t.Errorf("resolveFileBytes() = %q, want app-bytes", string(got))
+		}
+	})
+
+	t.Run("from file_content", func(t *testing.T) {
+		data := &PerTenantExtensionResourceModel{
+			FileContent: types.StringValue(base64.StdEncoding.EncodeToString([]byte("app-bytes"))),
+		}
+
+		got, err := resolveFileBytes(data)
+		if err != nil {
+			t.Fatalf("resolveFileBytes() unexpected error: %v", err)
+		}
+		if string(got) != "app-bytes" {
+			t.Errorf("resolveFileBytes() = %q, want app-bytes", string(got))
+		}
+	})
+
+	t.Run("invalid base64", func(t *testing.T) {
+		data := &PerTenantExtensionResourceModel{FileContent: types.StringValue("not-base64!!!")}
+
+		if _, err := resolveFileBytes(data); err == nil {
+			t.Error("resolveFileBytes() expected error for invalid base64, got nil")
+		}
+	})
+
+	t.Run("neither set", func(t *testing.T) {
+		if _, err := resolveFileBytes(&PerTenantExtensionResourceModel{}); err == nil {
+			t.Error("resolveFileBytes() expected error when neither input is set, got nil")
+		}
+	})
+}
+
+func TestOperationTimeout(t *testing.T) {
+	timeoutsType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"create": types.StringType,
+		"update": types.StringType,
+		"delete": types.StringType,
+	}}
+
+	withValues := func(create, update, del attr.Value) types.Object {
+		obj, diags := types.ObjectValue(timeoutsType.AttrTypes, map[string]attr.Value{
+			"create": create,
+			"update": update,
+			"delete": del,
+		})
+		if diags.HasError() {
+			t.Fatalf("failed to build timeouts object: %v", diags)
+		}
+		return obj
+	}
+
+	tests := []struct {
+		name     string
+		timeouts types.Object
+		key      string
+		want     time.Duration
+	}{
+		{
+			name:     "null object falls back to the default",
+			timeouts: types.ObjectNull(timeoutsType.AttrTypes),
+			key:      "create",
+			want:     defaultOperationTimeout,
+		},
+		{
+			name:     "configured value is used",
+			timeouts: withValues(types.StringValue("90m"), types.StringNull(), types.StringNull()),
+			key:      "create",
+			want:     90 * time.Minute,
+		},
+		{
+			name:     "unset key falls back to the default",
+			timeouts: withValues(types.StringValue("90m"), types.StringNull(), types.StringNull()),
+			key:      "delete",
+			want:     defaultOperationTimeout,
+		},
+		{
+			name:     "unparseable value falls back to the default",
+			timeouts: withValues(types.StringValue("not-a-duration"), types.StringNull(), types.StringNull()),
+			key:      "create",
+			want:     defaultOperationTimeout,
+		},
+		{
+			name:     "non-positive value falls back to the default",
+			timeouts: withValues(types.StringValue("0s"), types.StringNull(), types.StringNull()),
+			key:      "create",
+			want:     defaultOperationTimeout,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := operationTimeout(context.Background(), tt.timeouts, tt.key); got != tt.want {
+				t.Errorf("operationTimeout() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// stringOrNullValue converts a test fixture string into a Terraform value, mapping "" to null.
+func stringOrNullValue(value string) types.String {
+	if value == "" {
+		return types.StringNull()
+	}
+	return types.StringValue(value)
 }

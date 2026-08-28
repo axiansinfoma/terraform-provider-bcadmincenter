@@ -7,10 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 
@@ -720,4 +723,155 @@ func TestBuildGitHubOIDCCallback(t *testing.T) {
 			t.Error("expected error for empty value, got nil")
 		}
 	})
+}
+
+func TestClient_DoRequestWithOptions(t *testing.T) {
+	newClient := func(baseURL string, timeout time.Duration) *Client {
+		c := &Client{}
+		c.SetCredential(&mockTokenCredential{token: "test-token"})
+		c.SetBaseURL(baseURL)
+		c.SetAPIVersion(constants.DefaultAPIVersion)
+		c.SetHTTPClient(&http.Client{Timeout: timeout})
+		return c
+	}
+
+	t.Run("nil options keep the JSON defaults", func(t *testing.T) {
+		var gotContentType, gotAccept, gotAuth string
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotContentType = r.Header.Get("Content-Type")
+			gotAccept = r.Header.Get("Accept")
+			gotAuth = r.Header.Get("Authorization")
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		resp, err := newClient(server.URL, 30*time.Second).DoRequestWithOptions(context.Background(), http.MethodGet, "things", nil, nil)
+		if err != nil {
+			t.Fatalf("DoRequestWithOptions() unexpected error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if gotContentType != "application/json" {
+			t.Errorf("Content-Type = %q, want application/json", gotContentType)
+		}
+		if gotAccept != "application/json" {
+			t.Errorf("Accept = %q, want application/json", gotAccept)
+		}
+		if gotAuth != "Bearer test-token" {
+			t.Errorf("Authorization = %q, want Bearer test-token", gotAuth)
+		}
+	})
+
+	t.Run("content type and extra headers are applied", func(t *testing.T) {
+		var gotContentType, gotCustom string
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotContentType = r.Header.Get("Content-Type")
+			gotCustom = r.Header.Get("If-Match")
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		resp, err := newClient(server.URL, 30*time.Second).DoRequestWithOptions(
+			context.Background(), http.MethodPatch, "things", strings.NewReader("payload"),
+			&RequestOptions{ContentType: "application/octet-stream", Headers: map[string]string{"If-Match": "*"}},
+		)
+		if err != nil {
+			t.Fatalf("DoRequestWithOptions() unexpected error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if gotContentType != "application/octet-stream" {
+			t.Errorf("Content-Type = %q, want application/octet-stream", gotContentType)
+		}
+		if gotCustom != "*" {
+			t.Errorf("If-Match = %q, want *", gotCustom)
+		}
+	})
+
+	t.Run("per-request timeout overrides a shorter client timeout", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			time.Sleep(150 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		// The client's own timeout is far too short for this handler.
+		c := newClient(server.URL, 20*time.Millisecond)
+
+		if _, err := c.DoRequest(context.Background(), http.MethodGet, "things", nil); err == nil {
+			t.Error("DoRequest() expected a timeout error with the short client timeout, got nil")
+		}
+
+		resp, err := c.DoRequestWithOptions(context.Background(), http.MethodGet, "things", nil, &RequestOptions{Timeout: 5 * time.Second})
+		if err != nil {
+			t.Fatalf("DoRequestWithOptions() with an extended timeout returned an error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// The override must not leak back into the shared client.
+		if c.httpClient.Timeout != 20*time.Millisecond {
+			t.Errorf("client timeout = %v, want it left at 20ms", c.httpClient.Timeout)
+		}
+	})
+
+	t.Run("error responses are decoded into AdminCenterError", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]string{"code": "EntityValidationFailed", "message": "bad"})
+		}))
+		defer server.Close()
+
+		_, err := newClient(server.URL, 30*time.Second).DoRequestWithOptions(context.Background(), http.MethodPost, "things", nil, &RequestOptions{})
+
+		var apiErr *AdminCenterError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %v, want an *AdminCenterError", err)
+		}
+		if apiErr.Code != "EntityValidationFailed" {
+			t.Errorf("code = %q, want EntityValidationFailed", apiErr.Code)
+		}
+	})
+}
+
+func TestClient_PostMultipart(t *testing.T) {
+	var gotMethod, gotPath, gotContentType, gotBody string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotContentType = r.Header.Get("Content-Type")
+		body, _ := io.ReadAll(r.Body)
+		gotBody = string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{}
+	c.SetCredential(&mockTokenCredential{token: "test-token"})
+	c.SetBaseURL(server.URL)
+	c.SetAPIVersion(constants.DefaultAPIVersion)
+	c.SetHTTPClient(&http.Client{Timeout: 30 * time.Second})
+
+	resp, err := c.PostMultipart(context.Background(), "applications/BusinessCentral/environments/Prod/apps/pteInstall",
+		strings.NewReader("--boundary--\r\n"), "multipart/form-data; boundary=boundary", 5*time.Minute)
+	if err != nil {
+		t.Fatalf("PostMultipart() unexpected error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if gotMethod != http.MethodPost {
+		t.Errorf("method = %q, want POST", gotMethod)
+	}
+	wantPath := "/admin/" + constants.DefaultAPIVersion + "/applications/BusinessCentral/environments/Prod/apps/pteInstall"
+	if gotPath != wantPath {
+		t.Errorf("path = %q, want %q", gotPath, wantPath)
+	}
+	if gotContentType != "multipart/form-data; boundary=boundary" {
+		t.Errorf("Content-Type = %q, want the boundary-carrying multipart type", gotContentType)
+	}
+	if !strings.Contains(gotBody, "boundary") {
+		t.Errorf("body = %q, want the multipart payload to be forwarded", gotBody)
+	}
 }

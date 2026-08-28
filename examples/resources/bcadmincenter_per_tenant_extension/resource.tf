@@ -1,7 +1,7 @@
 # Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
-# Example A: install a PTE from a local .app file
+# Example A: install a PTE from a local .app file, immediately
 resource "bcadmincenter_per_tenant_extension" "my_pte" {
   environment_name   = "MyProdEnvironment"
   application_family = "BusinessCentral"
@@ -10,11 +10,17 @@ resource "bcadmincenter_per_tenant_extension" "my_pte" {
   file_path   = "./extensions/MyExtension_1.0.0.0.app"
   file_sha256 = filesha256("./extensions/MyExtension_1.0.0.0.app")
 
-  schedule         = "Current version"
-  schema_sync_mode = "Add"
+  deployment_schedule = "Immediate"
+  sync_mode           = "Add"
+  language_id         = "en-US"
 
-  delete_data         = false
-  unpublish_on_delete = false
+  # Required: accepts the publisher's EULA and the associated Marketplace terms.
+  accept_isv_eula = true
+
+  install_or_update_needed_dependencies = true
+
+  delete_data          = false
+  uninstall_dependents = false
 }
 
 # Example B: install a PTE from base64-encoded content (e.g. an Azure Storage blob)
@@ -35,20 +41,35 @@ resource "bcadmincenter_per_tenant_extension" "my_pte_from_blob" {
   file_content = data.azurerm_storage_blob.pte_package.content
   file_sha256  = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" # replace with actual SHA-256
 
-  schedule         = "Next minor version"
-  schema_sync_mode = "Add"
+  # The API requires an uploaded file name ending in .app. Set it explicitly when the
+  # bytes do not come from file_path.
+  file_name = "MyExtension_1.0.0.0.app"
 
-  unpublish_on_delete = true
+  accept_isv_eula = true
 }
 
-# Example C: install from a local file with an explicit company_id
-resource "bcadmincenter_per_tenant_extension" "my_pte_explicit_company" {
+# Example C: stage an update to deploy during the environment's update window
+resource "bcadmincenter_per_tenant_extension" "my_pte_scheduled" {
   environment_name   = "MyDevEnvironment"
   application_family = "BusinessCentral"
 
-  # company_id is optional; when omitted the first company in the environment is used.
-  company_id = "00000000-0000-0000-0000-000000000001"
+  file_path   = "./extensions/MyExtension_2.0.0.0.app"
+  file_sha256 = filesha256("./extensions/MyExtension_2.0.0.0.app")
 
-  file_path   = "./extensions/MyExtension_1.0.0.0.app"
-  file_sha256 = filesha256("./extensions/MyExtension_1.0.0.0.app")
+  # "UpdateWindow" defers the install to the environment's update window.
+  # "NextMinorUpdate" and "NextMajorUpdate" are also valid, but only for an
+  # extension that is already installed.
+  deployment_schedule = "UpdateWindow"
+
+  accept_isv_eula = true
+
+  # Cancels any still-scheduled versions of this extension on destroy so they
+  # cannot reinstall it after the uninstall. Defaults to true.
+  cancel_scheduled_on_destroy = true
+
+  timeouts = {
+    create = "90m"
+    update = "90m"
+    delete = "30m"
+  }
 }

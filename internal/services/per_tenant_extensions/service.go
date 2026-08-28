@@ -7,15 +7,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Service handles per-tenant extension lifecycle operations via the BC Automation API.
+// uploadTimeout bounds the single HTTP request that streams the .app package. It is
+// deliberately generous because the endpoint accepts packages up to 50 MB.
+const uploadTimeout = 15 * time.Minute
+
+// Service handles per-tenant extension lifecycle operations via the Business Central
+// Admin Center API. The PTE endpoints it uses were introduced in API version 2.29.
 type Service struct {
 	client *client.Client
 }
@@ -25,282 +36,368 @@ func NewService(c *client.Client) *Service {
 	return &Service{client: c}
 }
 
-// GetFirstCompany fetches automation companies and returns the ID of the first one.
-// BC PTEs are published globally across all companies so the choice of company is only
-// an implementation detail for the Automation API endpoint.
-func (s *Service) GetFirstCompany(ctx context.Context, environmentName string) (string, error) {
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodGet, environmentName, "companies", nil, "", nil)
+// appsPath builds the base apps path for an environment.
+func appsPath(applicationFamily, environmentName string) string {
+	return fmt.Sprintf("applications/%s/environments/%s/apps", applicationFamily, environmentName)
+}
+
+// IsNotFoundError reports whether err is an API error indicating the targeted app or
+// scheduled version does not exist. Callers use it to treat "already gone" as success.
+func IsNotFoundError(err error) bool {
+	var apiErr *client.AdminCenterError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	return strings.EqualFold(apiErr.Code, "ResourceDoesNotExist") ||
+		strings.EqualFold(apiErr.Code, "NotFound") ||
+		strings.Contains(strings.ToLower(apiErr.Message), "not installed on environment")
+}
+
+// buildPteInstallForm encodes req as a multipart/form-data body and returns the body
+// together with the boundary-carrying content type.
+func buildPteInstallForm(req *PteInstallRequest) (*bytes.Buffer, string, error) {
+	if req == nil {
+		return nil, "", fmt.Errorf("pte install request cannot be nil")
+	}
+	if len(req.Content) == 0 {
+		return nil, "", fmt.Errorf("extension package is empty")
+	}
+	if len(req.Content) > MaxExtensionFileSize {
+		return nil, "", fmt.Errorf("extension package is %d bytes, which exceeds the %d byte limit enforced by the pteInstall endpoint",
+			len(req.Content), MaxExtensionFileSize)
+	}
+
+	fileName := req.FileName
+	if fileName == "" {
+		fileName = "extension.app"
+	}
+	if !strings.EqualFold(filepath.Ext(fileName), ".app") {
+		return nil, "", fmt.Errorf("extension package file name %q must have the .app extension", fileName)
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	part, err := writer.CreateFormFile("extensionFile", fileName)
 	if err != nil {
-		return "", fmt.Errorf("failed to list automation companies: %w", err)
+		return nil, "", fmt.Errorf("failed to create extension file part: %w", err)
+	}
+	if _, err := part.Write(req.Content); err != nil {
+		return nil, "", fmt.Errorf("failed to write extension file part: %w", err)
+	}
+
+	fields := map[string]string{
+		"deploymentSchedule":                NormalizeDeploymentSchedule(req.DeploymentSchedule),
+		"syncMode":                          NormalizeSyncMode(req.SyncMode),
+		"acceptIsvEula":                     strconv.FormatBool(req.AcceptIsvEula),
+		"installOrUpdateNeededDependencies": strconv.FormatBool(req.InstallOrUpdateNeededDependencies),
+	}
+	if req.LanguageID != "" {
+		fields["languageId"] = req.LanguageID
+	}
+
+	for name, value := range fields {
+		if err := writer.WriteField(name, value); err != nil {
+			return nil, "", fmt.Errorf("failed to write %s field: %w", name, err)
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return nil, "", fmt.Errorf("failed to finalize multipart body: %w", err)
+	}
+
+	return &body, writer.FormDataContentType(), nil
+}
+
+// UploadAndInstall uploads a .app package and schedules its install or update via the
+// `apps/pteInstall` endpoint. The returned operation carries the app ID and target
+// version read from the uploaded package, so callers do not need to look them up.
+func (s *Service) UploadAndInstall(ctx context.Context, applicationFamily, environmentName string, req *PteInstallRequest) (*AppOperation, error) {
+	body, contentType, err := buildPteInstallForm(req)
+	if err != nil {
+		return nil, err
+	}
+
+	path := fmt.Sprintf("%s/pteInstall", appsPath(applicationFamily, environmentName))
+
+	resp, err := s.client.PostMultipart(ctx, path, body, contentType, uploadTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload per-tenant extension: %w", err)
 	}
 	defer resp.Body.Close()
 
-	var list CompanyListResponse
+	var operation AppOperation
+	if err := json.NewDecoder(resp.Body).Decode(&operation); err != nil {
+		return nil, fmt.Errorf("failed to decode pteInstall response: %w", err)
+	}
+
+	if operation.ID == "" {
+		return nil, fmt.Errorf("pteInstall response did not contain an operation id")
+	}
+
+	tflog.Debug(ctx, "Uploaded per-tenant extension", map[string]interface{}{
+		"operation_id":   operation.ID,
+		"app_id":         operation.AppID,
+		"target_version": operation.TargetVersionValue(),
+		"status":         operation.Status,
+		"schedule_kind":  operation.ScheduleKind,
+	})
+
+	return &operation, nil
+}
+
+// GetApp returns the installed app with the given app ID.
+// Returns (nil, nil) when the app is not installed on the environment.
+func (s *Service) GetApp(ctx context.Context, applicationFamily, environmentName, appID string) (*App, error) {
+	resp, err := s.client.Get(ctx, appsPath(applicationFamily, environmentName))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list apps: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var list AppListResponse
 	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
-		return "", fmt.Errorf("failed to decode companies response: %w", err)
+		return nil, fmt.Errorf("failed to decode app list response: %w", err)
 	}
 
-	if len(list.Value) == 0 {
-		return "", fmt.Errorf("no companies found in environment %q", environmentName)
+	for i := range list.Value {
+		if strings.EqualFold(list.Value[i].Identity(), appID) {
+			return &list.Value[i], nil
+		}
 	}
 
-	return list.Value[0].ID, nil
+	return nil, nil
 }
 
-// CreateExtensionUpload creates an extension upload record and returns the system ID.
-func (s *Service) CreateExtensionUpload(ctx context.Context, environmentName, companyID string, req *ExtensionUploadRequest) (string, error) {
-	path := fmt.Sprintf("companies(%s)/extensionUpload", companyID)
-
-	body, err := json.Marshal(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal extension upload request: %w", err)
+// GetOperation returns a single app operation. The API returns either a bare operation
+// object or a list wrapper depending on the endpoint version, so both shapes are
+// accepted — but a list is always searched for the requested ID rather than taking the
+// first entry, because the endpoint returns the environment's whole operation history
+// (in no particular order) whenever it does not narrow to a single operation.
+//
+// operationID must be non-empty: the API answers a request with an empty operation ID by
+// returning that full history, whose first entry is an unrelated, long-completed
+// operation. Treating it as the requested one would report a stale success.
+func (s *Service) GetOperation(ctx context.Context, applicationFamily, environmentName, appID, operationID string) (*AppOperation, error) {
+	if operationID == "" {
+		return nil, fmt.Errorf("an operation id is required to look up an app operation")
 	}
 
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodPost, environmentName, path, bytes.NewReader(body), "", nil)
+	path := fmt.Sprintf("%s/%s/operations/%s", appsPath(applicationFamily, environmentName), appID, operationID)
+
+	resp, err := s.client.Get(ctx, path)
 	if err != nil {
-		return "", fmt.Errorf("failed to create extension upload: %w", err)
+		return nil, fmt.Errorf("failed to get app operation: %w", err)
 	}
 	defer resp.Body.Close()
 
-	var upload ExtensionUpload
-	if err := json.NewDecoder(resp.Body).Decode(&upload); err != nil {
-		return "", fmt.Errorf("failed to decode extension upload response: %w", err)
-	}
-
-	if upload.SystemID == "" {
-		return "", fmt.Errorf("extension upload response missing systemId")
-	}
-
-	return upload.SystemID, nil
-}
-
-// UploadExtensionContent streams the raw .app file bytes to the upload record.
-func (s *Service) UploadExtensionContent(ctx context.Context, environmentName, companyID, uploadID string, data []byte) error {
-	path := fmt.Sprintf("companies(%s)/extensionUpload(%s)/extensionContent", companyID, uploadID)
-
-	resp, err := s.client.DoAutomationRequest(
-		ctx, http.MethodPatch, environmentName, path,
-		bytes.NewReader(data),
-		"application/octet-stream",
-		map[string]string{"If-Match": "*"},
-	)
+	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to upload extension content: %w", err)
+		return nil, fmt.Errorf("failed to read app operation response: %w", err)
 	}
-	resp.Body.Close()
 
-	return nil
+	var list AppOperationListResponse
+	if err := json.Unmarshal(raw, &list); err == nil && len(list.Value) > 0 {
+		for i := range list.Value {
+			if strings.EqualFold(list.Value[i].ID, operationID) {
+				return &list.Value[i], nil
+			}
+		}
+		return nil, fmt.Errorf("app operation %q was not found among the %d operations returned for app %s",
+			operationID, len(list.Value), appID)
+	}
+
+	var operation AppOperation
+	if err := json.Unmarshal(raw, &operation); err != nil {
+		return nil, fmt.Errorf("failed to decode app operation response: %w", err)
+	}
+	if operation.ID == "" {
+		return nil, fmt.Errorf("app operation %q was not found", operationID)
+	}
+
+	return &operation, nil
 }
 
-// TriggerInstall calls Microsoft.NAV.upload to trigger the installation.
-func (s *Service) TriggerInstall(ctx context.Context, environmentName, companyID, uploadID string) error {
-	path := fmt.Sprintf("companies(%s)/extensionUpload(%s)/Microsoft.NAV.upload", companyID, uploadID)
-
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodPost, environmentName, path, nil, "", nil)
-	if err != nil {
-		return fmt.Errorf("failed to trigger extension install: %w", err)
-	}
-	resp.Body.Close()
-
-	return nil
-}
-
-// WaitForDeployment polls extensionDeploymentStatus until the deployment reaches a terminal state.
-// notBefore is the time recorded just before TriggerInstall was called; any status entry whose
-// StartedOn is at or before that time is considered stale (from a previous run) and skipped.
-// This prevents picking up a failed historical entry before BC has registered the new deployment.
-func (s *Service) WaitForDeployment(ctx context.Context, environmentName, companyID string, notBefore time.Time, timeout time.Duration) (*ExtensionDeploymentStatus, error) {
+// WaitForOperation polls an app operation until it reaches a terminal state or the
+// timeout elapses.
+//
+// scheduledIsTerminal controls how the "scheduled" status is treated, and must reflect
+// what the caller actually requested. The API uses "scheduled" for two different things:
+// a deployment genuinely deferred to a future window (unbounded, so it must not be
+// waited on), and a transient queued state that immediate operations — an uninstall in
+// particular — pass through before they start running. Treating the latter as terminal
+// reports success while the operation has not even begun.
+func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, environmentName, appID, operationID string, timeout time.Duration, scheduledIsTerminal bool) (*AppOperation, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-
-	// Give BC a few seconds to register the new deployment before the first poll.
-	select {
-	case <-time.After(5 * time.Second):
-	case <-ctx.Done():
-		return nil, fmt.Errorf("timed out waiting for extension deployment after %v", timeout)
-	}
 
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
-	// Poll immediately after the initial delay, then at intervals.
 	for {
-		status, err := s.getLatestDeploymentStatus(ctx, environmentName, companyID, notBefore)
+		operation, err := s.GetOperation(ctx, applicationFamily, environmentName, appID, operationID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to poll deployment status: %w", err)
+			return nil, fmt.Errorf("failed to poll app operation status: %w", err)
 		}
 
-		if status != nil {
-			tflog.Debug(ctx, "Extension deployment status", map[string]interface{}{
-				"name":           status.Name,
-				"status":         status.Status,
-				"operation_type": status.OperationType,
-			})
+		tflog.Debug(ctx, "Per-tenant extension operation status", map[string]interface{}{
+			"operation_id": operation.ID,
+			"status":       operation.Status,
+			"type":         operation.Type,
+		})
 
-			switch status.Status {
-			case DeploymentStatusCompleted:
-				return status, nil
-			case DeploymentStatusFailed:
-				return nil, fmt.Errorf("extension deployment failed (operationType=%s, status=%s, name=%q)",
-					status.OperationType, status.Status, status.Name)
+		switch {
+		case strings.EqualFold(operation.Status, OperationStatusSucceeded):
+			return operation, nil
+		case strings.EqualFold(operation.Status, OperationStatusScheduled):
+			if scheduledIsTerminal {
+				// Genuinely deferred to a future deployment window — do not block on it.
+				return operation, nil
 			}
+			// Transient queued state for an immediate operation; keep polling.
+		case strings.EqualFold(operation.Status, OperationStatusFailed):
+			return nil, fmt.Errorf("per-tenant extension operation %s failed: %s", operation.ID, operation.ErrorMessage)
+		case strings.EqualFold(operation.Status, OperationStatusCanceled):
+			return nil, fmt.Errorf("per-tenant extension operation %s was canceled", operation.ID)
+		case strings.EqualFold(operation.Status, OperationStatusSkipped):
+			return nil, fmt.Errorf("per-tenant extension operation %s was skipped", operation.ID)
 		}
 
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("timed out waiting for extension deployment after %v", timeout)
+			return nil, fmt.Errorf("timed out after %v waiting for per-tenant extension operation %s", timeout, operationID)
 		case <-ticker.C:
-			// continue polling
+			// Continue polling.
 		}
 	}
 }
 
-// getLatestDeploymentStatus returns the most recently started deployment status entry whose
-// StartedOn is strictly after notBefore. Entries at or before notBefore are from previous runs
-// and are ignored. Returns (nil, nil) when no eligible entry has been registered yet.
-func (s *Service) getLatestDeploymentStatus(ctx context.Context, environmentName, companyID string, notBefore time.Time) (*ExtensionDeploymentStatus, error) {
-	path := fmt.Sprintf("companies(%s)/extensionDeploymentStatus", companyID)
+// Uninstall uninstalls an app from the environment and returns the operation to poll.
+func (s *Service) Uninstall(ctx context.Context, applicationFamily, environmentName, appID string, req *UninstallAppRequest) (*AppOperation, error) {
+	path := fmt.Sprintf("%s/%s/uninstall", appsPath(applicationFamily, environmentName), appID)
 
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodGet, environmentName, path, nil, "", nil)
+	body, err := json.Marshal(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get deployment status: %w", err)
+		return nil, fmt.Errorf("failed to marshal uninstall request: %w", err)
+	}
+
+	resp, err := s.client.Post(ctx, path, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to uninstall per-tenant extension: %w", err)
 	}
 	defer resp.Body.Close()
 
-	var list ExtensionDeploymentStatusListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
-		return nil, fmt.Errorf("failed to decode deployment status response: %w", err)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return nil, fmt.Errorf("unexpected status code %d from uninstall endpoint", resp.StatusCode)
 	}
 
-	// BC returns entries in reverse-chronological order. Walk the list and return the first
-	// entry whose StartedOn is strictly after notBefore (i.e. belongs to this deployment).
-	for i := range list.Value {
-		startedOn, err := time.Parse(time.RFC3339, list.Value[i].StartedOn)
+	var operation AppOperation
+	if err := json.NewDecoder(resp.Body).Decode(&operation); err != nil {
+		return nil, fmt.Errorf("failed to decode uninstall operation response: %w", err)
+	}
+
+	return &operation, nil
+}
+
+// WaitForAppRemoval polls the apps list until the app is no longer present.
+//
+// A successful uninstall operation does not mean the app is gone: the API reports the
+// operation as "succeeded" while the app lingers in an "uninstallPending" state for
+// roughly another half minute. Without this wait, a destroy followed by an apply fails
+// because the extension is still considered installed.
+func (s *Service) WaitForAppRemoval(ctx context.Context, applicationFamily, environmentName, appID string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		app, err := s.GetApp(ctx, applicationFamily, environmentName, appID)
 		if err != nil {
-			// If we cannot parse the timestamp, conservatively skip the entry so that
-			// stale records with unparseable dates don't cause false failures.
-			continue
+			return fmt.Errorf("failed to poll app removal: %w", err)
 		}
-		if startedOn.After(notBefore) {
-			return &list.Value[i], nil
-		}
-	}
-
-	return nil, nil
-}
-
-// GetInstalledExtensionByNameAndPublisher looks up an installed extension by display name and publisher.
-// Returns (nil, nil) when no matching installed extension is found.
-func (s *Service) GetInstalledExtensionByNameAndPublisher(ctx context.Context, environmentName, companyID, displayName, publisher string) (*Extension, error) {
-	path := fmt.Sprintf("companies(%s)/extensions", companyID)
-
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodGet, environmentName, path, nil, "", nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list extensions: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var list ExtensionListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
-		return nil, fmt.Errorf("failed to decode extensions response: %w", err)
-	}
-
-	for i := range list.Value {
-		if list.Value[i].DisplayName == displayName &&
-			list.Value[i].Publisher == publisher &&
-			list.Value[i].IsInstalled {
-			return &list.Value[i], nil
-		}
-	}
-
-	return nil, nil
-}
-
-// Returns (nil, nil) when no matching extension is found.
-func (s *Service) GetExtensionByPackageID(ctx context.Context, environmentName, companyID, packageID string) (*Extension, error) {
-	path := fmt.Sprintf("companies(%s)/extensions", companyID)
-
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodGet, environmentName, path, nil, "", nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list extensions: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var list ExtensionListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
-		return nil, fmt.Errorf("failed to decode extensions response: %w", err)
-	}
-
-	for i := range list.Value {
-		if list.Value[i].PackageID == packageID {
-			return &list.Value[i], nil
-		}
-	}
-
-	return nil, nil
-}
-
-// GetExtensionByAppID looks up an installed extension by its stable appId (id field).
-// Returns (nil, nil) when no matching extension is found.
-func (s *Service) GetExtensionByAppID(ctx context.Context, environmentName, companyID, appID string) (*Extension, error) {
-	path := fmt.Sprintf("companies(%s)/extensions", companyID)
-
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodGet, environmentName, path, nil, "", nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list extensions: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var list ExtensionListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
-		return nil, fmt.Errorf("failed to decode extensions response: %w", err)
-	}
-
-	for i := range list.Value {
-		if list.Value[i].ID == appID && list.Value[i].IsInstalled {
-			return &list.Value[i], nil
-		}
-	}
-
-	return nil, nil
-}
-
-// Uninstall uninstalls an extension by packageId.
-// When deleteData is true it calls Microsoft.NAV.uninstallAndDeleteExtensionData; otherwise Microsoft.NAV.uninstall.
-func (s *Service) Uninstall(ctx context.Context, environmentName, companyID, packageID string, deleteData bool) error {
-	action := "Microsoft.NAV.uninstall"
-	if deleteData {
-		action = "Microsoft.NAV.uninstallAndDeleteExtensionData"
-	}
-
-	path := fmt.Sprintf("companies(%s)/extensions(%s)/%s", companyID, packageID, action)
-
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodPost, environmentName, path, nil, "", nil)
-	if err != nil {
-		return fmt.Errorf("failed to uninstall extension: %w", err)
-	}
-	resp.Body.Close()
-
-	return nil
-}
-
-// Unpublish calls Microsoft.NAV.unpublish on the extension identified by packageId.
-// Gracefully ignores 404/405 responses (indicating the BC version does not support unpublish).
-func (s *Service) Unpublish(ctx context.Context, environmentName, companyID, packageID string) error {
-	path := fmt.Sprintf("companies(%s)/extensions(%s)/Microsoft.NAV.unpublish", companyID, packageID)
-
-	resp, err := s.client.DoAutomationRequest(ctx, http.MethodPost, environmentName, path, nil, "", nil)
-	if err != nil {
-		// Gracefully skip if the endpoint does not exist (older BC versions).
-		if _, ok := err.(*client.AdminCenterError); ok {
-			tflog.Warn(ctx, "Microsoft.NAV.unpublish not supported on this BC version, skipping", map[string]interface{}{
-				"package_id": packageID,
-			})
+		if app == nil {
 			return nil
 		}
-		return fmt.Errorf("failed to unpublish extension: %w", err)
-	}
-	resp.Body.Close()
 
-	return nil
+		tflog.Debug(ctx, "Waiting for per-tenant extension removal", map[string]interface{}{
+			"app_id": appID,
+			"state":  app.State,
+		})
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out after %v waiting for per-tenant extension %s to be removed (last state %q)",
+				timeout, appID, app.State)
+		case <-ticker.C:
+			// Continue polling.
+		}
+	}
+}
+
+// ListScheduledPteOperations returns the PTE installs and updates that are scheduled for
+// a future deployment window on the environment.
+func (s *Service) ListScheduledPteOperations(ctx context.Context, applicationFamily, environmentName string) ([]ScheduledPteOperation, error) {
+	path := fmt.Sprintf("%s/scheduledPteOperations", appsPath(applicationFamily, environmentName))
+
+	resp, err := s.client.Get(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list scheduled per-tenant extension operations: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var list ScheduledPteOperationListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
+		return nil, fmt.Errorf("failed to decode scheduled per-tenant extension operations response: %w", err)
+	}
+
+	return list.Value, nil
+}
+
+// GetScheduledPteOperationsForApp returns the scheduled operations that target the given
+// app ID.
+func (s *Service) GetScheduledPteOperationsForApp(ctx context.Context, applicationFamily, environmentName, appID string) ([]ScheduledPteOperation, error) {
+	all, err := s.ListScheduledPteOperations(ctx, applicationFamily, environmentName)
+	if err != nil {
+		return nil, err
+	}
+
+	matches := make([]ScheduledPteOperation, 0, len(all))
+	for i := range all {
+		if strings.EqualFold(all[i].AppID, appID) {
+			matches = append(matches, all[i])
+		}
+	}
+
+	return matches, nil
+}
+
+// RemoveScheduledPteVersion cancels one scheduled PTE install or update, permanently
+// removing the staged .app package for that version. The scheduled operation is
+// identified by app ID, target version, and schedule kind.
+func (s *Service) RemoveScheduledPteVersion(ctx context.Context, applicationFamily, environmentName, appID string, req *RemoveScheduledPteVersionRequest) (*AppOperation, error) {
+	if req == nil || req.TargetVersion == "" || req.ScheduleKind == "" {
+		return nil, fmt.Errorf("targetVersion and scheduleKind are required to remove a scheduled per-tenant extension version")
+	}
+
+	path := fmt.Sprintf("%s/%s/removeScheduledPteVersion", appsPath(applicationFamily, environmentName), appID)
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal remove scheduled version request: %w", err)
+	}
+
+	resp, err := s.client.Post(ctx, path, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove scheduled per-tenant extension version: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var operation AppOperation
+	if err := json.NewDecoder(resp.Body).Decode(&operation); err != nil {
+		return nil, fmt.Errorf("failed to decode remove scheduled version response: %w", err)
+	}
+
+	return &operation, nil
 }
