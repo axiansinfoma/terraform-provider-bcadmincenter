@@ -337,8 +337,28 @@ func (c *Client) GetToken(ctx context.Context) (string, error) {
 	return token.Token, nil
 }
 
+// RequestOptions customizes a single Admin Center API request. A nil *RequestOptions
+// selects the defaults: a JSON content type, no extra headers, and the client's
+// configured HTTP timeout.
+type RequestOptions struct {
+	// ContentType overrides the default "application/json" request content type.
+	ContentType string
+	// Headers are additional request headers applied after the defaults.
+	Headers map[string]string
+	// Timeout overrides the client's HTTP timeout for this request only. Uploads of
+	// large payloads (for example a 50 MB .app package) need more than the default.
+	Timeout time.Duration
+}
+
 // DoRequest performs an authenticated HTTP request to the Business Central Admin Center API.
 func (c *Client) DoRequest(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
+	return c.DoRequestWithOptions(ctx, method, path, body, nil)
+}
+
+// DoRequestWithOptions performs an authenticated HTTP request to the Business Central
+// Admin Center API, allowing the content type, extra headers, and HTTP timeout to be
+// overridden for this request only.
+func (c *Client) DoRequestWithOptions(ctx context.Context, method, path string, body io.Reader, opts *RequestOptions) (*http.Response, error) {
 	// Get authentication token.
 	token, err := c.GetToken(ctx)
 	if err != nil {
@@ -355,12 +375,28 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body io.Rea
 	}
 
 	// Set headers.
+	contentType := "application/json"
+	if opts != nil && opts.ContentType != "" {
+		contentType = opts.ContentType
+	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Accept", "application/json")
+	if opts != nil {
+		for k, v := range opts.Headers {
+			req.Header.Set(k, v)
+		}
+	}
 
-	// Execute request.
-	resp, err := c.httpClient.Do(req)
+	// Execute request, applying a per-request timeout when one is requested.
+	httpClient := c.httpClient
+	if opts != nil && opts.Timeout > 0 && opts.Timeout != httpClient.Timeout {
+		clientCopy := *httpClient
+		clientCopy.Timeout = opts.Timeout
+		httpClient = &clientCopy
+	}
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
@@ -388,6 +424,17 @@ func (c *Client) Get(ctx context.Context, path string) (*http.Response, error) {
 // Post performs an authenticated POST request.
 func (c *Client) Post(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
 	return c.DoRequest(ctx, http.MethodPost, path, body)
+}
+
+// PostMultipart performs an authenticated POST request carrying a multipart/form-data
+// payload. contentType must be the boundary-carrying value produced by
+// multipart.Writer.FormDataContentType(). timeout overrides the client's HTTP timeout
+// when greater than zero, which large uploads require.
+func (c *Client) PostMultipart(ctx context.Context, path string, body io.Reader, contentType string, timeout time.Duration) (*http.Response, error) {
+	return c.DoRequestWithOptions(ctx, http.MethodPost, path, body, &RequestOptions{
+		ContentType: contentType,
+		Timeout:     timeout,
+	})
 }
 
 // Put performs an authenticated PUT request.

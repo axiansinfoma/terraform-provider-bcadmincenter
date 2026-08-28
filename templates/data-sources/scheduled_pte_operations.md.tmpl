@@ -1,0 +1,41 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: "Extension Management"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Type}} ({{.Name}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+### Basic Example
+
+{{tffile "examples/data-sources/bcadmincenter_scheduled_pte_operations/data-source.tf"}}
+
+### Failing a Plan When Anything Is Still Queued
+
+```terraform
+data "bcadmincenter_scheduled_pte_operations" "prod" {
+  application_family = "BusinessCentral"
+  environment_name   = "MyProdEnvironment"
+}
+
+check "no_unexpected_pte_deployments" {
+  assert {
+    condition     = length(data.bcadmincenter_scheduled_pte_operations.prod.operations) == 0
+    error_message = "Unexpected per-tenant extensions are still scheduled for deployment."
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Notes
+
+- Requires **Admin Center API version 2.29 or later**, which introduced the `apps/scheduledPteOperations` endpoint.
+- Every entry has `status = "scheduled"`; the endpoint only returns operations awaiting a future deployment window.
+- Scheduled versions are **not** removed when an extension is uninstalled. The [`bcadmincenter_per_tenant_extension`](../resources/per_tenant_extension.md) resource cancels the ones it created on destroy when `cancel_scheduled_on_destroy` is `true`.
+- `name`, `publisher`, `sync_mode`, `language_id`, `country_code`, and `target_release` come from the snapshot of the original upload request and are `null` when the API omits the `parameters` block.
