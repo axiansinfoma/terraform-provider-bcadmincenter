@@ -31,7 +31,7 @@ func NewService(c *client.Client) *Service {
 
 // List retrieves all environments for the specified application family.
 func (s *Service) List(ctx context.Context, applicationFamily string) ([]Environment, error) {
-	path := fmt.Sprintf("applications/%s/environments", applicationFamily)
+	path := client.BuildPath("applications", applicationFamily, "environments")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -49,7 +49,7 @@ func (s *Service) List(ctx context.Context, applicationFamily string) ([]Environ
 
 // Get retrieves a specific environment by name.
 func (s *Service) Get(ctx context.Context, applicationFamily, environmentName string) (*Environment, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *Service) Get(ctx context.Context, applicationFamily, environmentName st
 // Create creates a new Business Central environment.
 func (s *Service) Create(ctx context.Context, applicationFamily string, req *CreateEnvironmentRequest) (*Operation, error) {
 	// The API uses PUT with the environment name in the URL path.
-	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, req.Name)
+	path := client.BuildPath("applications", applicationFamily, "environments", req.Name)
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -96,7 +96,7 @@ func (s *Service) Create(ctx context.Context, applicationFamily string, req *Cre
 
 // Delete deletes a Business Central environment.
 func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName string) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName)
 
 	resp, err := s.client.Delete(ctx, path)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName
 // Uses the environment-specific operations endpoint.
 func (s *Service) GetOperation(ctx context.Context, applicationFamily, environmentName, operationID string) (*Operation, error) {
 	// GET /admin/{version}/applications/{applicationFamily}/environments/{environmentName}/operations/{id}.
-	path := fmt.Sprintf("applications/%s/environments/%s/operations/%s", applicationFamily, environmentName, operationID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "operations", operationID)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -234,7 +234,7 @@ func isEnvironmentNotFoundError(err error) bool {
 // GetUpdates returns available and selected updates for an environment.
 // Calls GET /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates.
 func (s *Service) GetUpdates(ctx context.Context, applicationFamily, environmentName string) ([]EnvironmentUpdate, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/updates", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "updates")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -252,7 +252,7 @@ func (s *Service) GetUpdates(ctx context.Context, applicationFamily, environment
 
 // patchUpdate is a shared helper that sends a PATCH request to the updates endpoint.
 func (s *Service) patchUpdate(ctx context.Context, applicationFamily, environmentName, targetVersion string, body interface{}) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/updates/%s", applicationFamily, environmentName, targetVersion)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "updates", targetVersion)
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {

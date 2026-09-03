@@ -30,7 +30,7 @@ func NewService(c *client.Client) *Service {
 
 // Get retrieves the support contact information for an environment.
 func (s *Service) Get(ctx context.Context, applicationFamily, environmentName string) (*SupportContact, error) {
-	path := fmt.Sprintf("support/applications/%s/environments/%s/supportcontact", applicationFamily, environmentName)
+	path := client.BuildPath("support", "applications", applicationFamily, "environments", environmentName, "supportcontact")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -73,7 +73,7 @@ func isNotFoundError(err error) bool {
 
 // Set updates the support contact information for an environment.
 func (s *Service) Set(ctx context.Context, applicationFamily, environmentName string, contact *SupportContact) (*SupportContact, error) {
-	path := fmt.Sprintf("support/applications/%s/environments/%s/supportcontact", applicationFamily, environmentName)
+	path := client.BuildPath("support", "applications", applicationFamily, "environments", environmentName, "supportcontact")
 
 	body, err := json.Marshal(contact)
 	if err != nil {

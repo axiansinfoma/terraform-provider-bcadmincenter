@@ -138,6 +138,25 @@ func newAdminCenterError(resp *http.Response) *AdminCenterError {
 	return apiError
 }
 
+// BuildPath assembles an Admin Center API path from individual segments, percent-escaping
+// each one.
+//
+// Callers pass values that come from Terraform configuration — environment names,
+// application families, app ids, target versions. Interpolating those into a path with
+// fmt.Sprintf lets a value change the request's structure rather than just its content: a
+// "?" starts the query string, a "#" starts a fragment that is never transmitted, and a
+// "/" or "../" re-targets the request at a different resource. Each of those turns a
+// request meant for one environment into a silently successful request against another.
+//
+// Literal segments may be passed alongside dynamic ones; escaping is a no-op for them.
+func BuildPath(segments ...string) string {
+	escaped := make([]string, len(segments))
+	for i, segment := range segments {
+		escaped[i] = url.PathEscape(segment)
+	}
+	return strings.Join(escaped, "/")
+}
+
 // validateBaseURL checks a caller-supplied base URL before it is used.
 //
 // Every request built from this URL carries a live Azure AD bearer token in an
@@ -543,7 +562,7 @@ func (c *Client) DoAutomationRequest(ctx context.Context, method, environmentNam
 	}
 
 	// Build Automation API URL.
-	url := fmt.Sprintf("%s/v2.0/%s/api/microsoft/automation/v2.0/%s", c.baseURL, environmentName, path)
+	url := fmt.Sprintf("%s/v2.0/%s/api/microsoft/automation/v2.0/%s", c.baseURL, BuildPath(environmentName), path)
 
 	// Create request.
 	req, err := http.NewRequestWithContext(ctx, method, url, body)

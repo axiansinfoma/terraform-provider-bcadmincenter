@@ -51,7 +51,7 @@ func (s *Service) ListAuthorizedApps(ctx context.Context) ([]AuthorizedApp, erro
 // Note: This endpoint cannot be used when authenticated as an app.
 // This does not grant admin consent or assign permission sets in environments.
 func (s *Service) AuthorizeApp(ctx context.Context, appID string) (*AuthorizedApp, error) {
-	path := fmt.Sprintf("authorizedAadApps/%s", appID)
+	path := client.BuildPath("authorizedAadApps", appID)
 
 	resp, err := s.client.Put(ctx, path, nil)
 	if err != nil {
@@ -74,7 +74,7 @@ func (s *Service) AuthorizeApp(ctx context.Context, appID string) (*AuthorizedAp
 // RemoveAuthorizedApp removes a Microsoft Entra app from the authorized apps list.
 // This does not revoke admin consent in Microsoft Entra ID nor remove permission sets in environments.
 func (s *Service) RemoveAuthorizedApp(ctx context.Context, appID string) error {
-	path := fmt.Sprintf("authorizedAadApps/%s", appID)
+	path := client.BuildPath("authorizedAadApps", appID)
 
 	resp, err := s.client.Delete(ctx, path)
 	if err != nil {

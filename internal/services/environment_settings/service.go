@@ -28,7 +28,7 @@ func NewService(c *client.Client) *Service {
 
 // GetUpdateSettings retrieves the update window settings for an environment.
 func (s *Service) GetUpdateSettings(ctx context.Context, applicationFamily, environmentName string) (*UpdateSettings, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/upgrade", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "upgrade")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *Service) GetUpdateSettings(ctx context.Context, applicationFamily, envi
 
 // SetUpdateSettings configures the update window for an environment.
 func (s *Service) SetUpdateSettings(ctx context.Context, applicationFamily, environmentName string, settings *UpdateSettings) (*UpdateSettings, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/upgrade", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "upgrade")
 
 	body, err := json.Marshal(settings)
 	if err != nil {
@@ -93,7 +93,7 @@ func (s *Service) GetTimeZones(ctx context.Context) ([]TimeZone, error) {
 // SetAppInsightsKey sets the Application Insights connection string for an environment.
 // Note: This triggers an automatic environment restart.
 func (s *Service) SetAppInsightsKey(ctx context.Context, applicationFamily, environmentName, key string) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/appinsightskey", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "appinsightskey")
 
 	req := AppInsightsKeyRequest{Key: key}
 	body, err := json.Marshal(req)
@@ -116,7 +116,7 @@ func (s *Service) SetAppInsightsKey(ctx context.Context, applicationFamily, envi
 
 // GetSecurityGroup retrieves the Microsoft Entra security group assigned to an environment.
 func (s *Service) GetSecurityGroup(ctx context.Context, applicationFamily, environmentName string) (*SecurityGroupResponse, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/securitygroupaccess", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "securitygroupaccess")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -139,7 +139,7 @@ func (s *Service) GetSecurityGroup(ctx context.Context, applicationFamily, envir
 
 // SetSecurityGroup assigns a Microsoft Entra security group to an environment.
 func (s *Service) SetSecurityGroup(ctx context.Context, applicationFamily, environmentName, groupID string) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/securitygroupaccess", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "securitygroupaccess")
 
 	req := SecurityGroupRequest{Value: groupID}
 	body, err := json.Marshal(req)
@@ -162,7 +162,7 @@ func (s *Service) SetSecurityGroup(ctx context.Context, applicationFamily, envir
 
 // ClearSecurityGroup removes the Microsoft Entra security group from an environment.
 func (s *Service) ClearSecurityGroup(ctx context.Context, applicationFamily, environmentName string) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/securitygroupaccess", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "securitygroupaccess")
 
 	resp, err := s.client.Delete(ctx, path)
 	if err != nil {
@@ -180,7 +180,7 @@ func (s *Service) ClearSecurityGroup(ctx context.Context, applicationFamily, env
 // GetAccessWithM365Licenses retrieves whether M365 license access is enabled.
 // Returns nil if the setting is not available (404) or not configured.
 func (s *Service) GetAccessWithM365Licenses(ctx context.Context, applicationFamily, environmentName string) (*AccessWithM365LicensesResponse, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/accesswithm365licenses", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "accesswithm365licenses")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -207,7 +207,7 @@ func (s *Service) GetAccessWithM365Licenses(ctx context.Context, applicationFami
 
 // SetAccessWithM365Licenses enables or disables M365 license access.
 func (s *Service) SetAccessWithM365Licenses(ctx context.Context, applicationFamily, environmentName string, enabled bool) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/accesswithm365licenses", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "accesswithm365licenses")
 
 	req := AccessWithM365LicensesRequest{Enabled: enabled}
 	body, err := json.Marshal(req)
@@ -230,7 +230,7 @@ func (s *Service) SetAccessWithM365Licenses(ctx context.Context, applicationFami
 
 // SetAppUpdateCadence configures how frequently AppSource apps are updated.
 func (s *Service) SetAppUpdateCadence(ctx context.Context, applicationFamily, environmentName, cadence string) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/appSourceAppsUpdateCadence", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "appSourceAppsUpdateCadence")
 
 	req := AppUpdateCadenceRequest{Value: cadence}
 	body, err := json.Marshal(req)
@@ -253,7 +253,7 @@ func (s *Service) SetAppUpdateCadence(ctx context.Context, applicationFamily, en
 
 // GetPartnerAccess retrieves partner access settings for an environment.
 func (s *Service) GetPartnerAccess(ctx context.Context, applicationFamily, environmentName string) (*PartnerAccessResponse, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/partneraccess", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "partneraccess")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -271,7 +271,7 @@ func (s *Service) GetPartnerAccess(ctx context.Context, applicationFamily, envir
 
 // SetPartnerAccess configures partner access settings for an environment.
 func (s *Service) SetPartnerAccess(ctx context.Context, applicationFamily, environmentName string, settings *PartnerAccessRequest) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/settings/partneraccess", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "settings", "partneraccess")
 
 	body, err := json.Marshal(settings)
 	if err != nil {

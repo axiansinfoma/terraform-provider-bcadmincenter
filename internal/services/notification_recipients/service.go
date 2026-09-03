@@ -101,7 +101,7 @@ func (s *Service) Create(ctx context.Context, email, name string) (*Notification
 // Delete deletes a notification recipient by ID.
 // The tenant is determined by the client's OAuth token (see client.ForTenant).
 func (s *Service) Delete(ctx context.Context, id string) error {
-	path := fmt.Sprintf("settings/notification/recipients/%s", id)
+	path := client.BuildPath("settings", "notification", "recipients", id)
 
 	resp, err := s.client.Delete(ctx, path)
 	if err != nil {

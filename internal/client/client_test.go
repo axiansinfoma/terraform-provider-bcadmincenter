@@ -1083,3 +1083,97 @@ func TestNewClient_RejectsPlaintextBaseURL(t *testing.T) {
 		t.Errorf("error should explain the https requirement, got: %v", err)
 	}
 }
+
+// TestBuildPath pins the escaping that keeps a configuration value from changing the
+// structure of a request rather than just its content.
+func TestBuildPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		segments []string
+		want     string
+	}{
+		{
+			name:     "ordinary values pass through unchanged",
+			segments: []string{"applications", "BusinessCentral", "environments", "production"},
+			want:     "applications/BusinessCentral/environments/production",
+		},
+		{
+			// Unescaped, this truncates the path at "prod" and appends an attacker-chosen
+			// query string, so the request silently targets a different environment.
+			name:     "question mark cannot start a query string",
+			segments: []string{"environments", "prod?api-version=v9.9"},
+			want:     "environments/prod%3Fapi-version=v9.9",
+		},
+		{
+			// Unescaped, everything from "#" onward becomes a fragment and is never sent,
+			// so a settings write lands on "prod" and reports success.
+			name:     "hash cannot start a fragment",
+			segments: []string{"environments", "prod#1"},
+			want:     "environments/prod%231",
+		},
+		{
+			// Unescaped, a normalising gateway collapses the dot-segments and re-targets
+			// the request — a DELETE could hit an unrelated environment.
+			name:     "slashes and dot segments cannot re-target the request",
+			segments: []string{"environments", "a/../../applications/X/environments/prod"},
+			want:     "environments/a%2F..%2F..%2Fapplications%2FX%2Fenvironments%2Fprod",
+		},
+		{
+			name:     "percent is escaped rather than read as an escape sequence",
+			segments: []string{"environments", "prod%2fother"},
+			want:     "environments/prod%252fother",
+		},
+		{
+			name:     "empty segment is preserved",
+			segments: []string{"apps", ""},
+			want:     "apps/",
+		},
+		{
+			name:     "no segments",
+			segments: nil,
+			want:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := BuildPath(tt.segments...); got != tt.want {
+				t.Errorf("BuildPath(%q) = %q, want %q", tt.segments, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestDoRequest_HostileSegmentReachesServerIntact verifies the escaping survives the
+// whole request pipeline: the server must see the crafted name as one path segment, not
+// as a shorter path plus a query string.
+func TestDoRequest_HostileSegmentReachesServerIntact(t *testing.T) {
+	var gotPath, gotRawQuery string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotRawQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{}
+	c.SetCredential(&mockTokenCredential{token: "test-token"})
+	c.SetBaseURL(server.URL)
+	c.SetAPIVersion(constants.DefaultAPIVersion)
+	c.SetHTTPClient(&http.Client{})
+
+	hostile := "prod?api-version=v9.9"
+	resp, err := c.Get(context.Background(), BuildPath("applications", "BusinessCentral", "environments", hostile))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	wantPath := "/admin/" + constants.DefaultAPIVersion + "/applications/BusinessCentral/environments/" + hostile
+	if gotPath != wantPath {
+		t.Errorf("server saw path %q, want %q", gotPath, wantPath)
+	}
+	if gotRawQuery != "" {
+		t.Errorf("server saw query %q, want none — the segment escaped its position", gotRawQuery)
+	}
+}
