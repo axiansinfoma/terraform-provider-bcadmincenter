@@ -41,16 +41,12 @@ repos:
         pass_filenames: false
         files: ^templates/.*\.tmpl$
 
-      - id: generate-documentation
-        name: Generate documentation
-        entry: bash -c 'if git diff --cached --name-only --diff-filter=ACM | grep -qE "^(templates/|internal/|examples/)"; then echo "Regenerating documentation..."; cd tools && go generate && cd ..; git add docs/; fi'
+      # Regenerates docs/ and FAILS if the result differs from what is committed.
+      # Deliberately does not `git add docs/`: silently amending staged content hides
+      # generated changes from the review the developer is about to commit.
+      - id: check-documentation-sync
+        name: Check documentation is in sync
+        entry: bash -c 'cd tools && go generate && cd .. && git diff --exit-code docs/ || { echo; echo "Documentation is out of sync — docs/ was regenerated in your working tree."; echo "Review the changes and stage them, then commit again."; exit 1; }'
         language: system
         pass_filenames: false
         files: ^(templates/|internal/|examples/)
-
-      - id: check-documentation-sync
-        name: Check documentation is in sync
-        entry: bash -c 'cd tools && go generate && cd .. && git diff --exit-code docs/ || (echo "Documentation out of sync. Changes have been staged." && exit 0)'
-        language: system
-        pass_filenames: false
-        stages: [commit]
