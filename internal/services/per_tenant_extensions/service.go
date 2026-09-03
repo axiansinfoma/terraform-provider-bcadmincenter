@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -38,12 +39,25 @@ func NewService(c *client.Client) *Service {
 
 // appsPath builds the base apps path for an environment.
 func appsPath(applicationFamily, environmentName string) string {
-	return fmt.Sprintf("applications/%s/environments/%s/apps", applicationFamily, environmentName)
+	return client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps")
+}
+
+// appPath returns the path for a single app under an environment, with any further
+// segments appended. Every segment is escaped by client.BuildPath.
+func appPath(applicationFamily, environmentName, appID string, extra ...string) string {
+	segments := append([]string{"applications", applicationFamily, "environments", environmentName, "apps", appID}, extra...)
+	return client.BuildPath(segments...)
 }
 
 // IsNotFoundError reports whether err is an API error indicating the targeted app or
 // scheduled version does not exist. Callers use it to treat "already gone" as success.
 func IsNotFoundError(err error) bool {
+	// HTTP 404 is authoritative. The Admin Center also returns not-found codes on some
+	// non-404 statuses, so both checks are needed.
+	if client.IsNotFound(err) {
+		return true
+	}
+
 	var apiErr *client.AdminCenterError
 	if !errors.As(err, &apiErr) {
 		return false
@@ -118,7 +132,7 @@ func (s *Service) UploadAndInstall(ctx context.Context, applicationFamily, envir
 		return nil, err
 	}
 
-	path := fmt.Sprintf("%s/pteInstall", appsPath(applicationFamily, environmentName))
+	path := appsPath(applicationFamily, environmentName) + "/pteInstall"
 
 	resp, err := s.client.PostMultipart(ctx, path, body, contentType, uploadTimeout)
 	if err != nil {
@@ -183,7 +197,7 @@ func (s *Service) GetOperation(ctx context.Context, applicationFamily, environme
 		return nil, fmt.Errorf("an operation id is required to look up an app operation")
 	}
 
-	path := fmt.Sprintf("%s/%s/operations/%s", appsPath(applicationFamily, environmentName), appID, operationID)
+	path := appPath(applicationFamily, environmentName, appID, "operations", operationID)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -257,7 +271,7 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 			// Transient queued state for an immediate operation; keep polling.
 		case strings.EqualFold(operation.Status, OperationStatusFailed):
 			return nil, fmt.Errorf("per-tenant extension operation %s failed: %s", operation.ID, operation.ErrorMessage)
-		case strings.EqualFold(operation.Status, OperationStatusCanceled):
+		case utils.StatusIs(operation.Status, OperationStatusCanceled, OperationStatusCancelled):
 			return nil, fmt.Errorf("per-tenant extension operation %s was canceled", operation.ID)
 		case strings.EqualFold(operation.Status, OperationStatusSkipped):
 			return nil, fmt.Errorf("per-tenant extension operation %s was skipped", operation.ID)
@@ -274,7 +288,7 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 
 // Uninstall uninstalls an app from the environment and returns the operation to poll.
 func (s *Service) Uninstall(ctx context.Context, applicationFamily, environmentName, appID string, req *UninstallAppRequest) (*AppOperation, error) {
-	path := fmt.Sprintf("%s/%s/uninstall", appsPath(applicationFamily, environmentName), appID)
+	path := appPath(applicationFamily, environmentName, appID, "uninstall")
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -339,7 +353,7 @@ func (s *Service) WaitForAppRemoval(ctx context.Context, applicationFamily, envi
 // ListScheduledPteOperations returns the PTE installs and updates that are scheduled for
 // a future deployment window on the environment.
 func (s *Service) ListScheduledPteOperations(ctx context.Context, applicationFamily, environmentName string) ([]ScheduledPteOperation, error) {
-	path := fmt.Sprintf("%s/scheduledPteOperations", appsPath(applicationFamily, environmentName))
+	path := appsPath(applicationFamily, environmentName) + "/scheduledPteOperations"
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -381,7 +395,7 @@ func (s *Service) RemoveScheduledPteVersion(ctx context.Context, applicationFami
 		return nil, fmt.Errorf("targetVersion and scheduleKind are required to remove a scheduled per-tenant extension version")
 	}
 
-	path := fmt.Sprintf("%s/%s/removeScheduledPteVersion", appsPath(applicationFamily, environmentName), appID)
+	path := appPath(applicationFamily, environmentName, appID, "removeScheduledPteVersion")
 
 	body, err := json.Marshal(req)
 	if err != nil {

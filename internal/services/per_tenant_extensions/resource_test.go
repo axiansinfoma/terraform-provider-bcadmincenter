@@ -5,15 +5,20 @@ package pertenantextensions
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 )
 
 func TestPerTenantExtensionResource_Metadata(t *testing.T) {
@@ -296,7 +301,7 @@ func TestOperationTimeout(t *testing.T) {
 			name:     "null object falls back to the default",
 			timeouts: types.ObjectNull(timeoutsType.AttrTypes),
 			key:      "create",
-			want:     defaultOperationTimeout,
+			want:     utils.DefaultOperationTimeout,
 		},
 		{
 			name:     "configured value is used",
@@ -308,19 +313,19 @@ func TestOperationTimeout(t *testing.T) {
 			name:     "unset key falls back to the default",
 			timeouts: withValues(types.StringValue("90m"), types.StringNull(), types.StringNull()),
 			key:      "delete",
-			want:     defaultOperationTimeout,
+			want:     utils.DefaultOperationTimeout,
 		},
 		{
 			name:     "unparseable value falls back to the default",
 			timeouts: withValues(types.StringValue("not-a-duration"), types.StringNull(), types.StringNull()),
 			key:      "create",
-			want:     defaultOperationTimeout,
+			want:     utils.DefaultOperationTimeout,
 		},
 		{
 			name:     "non-positive value falls back to the default",
 			timeouts: withValues(types.StringValue("0s"), types.StringNull(), types.StringNull()),
 			key:      "create",
-			want:     defaultOperationTimeout,
+			want:     utils.DefaultOperationTimeout,
 		},
 	}
 
@@ -339,4 +344,63 @@ func stringOrNullValue(value string) types.String {
 		return types.StringNull()
 	}
 	return types.StringValue(value)
+}
+
+// TestVerifyFileChecksum covers the integrity check that file_sha256 previously did not
+// perform. Nothing hashed the package or compared it: the attribute existed only so that
+// editing it produced a diff, so a rebuilt package with a stale hash silently uploaded
+// nothing, and a package rebuilt between plan and apply uploaded unverified bytes.
+func TestVerifyFileChecksum(t *testing.T) {
+	content := []byte("pretend this is an .app package")
+	actual := fmt.Sprintf("%x", sha256.Sum256(content))
+
+	tests := []struct {
+		name    string
+		hash    types.String
+		wantErr bool
+	}{
+		{name: "matching hash", hash: types.StringValue(actual)},
+		{name: "uppercase hash still matches", hash: types.StringValue(strings.ToUpper(actual))},
+		{name: "surrounding whitespace tolerated", hash: types.StringValue("  " + actual + "\n")},
+		{name: "unset hash skips the check", hash: types.StringNull()},
+		{name: "empty hash skips the check", hash: types.StringValue("")},
+		{
+			name:    "stale hash is rejected",
+			hash:    types.StringValue("0000000000000000000000000000000000000000000000000000000000000000"),
+			wantErr: true,
+		},
+		{name: "not a hash at all is rejected", hash: types.StringValue("not-a-hash"), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := verifyFileChecksum(&PerTenantExtensionResourceModel{FileSHA256: tt.hash}, content)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("verifyFileChecksum() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestReadExtensionFile checks the package is sized and typed before being read into
+// memory. os.ReadFile alone slurped the whole path first and only then hit the 50 MB
+// limit, so a huge file or a non-regular path exhausted memory or hung.
+func TestReadExtensionFile(t *testing.T) {
+	dir := t.TempDir()
+
+	good := filepath.Join(dir, "ok.app")
+	if err := os.WriteFile(good, []byte("package"), 0o600); err != nil {
+		t.Fatalf("failed to write fixture: %v", err)
+	}
+	if got, err := readExtensionFile(good); err != nil || string(got) != "package" {
+		t.Errorf("readExtensionFile(regular file) = %q, %v; want \"package\", nil", got, err)
+	}
+
+	if _, err := readExtensionFile(filepath.Join(dir, "missing.app")); err == nil {
+		t.Error("a missing file should be an error")
+	}
+
+	if _, err := readExtensionFile(dir); err == nil {
+		t.Error("a directory is not a regular file and must be rejected")
+	}
 }

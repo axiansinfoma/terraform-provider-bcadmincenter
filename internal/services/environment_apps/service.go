@@ -58,7 +58,7 @@ func IsCancelNotAllowedError(err error) bool {
 // GetByID retrieves a specific installed app by its ID.
 // Returns (nil, nil) when the app is not found (not installed).
 func (s *Service) GetByID(ctx context.Context, applicationFamily, environmentName, appID string) (*App, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -72,7 +72,10 @@ func (s *Service) GetByID(ctx context.Context, applicationFamily, environmentNam
 	}
 
 	for i := range appList.Value {
-		if appList.Value[i].ID == appID {
+		// The Admin Center varies GUID casing between what it accepts and what it
+		// returns, so an exact match would report an installed app as missing and make
+		// Read remove it from state.
+		if strings.EqualFold(appList.Value[i].ID, appID) {
 			return &appList.Value[i], nil
 		}
 	}
@@ -84,7 +87,7 @@ func (s *Service) GetByID(ctx context.Context, applicationFamily, environmentNam
 // Install installs an app into the environment.
 // Returns the async operation to poll.
 func (s *Service) Install(ctx context.Context, applicationFamily, environmentName, appID string, req *InstallAppRequest) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/install", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "install")
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -112,7 +115,7 @@ func (s *Service) Install(ctx context.Context, applicationFamily, environmentNam
 // Update updates an installed app to a new version.
 // Returns the async operation to poll.
 func (s *Service) Update(ctx context.Context, applicationFamily, environmentName, appID string, req *UpdateAppRequest) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/update", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "update")
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -140,7 +143,7 @@ func (s *Service) Update(ctx context.Context, applicationFamily, environmentName
 // Uninstall uninstalls an app from the environment.
 // Returns the async operation to poll.
 func (s *Service) Uninstall(ctx context.Context, applicationFamily, environmentName, appID string, req *UninstallAppRequest) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/uninstall", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "uninstall")
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -171,7 +174,7 @@ func (s *Service) Uninstall(ctx context.Context, applicationFamily, environmentN
 // ID in the request body.  Returns an error if no scheduled update operation is
 // found or the API call fails.
 func (s *Service) GetScheduledUpdateOperationID(ctx context.Context, applicationFamily, environmentName, appID string) (string, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/operations", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "operations")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -203,7 +206,7 @@ func (s *Service) GetScheduledUpdateOperationID(ctx context.Context, application
 // state; callers should check with IsCancelNotAllowedError to distinguish that
 // from transient errors.
 func (s *Service) CancelUpdate(ctx context.Context, applicationFamily, environmentName, appID, scheduledOperationID string) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/update/cancel", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "update", "cancel")
 
 	cancelReq := CancelUpdateRequest{ScheduledOperationID: scheduledOperationID}
 	body, err := json.Marshal(cancelReq)
@@ -226,7 +229,7 @@ func (s *Service) CancelUpdate(ctx context.Context, applicationFamily, environme
 
 // getOperation retrieves the current status of an async operation.
 func (s *Service) getOperation(ctx context.Context, applicationFamily, environmentName, operationID string) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/operations/%s", applicationFamily, environmentName, operationID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "operations", operationID)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -266,18 +269,8 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 
 	tflog.Debug(ctx, "Initial app operation status", map[string]interface{}{"status": operation.Status, "operation_id": operation.ID})
 
-	switch operation.Status {
-	case OperationStatusSucceeded:
-		return false, nil
-	case OperationStatusFailed:
-		return false, fmt.Errorf("operation failed: %s", operation.ErrorMessage)
-	case OperationStatusCancelled:
-		return false, fmt.Errorf("operation was cancelled")
-	case OperationStatusScheduled:
-		if skipIfScheduled {
-			// Operation has been deferred to the update window — do not block.
-			return true, nil
-		}
+	if done, deferred, err := classifyOperation(operation, skipIfScheduled); done {
+		return deferred, err
 	}
 
 	// Then poll at intervals.
@@ -293,25 +286,32 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 
 			tflog.Debug(ctx, "Polling app operation status", map[string]interface{}{"status": operation.Status, "operation_id": operation.ID})
 
-			switch operation.Status {
-			case OperationStatusSucceeded:
-				return false, nil
-			case OperationStatusFailed:
-				return false, fmt.Errorf("operation failed: %s", operation.ErrorMessage)
-			case OperationStatusCancelled:
-				return false, fmt.Errorf("operation was cancelled")
-			case OperationStatusScheduled:
-				if skipIfScheduled {
-					// Transitioned to scheduled mid-poll — deferred to update window.
-					return true, nil
-				}
-				continue
-			case OperationStatusQueued, OperationStatusRunning:
-				// Continue polling.
-				continue
-			default:
-				return false, fmt.Errorf("unknown operation status: %s", operation.Status)
+			if done, deferred, err := classifyOperation(operation, skipIfScheduled); done {
+				return deferred, err
 			}
+			// Queued, running, scheduled-but-not-skippable, or a status this provider
+			// does not recognise: keep polling until the context deadline. Treating an
+			// unrecognised status as fatal used to fail an install that had actually
+			// succeeded, and left no state behind for it.
 		}
+	}
+}
+
+// classifyOperation decides whether a polled operation has reached a terminal state.
+// done reports whether polling should stop; deferred reports that the operation was
+// handed off to the environment's update window rather than completed.
+func classifyOperation(operation *Operation, skipIfScheduled bool) (done, deferred bool, err error) {
+	switch {
+	case utils.StatusIs(operation.Status, OperationStatusSucceeded):
+		return true, false, nil
+	case utils.StatusIs(operation.Status, OperationStatusFailed):
+		return true, false, fmt.Errorf("operation failed: %s", operation.ErrorMessage)
+	case utils.StatusIs(operation.Status, OperationStatusCancelled, OperationStatusCanceled):
+		return true, false, fmt.Errorf("operation was cancelled")
+	case utils.StatusIs(operation.Status, OperationStatusScheduled) && skipIfScheduled:
+		// Deferred to the update window — do not block.
+		return true, true, nil
+	default:
+		return false, false, nil
 	}
 }

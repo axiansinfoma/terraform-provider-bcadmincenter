@@ -30,7 +30,7 @@ func NewService(c *client.Client) *Service {
 
 // Get retrieves the support contact information for an environment.
 func (s *Service) Get(ctx context.Context, applicationFamily, environmentName string) (*SupportContact, error) {
-	path := fmt.Sprintf("support/applications/%s/environments/%s/supportcontact", applicationFamily, environmentName)
+	path := client.BuildPath("support", "applications", applicationFamily, "environments", environmentName, "supportcontact")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -56,17 +56,24 @@ func isNotFoundError(err error) bool {
 		return false
 	}
 
-	var apiErr *client.AdminCenterError
-	if errors.As(err, &apiErr) {
-		return apiErr.Code == "ResourceNotFound" || apiErr.Code == "EnvironmentNotFound"
+	// HTTP 404 is authoritative. The Admin Center also returns not-found *codes* on
+	// some non-404 statuses, so both checks are needed.
+	if client.IsNotFound(err) {
+		return true
 	}
 
-	return strings.Contains(err.Error(), "404")
+	var apiErr *client.AdminCenterError
+	if errors.As(err, &apiErr) {
+		return strings.EqualFold(apiErr.Code, "ResourceNotFound") ||
+			strings.EqualFold(apiErr.Code, "EnvironmentNotFound")
+	}
+
+	return false
 }
 
 // Set updates the support contact information for an environment.
 func (s *Service) Set(ctx context.Context, applicationFamily, environmentName string, contact *SupportContact) (*SupportContact, error) {
-	path := fmt.Sprintf("support/applications/%s/environments/%s/supportcontact", applicationFamily, environmentName)
+	path := client.BuildPath("support", "applications", applicationFamily, "environments", environmentName, "supportcontact")
 
 	body, err := json.Marshal(contact)
 	if err != nil {

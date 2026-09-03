@@ -105,7 +105,7 @@ resource "bcadmincenter_environment_support_contact" "sandbox" {
 
 ### Optional
 
-- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.
+- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. Changing this forces a new resource to be created.
 - `url` (String) A URL for additional support information such as a support website or portal
 
 ### Read-Only

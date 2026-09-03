@@ -5,10 +5,17 @@ package environments
 
 import (
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
+	environmentsettings "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_settings"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -276,9 +283,7 @@ func TestUpdateModelFromEnvironment(t *testing.T) {
 				if model.AADTenantID.ValueString() != "tenant-id-123" {
 					t.Errorf("AADTenantID = %v, want tenant-id-123", model.AADTenantID.ValueString())
 				}
-				if !model.AzureRegion.IsNull() {
-					t.Error("AzureRegion should be null")
-				}
+				// azure_region preservation is asserted for every case in the runner below.
 			},
 		},
 		{
@@ -360,7 +365,16 @@ func TestUpdateModelFromEnvironment(t *testing.T) {
 			r := &EnvironmentResource{}
 			model := &EnvironmentResourceModel{}
 
+			// The API never returns azure_region, so seed it the way Create and Read do
+			// (from the plan and from prior state respectively). The refresh must leave it
+			// alone; resetting it to null breaks the apply and then forces a replace.
+			model.AzureRegion = types.StringValue("westus2")
+
 			r.updateModelFromEnvironment(model, tt.env)
+
+			if model.AzureRegion.ValueString() != "westus2" {
+				t.Errorf("AzureRegion = %v, want the seeded westus2 to be preserved", model.AzureRegion)
+			}
 
 			tt.validate(t, model)
 		})
@@ -826,5 +840,248 @@ func TestSettingsBlockChanged_UnknownM365DoesNotTriggerChange(t *testing.T) {
 				t.Errorf("settingsBlockChanged() = %v, want %v", got, tt.expected)
 			}
 		})
+	}
+}
+
+// TestResolveUnknownComputed underpins partial-state saving after a failed create.
+// Terraform rejects a state object that still contains unknown values, so every unknown
+// has to become null before the model can be written. Without this, an environment that
+// was already provisioning could not be recorded at all, and Terraform forgot it.
+func TestResolveUnknownComputed(t *testing.T) {
+	model := &EnvironmentResourceModel{
+		ID:                         types.StringUnknown(),
+		Name:                       types.StringValue("prod01"),
+		ApplicationFamily:          types.StringValue("BusinessCentral"),
+		Type:                       types.StringValue("Production"),
+		CountryCode:                types.StringValue("US"),
+		RingName:                   types.StringUnknown(),
+		ApplicationVersion:         types.StringUnknown(),
+		IgnoreUpdateWindow:         types.BoolUnknown(),
+		AzureRegion:                types.StringValue("westus2"),
+		Status:                     types.StringUnknown(),
+		WebClientLoginURL:          types.StringUnknown(),
+		WebServiceURL:              types.StringUnknown(),
+		AppInsightsKey:             types.StringUnknown(),
+		PlatformVersion:            types.StringUnknown(),
+		AADTenantID:                types.StringUnknown(),
+		PendingUpgradeVersion:      types.StringUnknown(),
+		PendingUpgradeScheduledFor: types.StringUnknown(),
+		Settings: &EnvironmentSettingsNestedModel{
+			AccessWithM365Licenses: types.BoolUnknown(),
+			SecurityGroupID:        types.StringValue("group-1"),
+		},
+	}
+
+	resolveUnknownComputed(model)
+
+	unknowns := map[string]bool{
+		"id":                            model.ID.IsUnknown(),
+		"ring_name":                     model.RingName.IsUnknown(),
+		"application_version":           model.ApplicationVersion.IsUnknown(),
+		"ignore_update_window":          model.IgnoreUpdateWindow.IsUnknown(),
+		"status":                        model.Status.IsUnknown(),
+		"web_client_login_url":          model.WebClientLoginURL.IsUnknown(),
+		"web_service_url":               model.WebServiceURL.IsUnknown(),
+		"app_insights_key":              model.AppInsightsKey.IsUnknown(),
+		"platform_version":              model.PlatformVersion.IsUnknown(),
+		"aad_tenant_id":                 model.AADTenantID.IsUnknown(),
+		"pending_upgrade_version":       model.PendingUpgradeVersion.IsUnknown(),
+		"pending_upgrade_scheduled_for": model.PendingUpgradeScheduledFor.IsUnknown(),
+		"settings.access_with_m365":     model.Settings.AccessWithM365Licenses.IsUnknown(),
+	}
+	for attr, stillUnknown := range unknowns {
+		if stillUnknown {
+			t.Errorf("%s is still unknown; Terraform would reject the state object", attr)
+		}
+	}
+
+	// Known values must survive untouched.
+	if model.Name.ValueString() != "prod01" {
+		t.Errorf("Name = %v, want prod01", model.Name)
+	}
+	if model.AzureRegion.ValueString() != "westus2" {
+		t.Errorf("AzureRegion = %v, want westus2", model.AzureRegion)
+	}
+	if model.Settings.SecurityGroupID.ValueString() != "group-1" {
+		t.Errorf("SecurityGroupID = %v, want group-1", model.Settings.SecurityGroupID)
+	}
+}
+
+// A nil settings block must not panic — it is an optional block.
+func TestResolveUnknownComputed_NilSettings(t *testing.T) {
+	model := &EnvironmentResourceModel{ID: types.StringUnknown()}
+	resolveUnknownComputed(model)
+	if model.ID.IsUnknown() {
+		t.Error("ID should have been resolved to null")
+	}
+}
+
+// recordSettingsCalls runs applyEnvironmentSettingsChanges against a mock server and
+// returns the endpoints it called, so "did a removal actually reach the API?" is answered
+// by observation rather than by reading the guards.
+func recordSettingsCalls(t *testing.T, plan, state *EnvironmentSettingsNestedModel) []string {
+	t.Helper()
+
+	var calls []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		leaf := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
+		calls = append(calls, r.Method+" "+leaf+" "+strings.TrimSpace(string(body)))
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(map[string]any{}); err != nil {
+			t.Errorf("failed to encode response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	c := &client.Client{}
+	c.SetCredential(&mockTokenCredential{token: "test-token"})
+	c.SetBaseURL(server.URL)
+	c.SetAPIVersion(constants.DefaultAPIVersion)
+	c.SetHTTPClient(&http.Client{})
+
+	if err := (&EnvironmentResource{}).applyEnvironmentSettingsChanges(
+		context.Background(), environmentsettings.NewService(c), "BusinessCentral", "prod", plan, state,
+	); err != nil {
+		t.Fatalf("applyEnvironmentSettingsChanges: %v", err)
+	}
+	return calls
+}
+
+func fullSettings(t *testing.T) *EnvironmentSettingsNestedModel {
+	t.Helper()
+	ids, diags := types.ListValueFrom(context.Background(), types.StringType, []string{"aaaa"})
+	if diags.HasError() {
+		t.Fatalf("building list: %v", diags)
+	}
+	return &EnvironmentSettingsNestedModel{
+		UpdateWindowStartTime:   types.StringValue("22:00"),
+		UpdateWindowEndTime:     types.StringValue("04:00"),
+		UpdateWindowTimeZone:    types.StringValue("UTC"),
+		AppInsightsKey:          types.StringValue("key-123"),
+		SecurityGroupID:         types.StringValue("group-1"),
+		AccessWithM365Licenses:  types.BoolValue(true),
+		AppUpdateCadence:        types.StringValue("DuringMajorUpgrade"),
+		PartnerAccessStatus:     types.StringValue("AllowAllPartnerTenants"),
+		AllowedPartnerTenantIDs: ids,
+	}
+}
+
+// TestSettingsRemoval_ReachesTheAPI covers the settings whose removal is expressible.
+// Each of these used to send no request at all, so Terraform recorded the attribute as
+// removed while the environment kept it — and since these settings are not read back,
+// the difference could never surface in a later plan.
+func TestSettingsRemoval_ReachesTheAPI(t *testing.T) {
+	tests := []struct {
+		name     string
+		mutate   func(*EnvironmentSettingsNestedModel)
+		wantCall string
+	}{
+		{
+			name:     "clearing app_insights_key sends an empty key",
+			mutate:   func(m *EnvironmentSettingsNestedModel) { m.AppInsightsKey = types.StringNull() },
+			wantCall: `POST appinsightskey {"key":""}`,
+		},
+		{
+			name:     "clearing security_group_id deletes the assignment",
+			mutate:   func(m *EnvironmentSettingsNestedModel) { m.SecurityGroupID = types.StringNull() },
+			wantCall: "DELETE securitygroupaccess ",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plan := fullSettings(t)
+			tt.mutate(plan)
+
+			calls := recordSettingsCalls(t, plan, fullSettings(t))
+
+			var found bool
+			for _, c := range calls {
+				if c == tt.wantCall {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("removal did not reach the API.\n  want call: %q\n  got calls: %v", tt.wantCall, calls)
+			}
+		})
+	}
+}
+
+// TestSettingsUnchanged_SendsNothing guards the other direction: an identical plan must
+// not issue writes, so a no-op apply cannot disturb a live environment.
+func TestSettingsUnchanged_SendsNothing(t *testing.T) {
+	if calls := recordSettingsCalls(t, fullSettings(t), fullSettings(t)); len(calls) != 0 {
+		t.Errorf("an unchanged settings block should send no requests, got: %v", calls)
+	}
+}
+
+// TestModifyPlan_RefusesUnclearableRemovals pins the plan-time guards. These settings have
+// no API operation to unset them, so the removal must fail before anything is applied
+// rather than silently doing nothing.
+func TestModifyPlan_RefusesUnclearableRemovals(t *testing.T) {
+	tests := []struct {
+		name       string
+		mutate     func(*EnvironmentSettingsNestedModel)
+		wantErr    bool
+		wantDetail string
+	}{
+		{
+			name:       "removing app_update_cadence is refused",
+			mutate:     func(m *EnvironmentSettingsNestedModel) { m.AppUpdateCadence = types.StringNull() },
+			wantErr:    true,
+			wantDetail: `"Default"`,
+		},
+		{
+			name:       "removing partner_access_status is refused",
+			mutate:     func(m *EnvironmentSettingsNestedModel) { m.PartnerAccessStatus = types.StringNull() },
+			wantErr:    true,
+			wantDetail: `"Disabled"`,
+		},
+		{
+			name: "removing the whole update window is refused",
+			mutate: func(m *EnvironmentSettingsNestedModel) {
+				m.UpdateWindowStartTime = types.StringNull()
+				m.UpdateWindowEndTime = types.StringNull()
+				m.UpdateWindowTimeZone = types.StringNull()
+			},
+			wantErr:    true,
+			wantDetail: "no operation to clear a configured update window",
+		},
+		{
+			name:   "changing a value is allowed",
+			mutate: func(m *EnvironmentSettingsNestedModel) { m.AppUpdateCadence = types.StringValue("Default") },
+		},
+		{
+			name:   "removing a clearable setting is allowed",
+			mutate: func(m *EnvironmentSettingsNestedModel) { m.AppInsightsKey = types.StringNull() },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plan := fullSettings(t)
+			tt.mutate(plan)
+
+			diags := checkUnclearableSettings(&EnvironmentResourceModel{Settings: plan}, &EnvironmentResourceModel{Settings: fullSettings(t)})
+
+			if diags.HasError() != tt.wantErr {
+				t.Fatalf("HasError() = %v, want %v (diags: %v)", diags.HasError(), tt.wantErr, diags)
+			}
+			if tt.wantDetail != "" && !strings.Contains(diags.Errors()[0].Detail(), tt.wantDetail) {
+				t.Errorf("diagnostic should tell the user what to do instead; missing %q in:\n%s",
+					tt.wantDetail, diags.Errors()[0].Detail())
+			}
+		})
+	}
+}
+
+// Removing the whole block is the same as clearing every attribute, so it must be
+// refused for the same reasons rather than reporting a success that changes nothing.
+func TestModifyPlan_RefusesWholeBlockRemoval(t *testing.T) {
+	diags := checkUnclearableSettings(&EnvironmentResourceModel{Settings: nil}, &EnvironmentResourceModel{Settings: fullSettings(t)})
+	if !diags.HasError() {
+		t.Fatal("removing a settings block holding unclearable settings should be refused")
 	}
 }

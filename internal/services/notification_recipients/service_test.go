@@ -136,6 +136,9 @@ func TestService_Get(t *testing.T) {
 			expectedEmail:  "admin1@example.com",
 		},
 		{
+			// Absent from a successfully fetched list is (nil, nil), not an error: the
+			// caller must be able to tell this apart from a failed lookup, which is the
+			// only case that should keep the resource in state.
 			name:        "recipient not found",
 			recipientID: "00000000-0000-0000-0000-000000000999",
 			responseBody: NotificationRecipientsResponse{
@@ -148,8 +151,35 @@ func TestService_Get(t *testing.T) {
 				},
 			},
 			responseStatus: http.StatusOK,
+			wantErr:        false,
+			wantNil:        true,
+		},
+		{
+			// A failed list must surface as an error, never as "gone".
+			name:           "list failure is an error, not a not-found",
+			recipientID:    "00000000-0000-0000-0000-000000000001",
+			responseBody:   nil,
+			responseStatus: http.StatusServiceUnavailable,
 			wantErr:        true,
 			wantNil:        true,
+		},
+		{
+			// The Admin Center varies GUID casing between what it accepts and returns.
+			name:        "id match is case-insensitive",
+			recipientID: "00000000-0000-0000-0000-00000000ABCD",
+			responseBody: NotificationRecipientsResponse{
+				Value: []NotificationRecipient{
+					{
+						ID:    "00000000-0000-0000-0000-00000000abcd",
+						Email: "admin1@example.com",
+						Name:  "Admin One",
+					},
+				},
+			},
+			responseStatus: http.StatusOK,
+			wantErr:        false,
+			wantNil:        false,
+			expectedEmail:  "admin1@example.com",
 		},
 	}
 

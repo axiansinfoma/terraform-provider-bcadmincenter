@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -31,9 +33,11 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &EnvironmentResource{}
-	_ resource.ResourceWithConfigure   = &EnvironmentResource{}
-	_ resource.ResourceWithImportState = &EnvironmentResource{}
+	_ resource.Resource                     = &EnvironmentResource{}
+	_ resource.ResourceWithConfigure        = &EnvironmentResource{}
+	_ resource.ResourceWithImportState      = &EnvironmentResource{}
+	_ resource.ResourceWithConfigValidators = &EnvironmentResource{}
+	_ resource.ResourceWithModifyPlan       = &EnvironmentResource{}
 )
 
 // NewEnvironmentResource is a helper function to simplify the provider implementation.
@@ -225,11 +229,15 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.",
+				MarkdownDescription: "The Azure AD tenant ID for the environment. If not specified, the value is read from the API response. Changing this forces a new resource to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					// The tenant selects which API the resource is read from and written
+					// to. Without this, editing it made Terraform plan an in-place update
+					// that talked to the old tenant while recording the new one.
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"pending_upgrade_version": schema.StringAttribute{
@@ -412,9 +420,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		"source_env":         operation.SourceEnvironment,
 	})
 
-	// Determine timeout.
-	// TODO: Parse timeout from plan.Timeouts if needed.
-	timeout := 60 * time.Minute // default
+	timeout := utils.OperationTimeout(ctx, plan.Timeouts, "create")
 
 	// Always use the application_family from the plan when constructing API paths.
 	// The operation response fields (productFamily, applicationFamily) are internal API
@@ -437,11 +443,16 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		"environment_name":   envName,
 	})
 
+	// The PUT has been accepted, so the environment now exists in the tenant. Every
+	// failure from here on records what is known before reporting the error, so
+	// Terraform does not forget a live environment.
 	if err := svc.WaitForOperation(ctx, appFamily, envName, operation.ID, timeout); err != nil {
 		resp.Diagnostics.AddError(
 			"Error waiting for environment creation",
-			fmt.Sprintf("Environment creation failed: %s", err),
+			fmt.Sprintf("Environment creation failed: %s. The environment has been recorded in state; "+
+				"run `terraform plan` to reconcile it once provisioning settles.", err),
 		)
+		r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 		return
 	}
 
@@ -470,8 +481,10 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error reading created environment",
-				fmt.Sprintf("Could not read environment after creation: %s", err),
+				fmt.Sprintf("Could not read environment after creation: %s. The environment has been "+
+					"recorded in state; run `terraform plan` to reconcile it.", err),
 			)
+			r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 			return
 		}
 
@@ -479,7 +492,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			"status": env.Status,
 		})
 
-		if env.Status == "Active" {
+		if utils.StatusIs(env.Status, EnvironmentStatusActive) {
 			// Environment is ready, update state and return.
 			r.updateModelFromEnvironment(&plan, env)
 			// Preserve the user-configured short version (e.g. "27.1") if the API
@@ -493,16 +506,20 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 				if err := r.applyEnvironmentSettings(ctx, settingsSvc, plan.ApplicationFamily.ValueString(), envName, plan.Settings); err != nil {
 					resp.Diagnostics.AddError(
 						"Error applying environment settings",
-						"Could not apply settings after environment creation: "+err.Error(),
+						"Could not apply settings after environment creation: "+err.Error()+
+							". The environment exists and has been recorded in state; re-run to apply the settings.",
 					)
+					r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 					return
 				}
 				// Read back readable settings (update_window, security_group, m365 access).
 				if err := r.readEnvironmentSettings(ctx, settingsSvc, plan.ApplicationFamily.ValueString(), envName, plan.Settings); err != nil {
 					resp.Diagnostics.AddError(
 						"Error reading environment settings",
-						"Could not read settings after applying: "+err.Error(),
+						"Could not read settings after applying: "+err.Error()+
+							". The environment exists and has been recorded in state.",
 					)
+					r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 					return
 				}
 			}
@@ -512,11 +529,14 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		// Check for failed states.
-		if env.Status == "Failed" || env.Status == "Suspended" {
+		if utils.StatusIs(env.Status, "Failed", "Suspended") {
 			resp.Diagnostics.AddError(
 				"Environment creation failed",
-				fmt.Sprintf("Environment entered %s state during creation", env.Status),
+				fmt.Sprintf("Environment entered %s state during creation. It has been recorded in "+
+					"state so it can be inspected or destroyed with Terraform.", env.Status),
 			)
+			r.updateModelFromEnvironment(&plan, env)
+			r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 			return
 		}
 
@@ -525,8 +545,11 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		case <-envTimeout.Done():
 			resp.Diagnostics.AddError(
 				"Timeout waiting for environment",
-				fmt.Sprintf("Environment did not become Active within %v (current status: %s)", timeout, env.Status),
+				fmt.Sprintf("Environment did not become Active within %v (current status: %s). It has "+
+					"been recorded in state; run `terraform plan` once provisioning completes.", timeout, env.Status),
 			)
+			r.updateModelFromEnvironment(&plan, env)
+			r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 			return
 		case <-ticker.C:
 			// Continue polling.
@@ -561,6 +584,17 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 	// Get the environment.
 	env, err := svc.Get(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString())
 	if err != nil {
+		// Deleted out of band (for example in the Admin Center portal). Removing it from
+		// state lets the next plan recreate it; raising an error instead made every
+		// subsequent plan, apply and destroy fail until the user ran `terraform state rm`.
+		if isEnvironmentNotFoundError(err) {
+			tflog.Warn(ctx, "Environment no longer exists; removing from state", map[string]interface{}{
+				"name":               state.Name.ValueString(),
+				"application_family": state.ApplicationFamily.ValueString(),
+			})
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error reading environment",
 			fmt.Sprintf("Could not read environment: %s", err),
@@ -627,22 +661,37 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Apply inline settings changes if the block was added, modified, or removed.
-	if settingsChanged && plan.Settings != nil {
+	if settingsChanged {
+		// Removing the block means "revert these settings", not "leave them alone".
+		// Guarding this whole branch on plan.Settings != nil made removal a silent no-op:
+		// the apply reported success, state showed no settings, and the environment stayed
+		// locked to its security group. An all-null model drives the existing clearing
+		// paths (ClearSecurityGroup and friends) in applyEnvironmentSettingsChanges.
+		planSettings := plan.Settings
+		blockRemoved := planSettings == nil
+		if blockRemoved {
+			planSettings = clearedSettingsModel()
+		}
+
 		settingsSvc := environmentsettings.NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
-		if err := r.applyEnvironmentSettingsChanges(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), plan.Settings, state.Settings); err != nil {
+		if err := r.applyEnvironmentSettingsChanges(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), planSettings, state.Settings); err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating environment settings",
 				"Could not update inline settings: "+err.Error(),
 			)
 			return
 		}
-		// Read back readable settings to keep state consistent.
-		if err := r.readEnvironmentSettings(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), plan.Settings); err != nil {
-			resp.Diagnostics.AddError(
-				"Error reading environment settings",
-				"Could not read settings after update: "+err.Error(),
-			)
-			return
+		// Read back readable settings to keep state consistent. Skipped when the block was
+		// removed: the config has no settings block, so writing one back into state would
+		// fail the apply with an inconsistent result.
+		if !blockRemoved {
+			if err := r.readEnvironmentSettings(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), planSettings); err != nil {
+				resp.Diagnostics.AddError(
+					"Error reading environment settings",
+					"Could not read settings after update: "+err.Error(),
+				)
+				return
+			}
 		}
 	}
 
@@ -677,6 +726,12 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 			"Error scheduling environment upgrade",
 			fmt.Sprintf("Could not schedule upgrade to version %s: %s", targetVersion, err),
 		)
+		// Any settings changes above were already applied remotely. Returning without
+		// saving left state holding the *old* settings, so state and the environment
+		// disagreed until the next successful apply. Persist everything except the version,
+		// which is the part that failed.
+		plan.ApplicationVersion = state.ApplicationVersion
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return
 	}
 
@@ -718,19 +773,16 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	// Determine timeout.
-	// TODO: Parse timeout from state.Timeouts if needed.
-	timeout := 60 * time.Minute // default
+	timeout := utils.OperationTimeout(ctx, state.Timeouts, "delete")
 
-	// Wait for the operation to complete.
-	// Use ProductFamily from operation response if available, otherwise fall back to state.
-	appFamily := operation.ProductFamily
-	if appFamily == "" {
-		appFamily = operation.ApplicationFamily
-	}
-	if appFamily == "" {
-		appFamily = state.ApplicationFamily.ValueString()
-	}
+	// Always use the application_family from state when constructing API paths, matching
+	// Create. The operation response's productFamily/applicationFamily are internal API
+	// concepts that differ from the applicationFamily URL segment (the API may return
+	// productFamily="Financials" where the path segment must be "BusinessCentral").
+	// Preferring them built a path that 404s with a code other than EnvironmentNotFound,
+	// so the delete reported failure and Terraform kept the resource in state even though
+	// the deletion was running normally.
+	appFamily := state.ApplicationFamily.ValueString()
 
 	envName := operation.EnvironmentName
 	if envName == "" {
@@ -770,10 +822,194 @@ func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.Impo
 	}
 
 	// Set the attributes.
-	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
-	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
-	resp.State.SetAttribute(ctx, path.Root("name"), environmentName)
-	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), environmentName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)...)
+}
+
+// ConfigValidators enforces that an update window is configured completely or not at all.
+//
+// The three attributes are sent as one payload whose fields are `*string` with
+// `omitempty`, so a nil field is simply absent from the request and the API keeps its
+// previous value. Clearing one of three therefore looked like it worked and silently did
+// not. Requiring them together removes the partial state that cannot be expressed.
+func (r *EnvironmentResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.RequiredTogether(
+			path.MatchRoot("settings").AtName("update_window_start_time"),
+			path.MatchRoot("settings").AtName("update_window_end_time"),
+			path.MatchRoot("settings").AtName("update_window_timezone"),
+		),
+	}
+}
+
+// ModifyPlan refuses, at plan time, to "remove" a setting the Admin Center offers no way
+// to unset.
+//
+// applyEnvironmentSettingsChanges can only send values the API accepts. For these
+// settings there is no clear operation, so a removal previously produced no request at
+// all: Terraform reported success, recorded the attribute as gone, and left the
+// environment unchanged. None of them are read back from the API either — they are
+// write-only or need elevated permissions — so no later plan could detect the difference.
+// The result was permanent, invisible drift.
+//
+// Erroring here keeps the failure in `terraform plan`, before anything is applied, and
+// names the value to set instead.
+func (r *EnvironmentResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// Nothing to compare on create (no prior state) or destroy (no plan).
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var plan, state EnvironmentResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(checkUnclearableSettings(&plan, &state)...)
+}
+
+// checkUnclearableSettings reports removals the Admin Center cannot carry out. Kept
+// separate from ModifyPlan so the rules can be tested directly on models.
+func checkUnclearableSettings(plan, state *EnvironmentResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if state.Settings == nil {
+		return diags
+	}
+
+	// Removing the whole block is the same request as clearing every attribute in it.
+	planned := plan.Settings
+	if planned == nil {
+		planned = clearedSettingsModel()
+	}
+
+	settingsPath := path.Root("settings")
+
+	for _, c := range []struct {
+		attribute string
+		wasSet    bool
+		nowUnset  bool
+		remedy    string
+	}{
+		{
+			attribute: "app_update_cadence",
+			wasSet:    !state.Settings.AppUpdateCadence.IsNull(),
+			nowUnset:  planned.AppUpdateCadence.IsNull(),
+			remedy:    `Set it explicitly to "Default" to return to the standard cadence.`,
+		},
+		{
+			attribute: "partner_access_status",
+			wasSet:    !state.Settings.PartnerAccessStatus.IsNull(),
+			nowUnset:  planned.PartnerAccessStatus.IsNull(),
+			remedy:    `Set it explicitly to "Disabled" to withdraw partner access.`,
+		},
+	} {
+		if c.wasSet && c.nowUnset {
+			diags.AddAttributeError(
+				settingsPath.AtName(c.attribute),
+				fmt.Sprintf("Cannot remove %s", c.attribute),
+				fmt.Sprintf("The Admin Center API has no operation to unset %s, so removing it from the "+
+					"configuration would leave the environment unchanged while Terraform recorded it as "+
+					"removed — and this setting is not read back, so the difference would never surface "+
+					"in a later plan.\n\n%s", c.attribute, c.remedy),
+			)
+		}
+	}
+
+	windowWasSet := !state.Settings.UpdateWindowStartTime.IsNull() ||
+		!state.Settings.UpdateWindowEndTime.IsNull() ||
+		!state.Settings.UpdateWindowTimeZone.IsNull()
+	windowNowUnset := planned.UpdateWindowStartTime.IsNull() &&
+		planned.UpdateWindowEndTime.IsNull() &&
+		planned.UpdateWindowTimeZone.IsNull()
+
+	if windowWasSet && windowNowUnset {
+		diags.AddAttributeError(
+			settingsPath.AtName("update_window_start_time"),
+			"Cannot remove the update window",
+			"The Admin Center API has no operation to clear a configured update window: the request "+
+				"omits absent fields, so the previous window would stay in force while Terraform "+
+				"recorded it as removed.\n\nSet the window you want instead, or keep the current "+
+				"values to leave it as it is.",
+		)
+	}
+
+	return diags
+}
+
+// clearedSettingsModel returns a settings model with every attribute null, representing
+// the user having removed the `settings` block. Passing it to
+// applyEnvironmentSettingsChanges reverts each setting through the same code paths that
+// handle an individual attribute being cleared.
+func clearedSettingsModel() *EnvironmentSettingsNestedModel {
+	return &EnvironmentSettingsNestedModel{
+		UpdateWindowStartTime:   types.StringNull(),
+		UpdateWindowEndTime:     types.StringNull(),
+		UpdateWindowTimeZone:    types.StringNull(),
+		AppInsightsKey:          types.StringNull(),
+		SecurityGroupID:         types.StringNull(),
+		AccessWithM365Licenses:  types.BoolNull(),
+		AppUpdateCadence:        types.StringNull(),
+		PartnerAccessStatus:     types.StringNull(),
+		AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+	}
+}
+
+// resolveUnknownComputed replaces any attribute still carrying an unknown value with
+// null.
+//
+// Terraform rejects a state object that contains unknown values after apply, so a model
+// can only be written to state once every unknown has been resolved. Create fills these
+// from the API on the happy path; this is the fallback for saving partial state when a
+// step after the environment already exists fails.
+func resolveUnknownComputed(model *EnvironmentResourceModel) {
+	for _, attr := range []*types.String{
+		&model.ID,
+		&model.ApplicationFamily,
+		&model.RingName,
+		&model.ApplicationVersion,
+		&model.AzureRegion,
+		&model.Status,
+		&model.WebClientLoginURL,
+		&model.WebServiceURL,
+		&model.AppInsightsKey,
+		&model.PlatformVersion,
+		&model.AADTenantID,
+		&model.PendingUpgradeVersion,
+		&model.PendingUpgradeScheduledFor,
+	} {
+		if attr.IsUnknown() {
+			*attr = types.StringNull()
+		}
+	}
+	if model.IgnoreUpdateWindow.IsUnknown() {
+		model.IgnoreUpdateWindow = types.BoolNull()
+	}
+	if model.Settings != nil && model.Settings.AccessWithM365Licenses.IsUnknown() {
+		model.Settings.AccessWithM365Licenses = types.BoolNull()
+	}
+}
+
+// savePartialCreateState records an environment that exists remotely but whose creation
+// could not be completed or read back.
+//
+// Once the PUT succeeds the environment is being provisioned in the tenant. Returning an
+// error without writing state made Terraform forget it entirely: the environment
+// finished provisioning, the next apply re-issued the PUT and failed with "already
+// exists", and the only way out was to delete it by hand in the Admin Center. Recording
+// what is known lets the next plan reconcile it instead.
+func (r *EnvironmentResource) savePartialCreateState(ctx context.Context, resp *resource.CreateResponse, plan *EnvironmentResourceModel, tenantID, appFamily, envName string) {
+	if plan.ID.IsNull() || plan.ID.IsUnknown() || plan.ID.ValueString() == "" {
+		plan.ID = types.StringValue(BuildEnvironmentID(tenantID, appFamily, envName))
+	}
+	if plan.Name.IsNull() || plan.Name.IsUnknown() {
+		plan.Name = types.StringValue(envName)
+	}
+	resolveUnknownComputed(plan)
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 // updateModelFromEnvironment updates the Terraform model with data from the API.
@@ -808,8 +1044,11 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 		model.AppInsightsKey = types.StringNull()
 	}
 
-	// Azure region is not returned by the API, so always set to null.
-	model.AzureRegion = types.StringNull()
+	// azure_region is deliberately left untouched. The API accepts it on create but never
+	// returns it, so there is nothing to refresh from, and overwriting the model with null
+	// discarded the configured value. Because the attribute is Optional + Computed +
+	// RequiresReplace, that made every apply fail with "Provider produced inconsistent
+	// result after apply" and every later plan propose replacing the environment.
 
 	// Normalize ring name from API response format to Terraform format.
 	// API accepts "PROD", "PREVIEW", "FAST" on input but returns "Production", "Preview", "Fast" on output.
@@ -1105,8 +1344,14 @@ func (r *EnvironmentResource) applyEnvironmentSettingsChanges(ctx context.Contex
 		}
 	}
 
-	// Update Application Insights key if changed.
-	if !plan.AppInsightsKey.Equal(state.AppInsightsKey) && !plan.AppInsightsKey.IsNull() {
+	// Update Application Insights key if changed, including clearing it.
+	//
+	// The `&& !plan.AppInsightsKey.IsNull()` guard that used to be here made removing the
+	// attribute a silent no-op: no request was sent, so the key stayed on the environment
+	// while state recorded it as gone. Because this setting is never read back from the
+	// API, no later plan could detect the difference either. An empty key is the API's
+	// representation of "not set", so the removal is expressible.
+	if !plan.AppInsightsKey.Equal(state.AppInsightsKey) {
 		if err := svc.SetAppInsightsKey(ctx, applicationFamily, environmentName, plan.AppInsightsKey.ValueString()); err != nil {
 			return fmt.Errorf("updating app insights key: %w", err)
 		}
@@ -1204,10 +1449,13 @@ func (r *EnvironmentResource) readEnvironmentSettings(ctx context.Context, svc *
 	// Read M365 license access.
 	m365Access, err := svc.GetAccessWithM365Licenses(ctx, applicationFamily, environmentName)
 	if err != nil {
-		tflog.Warn(ctx, "Could not read M365 license access for inline settings", map[string]interface{}{
+		// Leave the existing value in place. Nulling it on a transient failure destroyed a
+		// value the user had configured: with a planned value of true and a 503 on the
+		// read-back, the apply failed with "inconsistent result after apply" even though
+		// the write had succeeded. The SecurityGroupID branch above does the same.
+		tflog.Warn(ctx, "Could not read M365 license access for inline settings; keeping the current value", map[string]interface{}{
 			"error": err.Error(),
 		})
-		settings.AccessWithM365Licenses = types.BoolNull()
 	} else if m365Access != nil {
 		settings.AccessWithM365Licenses = types.BoolValue(m365Access.Enabled)
 	} else {

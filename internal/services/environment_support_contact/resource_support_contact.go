@@ -62,11 +62,15 @@ func (r *EnvironmentSupportContactResource) Schema(_ context.Context, _ resource
 				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.",
+				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. Changing this forces a new resource to be created.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					// The tenant selects which API the resource is read from and written
+					// to. Without this, editing it made Terraform plan an in-place update
+					// that talked to the old tenant while recording the new one.
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"application_family": schema.StringAttribute{
@@ -95,8 +99,14 @@ func (r *EnvironmentSupportContactResource) Schema(_ context.Context, _ resource
 				},
 			},
 			"url": schema.StringAttribute{
+				// Computed as well as Optional: the API stores an omitted url as "" and
+				// echoes that back. With Optional alone the planned value is null, so
+				// storing the known "" failed the apply with "Provider produced
+				// inconsistent result after apply: .url: was null, but now
+				// cty.StringVal("")" — after the contact had already been written.
 				Description: "A URL for additional support information such as a support website or portal",
 				Optional:    true,
+				Computed:    true,
 			},
 		},
 	}
@@ -158,9 +168,10 @@ func (r *EnvironmentSupportContactResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	// Update the plan with the response.
-	plan.Name = types.StringValue(updatedContact.Name)
-	plan.Email = types.StringValue(updatedContact.Email)
+	// Only url is taken from the response: it is Optional + Computed, so the API's value is
+	// authoritative. name and email are Required, meaning their planned values are fixed —
+	// echoing the server's copy back makes any normalisation fail the apply with
+	// "inconsistent result after apply", with the contact already written remotely.
 	plan.URL = types.StringValue(updatedContact.URL)
 
 	// Save data into Terraform state.
@@ -236,9 +247,10 @@ func (r *EnvironmentSupportContactResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	// Update the plan with the response.
-	plan.Name = types.StringValue(updatedContact.Name)
-	plan.Email = types.StringValue(updatedContact.Email)
+	// Only url is taken from the response: it is Optional + Computed, so the API's value is
+	// authoritative. name and email are Required, meaning their planned values are fixed —
+	// echoing the server's copy back makes any normalisation fail the apply with
+	// "inconsistent result after apply", with the contact already written remotely.
 	plan.URL = types.StringValue(updatedContact.URL)
 
 	// Save updated data into Terraform state.
@@ -284,8 +296,8 @@ func (r *EnvironmentSupportContactResource) ImportState(ctx context.Context, req
 	}
 
 	// Set the attributes.
-	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
-	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
-	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
-	resp.State.SetAttribute(ctx, path.Root("environment_name"), environmentName)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("environment_name"), environmentName)...)
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -873,5 +874,306 @@ func TestClient_PostMultipart(t *testing.T) {
 	}
 	if !strings.Contains(gotBody, "boundary") {
 		t.Errorf("body = %q, want the multipart payload to be forwarded", gotBody)
+	}
+}
+
+// TestAdminCenterError_StatusCode covers the contract that error responses always carry
+// their HTTP status, regardless of whether the body uses the documented {code, message}
+// envelope. Without this, callers are forced to string-match the rendered message to
+// detect a 404, which misfires on unrelated errors and misses non-conforming bodies.
+func TestAdminCenterError_StatusCode(t *testing.T) {
+	tests := []struct {
+		name        string
+		status      int
+		body        string
+		wantCode    string
+		wantMessage string
+		wantErrText string
+		wantNotFnd  bool
+	}{
+		{
+			name:        "documented envelope",
+			status:      http.StatusBadRequest,
+			body:        `{"code":"ValidationError","message":"bad request"}`,
+			wantCode:    "ValidationError",
+			wantMessage: "bad request",
+			wantErrText: "ValidationError: bad request",
+			wantNotFnd:  false,
+		},
+		{
+			// The API answers some endpoints with this shape. encoding/json ignores the
+			// unknown field, so Code and Message stay empty and the old renderer produced
+			// the useless string ": ".
+			name:        "non-conforming body still reports status and body",
+			status:      http.StatusNotFound,
+			body:        `{"error":"tenant not found"}`,
+			wantCode:    "",
+			wantMessage: "",
+			wantErrText: `API returned status 404: {"error":"tenant not found"}`,
+			wantNotFnd:  true,
+		},
+		{
+			name:        "empty body falls back to the status line",
+			status:      http.StatusNotFound,
+			body:        "",
+			wantErrText: "API returned status 404: 404 Not Found",
+			wantNotFnd:  true,
+		},
+		{
+			name:        "not-found code on a non-404 status",
+			status:      http.StatusBadRequest,
+			body:        `{"code":"EnvironmentNotFound","message":"no such environment"}`,
+			wantCode:    "EnvironmentNotFound",
+			wantMessage: "no such environment",
+			wantErrText: "EnvironmentNotFound: no such environment",
+			wantNotFnd:  false, // IsNotFound is status-based only; code checks are the caller's job.
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+				if tt.body != "" {
+					if _, err := w.Write([]byte(tt.body)); err != nil {
+						t.Errorf("failed to write response body: %v", err)
+					}
+				}
+			}))
+			defer server.Close()
+
+			c := &Client{}
+			c.SetCredential(&mockTokenCredential{token: "test-token"})
+			c.SetBaseURL(server.URL)
+			c.SetAPIVersion(constants.DefaultAPIVersion)
+			c.SetHTTPClient(&http.Client{})
+
+			resp, err := c.Get(context.Background(), "some/path")
+			if resp != nil {
+				t.Fatalf("expected a nil response on error, got %v", resp)
+			}
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+
+			var apiErr *AdminCenterError
+			if !errors.As(err, &apiErr) {
+				t.Fatalf("expected *AdminCenterError, got %T: %v", err, err)
+			}
+			if apiErr.StatusCode != tt.status {
+				t.Errorf("StatusCode = %d, want %d", apiErr.StatusCode, tt.status)
+			}
+			if apiErr.Code != tt.wantCode {
+				t.Errorf("Code = %q, want %q", apiErr.Code, tt.wantCode)
+			}
+			if apiErr.Message != tt.wantMessage {
+				t.Errorf("Message = %q, want %q", apiErr.Message, tt.wantMessage)
+			}
+			if got := err.Error(); got != tt.wantErrText {
+				t.Errorf("Error() = %q, want %q", got, tt.wantErrText)
+			}
+			if got := IsNotFound(err); got != tt.wantNotFnd {
+				t.Errorf("IsNotFound() = %v, want %v", got, tt.wantNotFnd)
+			}
+			// Detection must survive wrapping, which every service layer does.
+			if got := IsNotFound(fmt.Errorf("wrapped: %w", err)); got != tt.wantNotFnd {
+				t.Errorf("IsNotFound(wrapped) = %v, want %v", got, tt.wantNotFnd)
+			}
+		})
+	}
+}
+
+func TestIsNotFound_NonAPIErrors(t *testing.T) {
+	if IsNotFound(nil) {
+		t.Error("IsNotFound(nil) = true, want false")
+	}
+	// Message text must not drive the decision: "404" shows up in addresses and versions.
+	if IsNotFound(fmt.Errorf("dial tcp 10.0.0.404:443: connection refused")) {
+		t.Error("IsNotFound(untyped error containing 404) = true, want false")
+	}
+}
+
+// TestNewClient_StaticTokenGate pins the security boundary added for the
+// BCADMINCENTER_TEST_TOKEN backdoor: a static bearer token bypasses Azure AD entirely
+// and must only be honoured in builds carrying the bcadmincenter_testing tag.
+func TestNewClient_StaticTokenGate(t *testing.T) {
+	c, err := NewClient(context.Background(), &Config{
+		TenantID:    "00000000-0000-0000-0000-000000000000",
+		AccessToken: "a-static-token",
+	})
+
+	if testingBuild {
+		if err != nil {
+			t.Fatalf("testing build should accept a static access token, got %v", err)
+		}
+		if c == nil {
+			t.Fatal("expected a client")
+		}
+		return
+	}
+
+	if err == nil {
+		t.Fatal("release build must refuse a static access token, got a usable client")
+	}
+	if !strings.Contains(err.Error(), "bcadmincenter_testing") {
+		t.Errorf("error should name the build tag so the cause is actionable, got: %v", err)
+	}
+}
+
+// TestValidateBaseURL guards against sending an Azure AD access token to an untrusted or
+// plaintext endpoint: DoRequest attaches the Authorization header before it inspects the
+// destination, so a bad base_url leaks a live credential.
+func TestValidateBaseURL(t *testing.T) {
+	alwaysValid := []string{
+		"https://api.businesscentral.dynamics.com",
+		"https://example.internal:8443/prefix",
+	}
+	for _, raw := range alwaysValid {
+		t.Run("valid/"+raw, func(t *testing.T) {
+			if err := validateBaseURL(raw); err != nil {
+				t.Errorf("validateBaseURL(%q) = %v, want nil", raw, err)
+			}
+		})
+	}
+
+	alwaysInvalid := []struct{ name, raw string }{
+		{"no scheme or host", "api.businesscentral.dynamics.com"},
+		{"scheme without host", "https://"},
+		{"unsupported scheme", "ftp://example.com"},
+		{"control characters", "https://exa\x7fmple.com"},
+	}
+	for _, tt := range alwaysInvalid {
+		t.Run("invalid/"+tt.name, func(t *testing.T) {
+			if err := validateBaseURL(tt.raw); err == nil {
+				t.Errorf("validateBaseURL(%q) = nil, want an error", tt.raw)
+			}
+		})
+	}
+
+	// http:// is the interesting case: test servers need it, release builds must not.
+	t.Run("plaintext http", func(t *testing.T) {
+		err := validateBaseURL("http://127.0.0.1:8080")
+		if testingBuild {
+			if err != nil {
+				t.Errorf("testing build should allow http for local mock servers, got %v", err)
+			}
+			return
+		}
+		if err == nil {
+			t.Error("release build must reject a plaintext http base_url")
+		}
+	})
+}
+
+// TestNewClient_RejectsPlaintextBaseURL checks the validation is actually wired into
+// NewClient, not just available as a helper.
+func TestNewClient_RejectsPlaintextBaseURL(t *testing.T) {
+	if testingBuild {
+		t.Skip("http:// is intentionally permitted in testing builds")
+	}
+	_, err := NewClient(context.Background(), &Config{
+		TenantID: "00000000-0000-0000-0000-000000000000",
+		ClientID: "client", ClientSecret: "secret",
+		BaseURL: "http://attacker.example.com",
+	})
+	if err == nil {
+		t.Fatal("NewClient accepted a plaintext base_url")
+	}
+	if !strings.Contains(err.Error(), "https") {
+		t.Errorf("error should explain the https requirement, got: %v", err)
+	}
+}
+
+// TestBuildPath pins the escaping that keeps a configuration value from changing the
+// structure of a request rather than just its content.
+func TestBuildPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		segments []string
+		want     string
+	}{
+		{
+			name:     "ordinary values pass through unchanged",
+			segments: []string{"applications", "BusinessCentral", "environments", "production"},
+			want:     "applications/BusinessCentral/environments/production",
+		},
+		{
+			// Unescaped, this truncates the path at "prod" and appends an attacker-chosen
+			// query string, so the request silently targets a different environment.
+			name:     "question mark cannot start a query string",
+			segments: []string{"environments", "prod?api-version=v9.9"},
+			want:     "environments/prod%3Fapi-version=v9.9",
+		},
+		{
+			// Unescaped, everything from "#" onward becomes a fragment and is never sent,
+			// so a settings write lands on "prod" and reports success.
+			name:     "hash cannot start a fragment",
+			segments: []string{"environments", "prod#1"},
+			want:     "environments/prod%231",
+		},
+		{
+			// Unescaped, a normalising gateway collapses the dot-segments and re-targets
+			// the request — a DELETE could hit an unrelated environment.
+			name:     "slashes and dot segments cannot re-target the request",
+			segments: []string{"environments", "a/../../applications/X/environments/prod"},
+			want:     "environments/a%2F..%2F..%2Fapplications%2FX%2Fenvironments%2Fprod",
+		},
+		{
+			name:     "percent is escaped rather than read as an escape sequence",
+			segments: []string{"environments", "prod%2fother"},
+			want:     "environments/prod%252fother",
+		},
+		{
+			name:     "empty segment is preserved",
+			segments: []string{"apps", ""},
+			want:     "apps/",
+		},
+		{
+			name:     "no segments",
+			segments: nil,
+			want:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := BuildPath(tt.segments...); got != tt.want {
+				t.Errorf("BuildPath(%q) = %q, want %q", tt.segments, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestDoRequest_HostileSegmentReachesServerIntact verifies the escaping survives the
+// whole request pipeline: the server must see the crafted name as one path segment, not
+// as a shorter path plus a query string.
+func TestDoRequest_HostileSegmentReachesServerIntact(t *testing.T) {
+	var gotPath, gotRawQuery string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotRawQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{}
+	c.SetCredential(&mockTokenCredential{token: "test-token"})
+	c.SetBaseURL(server.URL)
+	c.SetAPIVersion(constants.DefaultAPIVersion)
+	c.SetHTTPClient(&http.Client{})
+
+	hostile := "prod?api-version=v9.9"
+	resp, err := c.Get(context.Background(), BuildPath("applications", "BusinessCentral", "environments", hostile))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	wantPath := "/admin/" + constants.DefaultAPIVersion + "/applications/BusinessCentral/environments/" + hostile
+	if gotPath != wantPath {
+		t.Errorf("server saw path %q, want %q", gotPath, wantPath)
+	}
+	if gotRawQuery != "" {
+		t.Errorf("server saw query %q, want none — the segment escaped its position", gotRawQuery)
 	}
 }

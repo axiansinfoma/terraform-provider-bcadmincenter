@@ -263,7 +263,7 @@ output "environment_urls" {
 
 ### Optional
 
-- `aad_tenant_id` (String) The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.
+- `aad_tenant_id` (String) The Azure AD tenant ID for the environment. If not specified, the value is read from the API response. Changing this forces a new resource to be created.
 - `application_family` (String) The application family for the environment. Defaults to 'BusinessCentral'. Changing this forces a new Business Central Environment to be created.
 - `application_version` (String) The desired application version for the environment (e.g. `"26.1"`). When set at creation, the version is passed to the Create API. When changed after creation, the provider schedules an in-place upgrade via the Admin Center Updates API. When not set, the API assigns the version based on the ring. During a scheduled or running upgrade, this attribute reflects the target version and does not cause drift. If the upgrade fails, this attribute reflects the currently running version, causing drift and triggering a retry on next apply. Do not use this alongside `bcadmincenter_environment_update_schedule` for the same environment.
 - `azure_region` (String) The Azure region where the environment should be created. If not specified, a default region will be used. Changing this forces a new Business Central Environment to be created.

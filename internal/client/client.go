@@ -6,6 +6,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -75,7 +76,22 @@ func (s *staticTokenCredential) GetToken(_ context.Context, _ policy.TokenReques
 }
 
 // AdminCenterError represents an error response from the Business Central Admin Center API.
+//
+// StatusCode, Status and RawBody are populated from the HTTP response rather than the
+// JSON body. The API does not always return the documented {code, message} envelope —
+// some endpoints answer with shapes like {"error": "..."} — and encoding/json ignores
+// unknown fields, so Code and Message can both be empty for a perfectly valid error
+// response. Callers must therefore branch on StatusCode (see IsNotFound) rather than
+// pattern-matching Code or the rendered message.
 type AdminCenterError struct {
+	// StatusCode is the HTTP status of the response that produced this error.
+	StatusCode int `json:"-"`
+	// Status is the HTTP status line (e.g. "404 Not Found").
+	Status string `json:"-"`
+	// RawBody is the trimmed response body, retained so a non-conforming error body
+	// still produces a useful diagnostic instead of an empty "code: message".
+	RawBody string `json:"-"`
+
 	Code       string                 `json:"code"`
 	Message    string                 `json:"message"`
 	Target     string                 `json:"target,omitempty"`
@@ -84,10 +100,85 @@ type AdminCenterError struct {
 }
 
 func (e *AdminCenterError) Error() string {
+	if e.Code == "" && e.Message == "" {
+		detail := e.RawBody
+		if detail == "" {
+			detail = e.Status
+		}
+		return fmt.Sprintf("API returned status %d: %s", e.StatusCode, detail)
+	}
 	if e.Target != "" {
 		return fmt.Sprintf("%s: %s (target: %s)", e.Code, e.Message, e.Target)
 	}
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
+}
+
+// IsNotFound reports whether err is (or wraps) an Admin Center API error carrying
+// HTTP 404. Prefer this over inspecting Code or the message text.
+func IsNotFound(err error) bool {
+	var apiErr *AdminCenterError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
+}
+
+// newAdminCenterError builds a typed error from a >= 400 response. The status is always
+// carried, even when the body is empty or does not use the documented envelope, so
+// callers can detect a 404 without string-matching. The caller closes resp.Body.
+func newAdminCenterError(resp *http.Response) *AdminCenterError {
+	apiError := &AdminCenterError{
+		StatusCode: resp.StatusCode,
+		Status:     resp.Status,
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err == nil && len(body) > 0 {
+		// Unknown fields are ignored, so a non-conforming body leaves Code/Message
+		// empty rather than failing; RawBody keeps the text for the diagnostic.
+		_ = json.Unmarshal(body, apiError)
+		apiError.RawBody = strings.TrimSpace(string(body))
+	}
+	return apiError
+}
+
+// BuildPath assembles an Admin Center API path from individual segments, percent-escaping
+// each one.
+//
+// Callers pass values that come from Terraform configuration — environment names,
+// application families, app ids, target versions. Interpolating those into a path with
+// fmt.Sprintf lets a value change the request's structure rather than just its content: a
+// "?" starts the query string, a "#" starts a fragment that is never transmitted, and a
+// "/" or "../" re-targets the request at a different resource. Each of those turns a
+// request meant for one environment into a silently successful request against another.
+//
+// Literal segments may be passed alongside dynamic ones; escaping is a no-op for them.
+func BuildPath(segments ...string) string {
+	escaped := make([]string, len(segments))
+	for i, segment := range segments {
+		escaped[i] = url.PathEscape(segment)
+	}
+	return strings.Join(escaped, "/")
+}
+
+// validateBaseURL checks a caller-supplied base URL before it is used.
+//
+// Every request built from this URL carries a live Azure AD bearer token in an
+// Authorization header, and that header is attached before the destination is
+// examined. A plaintext or malformed base URL therefore leaks a usable credential, so
+// http:// is accepted only in testing builds where the target is a local test server.
+func validateBaseURL(raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid base_url %q: %w", raw, err)
+	}
+	if parsed.Host == "" {
+		return fmt.Errorf("invalid base_url %q: must be an absolute URL including a host", raw)
+	}
+	if parsed.Scheme == "https" {
+		return nil
+	}
+	if testingBuild && parsed.Scheme == "http" {
+		return nil
+	}
+	return fmt.Errorf("invalid base_url %q: scheme must be https, because every request to it "+
+		"carries an Azure AD access token", raw)
 }
 
 // NewClient creates a new Business Central Admin Center API client.
@@ -104,7 +195,16 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	var credential azcore.TokenCredential
 	var err error
 
-	// If a static access token is provided (for testing only), use it directly.
+	// A static access token bypasses Azure AD entirely, so it is refused unless this
+	// binary was built for testing. Failing loudly beats silently ignoring the value:
+	// a release provider that quietly discarded the token would authenticate as
+	// somebody else without saying so.
+	if config.AccessToken != "" && !testingBuild {
+		return nil, fmt.Errorf("a static access token was supplied (BCADMINCENTER_TEST_TOKEN), " +
+			"but static tokens bypass Azure AD authentication and are only honoured in builds " +
+			"tagged 'bcadmincenter_testing'")
+	}
+
 	if config.AccessToken != "" {
 		credential = &staticTokenCredential{token: config.AccessToken}
 	} else if config.ClientID != "" && config.ClientSecret != "" {
@@ -157,6 +257,8 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	baseURL := config.BaseURL
 	if baseURL == "" {
 		baseURL = constants.DefaultBaseURL
+	} else if err := validateBaseURL(baseURL); err != nil {
+		return nil, err
 	}
 
 	apiVersion := config.APIVersion
@@ -405,12 +507,7 @@ func (c *Client) DoRequestWithOptions(ctx context.Context, method, path string, 
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
 
-		var apiError AdminCenterError
-		if err := json.NewDecoder(resp.Body).Decode(&apiError); err != nil {
-			return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, resp.Status)
-		}
-
-		return nil, &apiError
+		return nil, newAdminCenterError(resp)
 	}
 
 	return resp, nil
@@ -450,60 +547,6 @@ func (c *Client) Delete(ctx context.Context, path string) (*http.Response, error
 // Patch performs an authenticated PATCH request.
 func (c *Client) Patch(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
 	return c.DoRequest(ctx, http.MethodPatch, path, body)
-}
-
-// DoAutomationRequest performs an authenticated HTTP request to the Business Central Automation API.
-// The Automation API uses a different base URL pattern:
-// {baseURL}/v2.0/{environmentName}/api/microsoft/automation/v2.0/{path}
-// contentType overrides the default "application/json" when non-empty.
-// extraHeaders contains additional headers (e.g. If-Match for PATCH requests).
-func (c *Client) DoAutomationRequest(ctx context.Context, method, environmentName, path string, body io.Reader, contentType string, extraHeaders map[string]string) (*http.Response, error) {
-	// Get authentication token.
-	token, err := c.GetToken(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build Automation API URL.
-	url := fmt.Sprintf("%s/v2.0/%s/api/microsoft/automation/v2.0/%s", c.baseURL, environmentName, path)
-
-	// Create request.
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create automation request: %w", err)
-	}
-
-	// Set headers.
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	} else {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Accept", "application/json")
-	for k, v := range extraHeaders {
-		req.Header.Set(k, v)
-	}
-
-	// Execute request.
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute automation request: %w", err)
-	}
-
-	// Check for error responses.
-	if resp.StatusCode >= 400 {
-		defer resp.Body.Close()
-
-		var apiError AdminCenterError
-		if err := json.NewDecoder(resp.Body).Decode(&apiError); err != nil {
-			return nil, fmt.Errorf("automation API returned status %d: %s", resp.StatusCode, resp.Status)
-		}
-
-		return nil, &apiError
-	}
-
-	return resp, nil
 }
 
 // SetCredential sets the credential for testing purposes.

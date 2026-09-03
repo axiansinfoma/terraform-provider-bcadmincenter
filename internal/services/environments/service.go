@@ -15,6 +15,7 @@ import (
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Service handles environment-related operations for the Business Central Admin Center API.
@@ -31,7 +32,7 @@ func NewService(c *client.Client) *Service {
 
 // List retrieves all environments for the specified application family.
 func (s *Service) List(ctx context.Context, applicationFamily string) ([]Environment, error) {
-	path := fmt.Sprintf("applications/%s/environments", applicationFamily)
+	path := client.BuildPath("applications", applicationFamily, "environments")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -49,7 +50,7 @@ func (s *Service) List(ctx context.Context, applicationFamily string) ([]Environ
 
 // Get retrieves a specific environment by name.
 func (s *Service) Get(ctx context.Context, applicationFamily, environmentName string) (*Environment, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -68,7 +69,7 @@ func (s *Service) Get(ctx context.Context, applicationFamily, environmentName st
 // Create creates a new Business Central environment.
 func (s *Service) Create(ctx context.Context, applicationFamily string, req *CreateEnvironmentRequest) (*Operation, error) {
 	// The API uses PUT with the environment name in the URL path.
-	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, req.Name)
+	path := client.BuildPath("applications", applicationFamily, "environments", req.Name)
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -96,7 +97,7 @@ func (s *Service) Create(ctx context.Context, applicationFamily string, req *Cre
 
 // Delete deletes a Business Central environment.
 func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName string) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName)
 
 	resp, err := s.client.Delete(ctx, path)
 	if err != nil {
@@ -126,7 +127,7 @@ func (s *Service) Delete(ctx context.Context, applicationFamily, environmentName
 // Uses the environment-specific operations endpoint.
 func (s *Service) GetOperation(ctx context.Context, applicationFamily, environmentName, operationID string) (*Operation, error) {
 	// GET /admin/{version}/applications/{applicationFamily}/environments/{environmentName}/operations/{id}.
-	path := fmt.Sprintf("applications/%s/environments/%s/operations/%s", applicationFamily, environmentName, operationID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "operations", operationID)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -160,25 +161,20 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 		return fmt.Errorf("failed to check operation status: %w", err)
 	}
 
-	// Log initial operation status.
-	fmt.Printf("[DEBUG] Initial operation status: %s (ID: %s)\n", operation.Status, operation.ID)
+	tflog.Debug(ctx, "Initial operation status", map[string]interface{}{
+		"status":       operation.Status,
+		"operation_id": operation.ID,
+	})
 
-	if operation.Status == OperationStatusSucceeded {
-		fmt.Printf("[DEBUG] Operation already succeeded\n")
-		return nil
-	}
-	if operation.Status == OperationStatusFailed {
-		return fmt.Errorf("operation failed: %s", operation.ErrorMessage)
-	}
-	if operation.Status == OperationStatusCancelled {
-		return fmt.Errorf("operation was cancelled")
+	if done, err := classifyOperation(operation); done {
+		return err
 	}
 
 	// Then poll at intervals.
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("operation timeout after %v", timeout)
+			return operationWaitError(ctx, timeout)
 		case <-ticker.C:
 			operation, err := s.GetOperation(ctx, applicationFamily, environmentName, operationID)
 			if err != nil {
@@ -189,25 +185,44 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 				return fmt.Errorf("failed to check operation status: %w", err)
 			}
 
-			// Log polling status.
-			fmt.Printf("[DEBUG] Polling operation status: %s (ID: %s)\n", operation.Status, operation.ID)
+			tflog.Debug(ctx, "Polling operation status", map[string]interface{}{
+				"status":       operation.Status,
+				"operation_id": operation.ID,
+			})
 
-			switch operation.Status {
-			case OperationStatusSucceeded:
-				fmt.Printf("[DEBUG] Operation succeeded\n")
-				return nil
-			case OperationStatusFailed:
-				return fmt.Errorf("operation failed: %s", operation.ErrorMessage)
-			case OperationStatusCancelled:
-				return fmt.Errorf("operation was cancelled")
-			case OperationStatusQueued, OperationStatusRunning:
-				// Continue polling.
-				continue
-			default:
-				return fmt.Errorf("unknown operation status: %s", operation.Status)
+			if done, err := classifyOperation(operation); done {
+				return err
 			}
+			// Queued, running, or a status this provider does not recognise: keep
+			// polling until the deadline. Failing on an unrecognised status aborted
+			// long-running operations that were progressing normally.
 		}
 	}
+}
+
+// classifyOperation reports whether an operation has reached a terminal state, and with
+// what outcome. Statuses are matched case-insensitively and across both spellings of
+// "cancelled", because the API is inconsistent about each.
+func classifyOperation(operation *Operation) (done bool, err error) {
+	switch {
+	case utils.StatusIs(operation.Status, OperationStatusSucceeded):
+		return true, nil
+	case utils.StatusIs(operation.Status, OperationStatusFailed):
+		return true, fmt.Errorf("operation failed: %s", operation.ErrorMessage)
+	case utils.StatusIs(operation.Status, OperationStatusCancelled, OperationStatusCanceled):
+		return true, fmt.Errorf("operation was cancelled")
+	default:
+		return false, nil
+	}
+}
+
+// operationWaitError distinguishes a genuine timeout from the user interrupting the run,
+// which otherwise reported a misleading "operation timeout after 1h0m0s" after a Ctrl-C.
+func operationWaitError(ctx context.Context, timeout time.Duration) error {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("operation timeout after %v", timeout)
+	}
+	return fmt.Errorf("stopped waiting for operation: %w", ctx.Err())
 }
 
 // isEnvironmentNotFoundError checks if an error is an EnvironmentNotFound error.
@@ -217,9 +232,15 @@ func isEnvironmentNotFoundError(err error) bool {
 		return false
 	}
 
+	// HTTP 404 is authoritative. The Admin Center also returns EnvironmentNotFound on
+	// some non-404 statuses, so both checks are needed.
+	if client.IsNotFound(err) {
+		return true
+	}
+
 	var apiErr *client.AdminCenterError
 	if errors.As(err, &apiErr) {
-		return apiErr.Code == "EnvironmentNotFound"
+		return strings.EqualFold(apiErr.Code, "EnvironmentNotFound")
 	}
 
 	return strings.Contains(err.Error(), "EnvironmentNotFound")
@@ -228,7 +249,7 @@ func isEnvironmentNotFoundError(err error) bool {
 // GetUpdates returns available and selected updates for an environment.
 // Calls GET /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates.
 func (s *Service) GetUpdates(ctx context.Context, applicationFamily, environmentName string) ([]EnvironmentUpdate, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/updates", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "updates")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -246,7 +267,7 @@ func (s *Service) GetUpdates(ctx context.Context, applicationFamily, environment
 
 // patchUpdate is a shared helper that sends a PATCH request to the updates endpoint.
 func (s *Service) patchUpdate(ctx context.Context, applicationFamily, environmentName, targetVersion string, body interface{}) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/updates/%s", applicationFamily, environmentName, targetVersion)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "updates", targetVersion)
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -296,8 +317,11 @@ func (s *Service) SelectUpdateVersion(ctx context.Context, applicationFamily, en
 		return err
 	}
 
-	fmt.Printf("[WARN] SelectUpdateVersion: stale past selectedDateTime detected for %s/%s/%s; retrying with refreshed datetime\n",
-		applicationFamily, environmentName, targetVersion)
+	tflog.Warn(ctx, "SelectUpdateVersion: stale past selectedDateTime detected; retrying with refreshed datetime", map[string]interface{}{
+		"application_family": applicationFamily,
+		"environment_name":   environmentName,
+		"target_version":     targetVersion,
+	})
 
 	safeDateTime := time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
 	// Cap to latestSelectableDateTime if the API provides one for this version.
@@ -342,8 +366,12 @@ func (s *Service) ScheduleUpdateVersion(ctx context.Context, applicationFamily, 
 	// Step 1: deselect to clear any past selectedDateTime state (best-effort).
 	deselect := SelectUpdateRequest{Selected: false}
 	if err := s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, deselect); err != nil {
-		fmt.Printf("[WARN] ScheduleUpdateVersion: failed to deselect %s/%s/%s: %v; proceeding with select\n",
-			applicationFamily, environmentName, targetVersion, err)
+		tflog.Warn(ctx, "ScheduleUpdateVersion: deselect failed; proceeding with select", map[string]interface{}{
+			"application_family": applicationFamily,
+			"environment_name":   environmentName,
+			"target_version":     targetVersion,
+			"error":              err.Error(),
+		})
 	}
 
 	// Step 2: select the version with the desired schedule.

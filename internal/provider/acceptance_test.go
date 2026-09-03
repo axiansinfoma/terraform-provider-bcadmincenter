@@ -1,6 +1,14 @@
 // Copyright (c) 2025 Axians Infoma GmbH
 // SPDX-License-Identifier: MPL-2.0
 
+// These acceptance tests drive the provider against a local mock HTTP server, which
+// requires the two capabilities gated by the `bcadmincenter_testing` build tag: a static
+// bearer token in place of Azure AD, and a plaintext http:// base URL. Release builds
+// refuse both, so this file only compiles under that tag.
+//
+// Run them with: go test -tags bcadmincenter_testing ./internal/provider/
+//go:build bcadmincenter_testing
+
 package provider_test
 
 import (

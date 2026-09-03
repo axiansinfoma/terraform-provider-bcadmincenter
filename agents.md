@@ -606,10 +606,10 @@ provider-bcadmincenter/
     ├── provider/
     │   └── provider.tf           # Provider configuration examples
     ├── resources/
-    │   └── bc_admin_center_environment/
+    │   └── bcadmincenter_environment/
     │       └── resource.tf       # Resource usage examples
     └── data-sources/
-        └── bc_admin_center_available_applications/
+        └── bcadmincenter_available_applications/
             └── data-source.tf    # Data source usage examples
 ```
 

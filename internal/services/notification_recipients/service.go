@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 )
@@ -50,19 +51,24 @@ func (s *Service) List(ctx context.Context) ([]NotificationRecipient, error) {
 
 // Get retrieves a specific notification recipient by ID.
 // The tenant is determined by the client's OAuth token (see client.ForTenant).
+//
+// A recipient that does not exist is reported as (nil, nil), not as an error. Callers
+// have to tell "it is gone" apart from "the API call failed": returning an error for
+// both made Read drop the resource from state on any transient 503 or timeout, after
+// which the next apply created a duplicate recipient and orphaned the original.
 func (s *Service) Get(ctx context.Context, id string) (*NotificationRecipient, error) {
 	recipients, err := s.List(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, recipient := range recipients {
-		if recipient.ID == id {
-			return &recipient, nil
+	for i := range recipients {
+		if strings.EqualFold(recipients[i].ID, id) {
+			return &recipients[i], nil
 		}
 	}
 
-	return nil, fmt.Errorf("notification recipient with ID %s not found", id)
+	return nil, nil
 }
 
 // Create creates a new notification recipient.
@@ -101,7 +107,7 @@ func (s *Service) Create(ctx context.Context, email, name string) (*Notification
 // Delete deletes a notification recipient by ID.
 // The tenant is determined by the client's OAuth token (see client.ForTenant).
 func (s *Service) Delete(ctx context.Context, id string) error {
-	path := fmt.Sprintf("settings/notification/recipients/%s", id)
+	path := client.BuildPath("settings", "notification", "recipients", id)
 
 	resp, err := s.client.Delete(ctx, path)
 	if err != nil {
