@@ -340,10 +340,10 @@ func (r *UpdateScheduleResource) ImportState(ctx context.Context, req resource.I
 		return
 	}
 
-	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
-	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
-	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
-	resp.State.SetAttribute(ctx, path.Root("environment_name"), environmentName)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("environment_name"), environmentName)...)
 }
 
 // readAndPopulate calls GetUpdates and populates computed fields from the selected update.

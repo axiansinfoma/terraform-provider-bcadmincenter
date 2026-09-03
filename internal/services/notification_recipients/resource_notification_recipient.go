@@ -6,6 +6,7 @@ package notificationrecipients
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -129,11 +130,15 @@ func (r *NotificationRecipientResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Update the plan with the response.
+	// Only the computed attributes come from the response. email and name are Required, so
+	// their planned values are fixed: echoing the server's copy back means any server-side
+	// normalisation (User@Example.com stored as user@example.com) fails the apply with
+	// "Provider produced inconsistent result after apply" — with the recipient already
+	// created remotely and no state recorded for it.
 	plan.ID = types.StringValue(BuildNotificationRecipientID(tenantID, recipient.ID))
-	plan.Email = types.StringValue(recipient.Email)
-	plan.Name = types.StringValue(recipient.Name)
-	plan.AADTenantID = types.StringValue(tenantID) // Save data into Terraform state
+	plan.AADTenantID = types.StringValue(tenantID)
+
+	// Save data into Terraform state.
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 }
@@ -181,9 +186,16 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	// Update the state.
-	state.Email = types.StringValue(recipient.Email)
-	state.Name = types.StringValue(recipient.Name)
+	// Update the state. email and name are Required + RequiresReplace, so a value that
+	// differs only by case is server-side normalisation, not drift — writing it back would
+	// make the next plan propose destroying and recreating the recipient. A genuinely
+	// different value is real drift and is recorded.
+	if !strings.EqualFold(recipient.Email, state.Email.ValueString()) {
+		state.Email = types.StringValue(recipient.Email)
+	}
+	if !strings.EqualFold(recipient.Name, state.Name.ValueString()) {
+		state.Name = types.StringValue(recipient.Name)
+	}
 	state.AADTenantID = types.StringValue(tenantID)
 
 	// Save updated data into Terraform state.
@@ -256,8 +268,8 @@ func (r *NotificationRecipientResource) ImportState(ctx context.Context, req res
 	}
 
 	// Set the ID and tenant ID in state.
-	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
-	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)...)
 
 	// Note: The Read method will populate email and name.
 	_ = recipientID // Used by Read method via ID parsing

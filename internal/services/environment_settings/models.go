@@ -56,12 +56,41 @@ type PartnerAccessRequest struct {
 }
 
 // TimeZone represents a time zone from the API.
+//
+// Two decoders for `applications/settings/timezones` used to exist — this one and
+// timezones.TimeZone — with mutually exclusive JSON tags for the same two fields
+// (supportsDaylightSavings/offsetFromUTC versus supportsDaylightSavingTime/currentUtcOffset).
+// encoding/json is case-insensitive but not synonym-aware, so at most one of them could
+// ever have matched the wire format, and the other silently produced false/"" for every
+// entry. Rather than guess which spelling the live API uses, both are accepted and read
+// through the SupportsDST and UTCOffset accessors.
 type TimeZone struct {
-	ID                            string `json:"id"`                            // Time zone identifier (e.g., "Romance Standard Time")
-	DisplayName                   string `json:"displayName"`                   // Display name
-	CurrentUTCOffset              string `json:"currentUtcOffset"`              // Offset from UTC (e.g., "+01:00")
-	SupportsDaylightSavingTime    bool   `json:"supportsDaylightSavingTime"`    // Whether DST is supported
-	IsCurrentlyDaylightSavingTime bool   `json:"isCurrentlyDaylightSavingTime"` // Whether DST is currently active
+	ID          string `json:"id"`          // Time zone identifier (e.g., "Romance Standard Time")
+	DisplayName string `json:"displayName"` // Display name
+
+	// Offset from UTC (e.g., "+01:00"), under either spelling.
+	CurrentUTCOffset string `json:"currentUtcOffset"`
+	OffsetFromUTC    string `json:"offsetFromUTC"`
+
+	// Whether DST is supported, under either spelling.
+	SupportsDaylightSavingTime bool `json:"supportsDaylightSavingTime"`
+	SupportsDaylightSavings    bool `json:"supportsDaylightSavings"`
+
+	IsCurrentlyDaylightSavingTime bool `json:"isCurrentlyDaylightSavingTime"` // Whether DST is currently active
+}
+
+// UTCOffset returns the UTC offset, whichever field name the API populated.
+func (t TimeZone) UTCOffset() string {
+	if t.CurrentUTCOffset != "" {
+		return t.CurrentUTCOffset
+	}
+	return t.OffsetFromUTC
+}
+
+// SupportsDST reports whether the zone observes daylight saving time, whichever field
+// name the API populated.
+func (t TimeZone) SupportsDST() bool {
+	return t.SupportsDaylightSavingTime || t.SupportsDaylightSavings
 }
 
 // TimeZoneListResponse represents the response for listing time zones.
