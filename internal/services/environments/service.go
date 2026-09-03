@@ -226,7 +226,7 @@ func isEnvironmentNotFoundError(err error) bool {
 }
 
 // GetUpdates returns available and selected updates for an environment.
-// GET /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates
+// Calls GET /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates.
 func (s *Service) GetUpdates(ctx context.Context, applicationFamily, environmentName string) ([]EnvironmentUpdate, error) {
 	path := fmt.Sprintf("applications/%s/environments/%s/updates", applicationFamily, environmentName)
 
@@ -362,8 +362,8 @@ func (s *Service) ScheduleUpdateVersion(ctx context.Context, applicationFamily, 
 
 // UpdateScheduleDetails updates scheduleDetails for an already-selected version without reselecting.
 // Used when only scheduled_datetime or ignore_update_window changes on the update_schedule resource.
-// PATCH /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates/{targetVersion}
-// Body: {"scheduleDetails": {"selectedDateTime": <datetime>, "ignoreUpdateWindow": <bool>}}
+// Calls PATCH /admin/{apiVersion}/applications/{applicationFamily}/environments/{environmentName}/updates/{targetVersion}
+// with body {"scheduleDetails": {"selectedDateTime": <datetime>, "ignoreUpdateWindow": <bool>}}.
 func (s *Service) UpdateScheduleDetails(ctx context.Context, applicationFamily, environmentName, targetVersion, scheduledDateTime string, ignoreUpdateWindow bool) error {
 	scheduleDetails := &UpdateScheduleDetails{
 		IgnoreUpdateWindow: ignoreUpdateWindow,
