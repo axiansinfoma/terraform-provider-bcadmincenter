@@ -44,6 +44,12 @@ func appsPath(applicationFamily, environmentName string) string {
 // IsNotFoundError reports whether err is an API error indicating the targeted app or
 // scheduled version does not exist. Callers use it to treat "already gone" as success.
 func IsNotFoundError(err error) bool {
+	// HTTP 404 is authoritative. The Admin Center also returns not-found codes on some
+	// non-404 statuses, so both checks are needed.
+	if client.IsNotFound(err) {
+		return true
+	}
+
 	var apiErr *client.AdminCenterError
 	if !errors.As(err, &apiErr) {
 		return false

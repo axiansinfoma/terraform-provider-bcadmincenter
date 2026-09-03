@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -873,5 +874,121 @@ func TestClient_PostMultipart(t *testing.T) {
 	}
 	if !strings.Contains(gotBody, "boundary") {
 		t.Errorf("body = %q, want the multipart payload to be forwarded", gotBody)
+	}
+}
+
+// TestAdminCenterError_StatusCode covers the contract that error responses always carry
+// their HTTP status, regardless of whether the body uses the documented {code, message}
+// envelope. Without this, callers are forced to string-match the rendered message to
+// detect a 404, which misfires on unrelated errors and misses non-conforming bodies.
+func TestAdminCenterError_StatusCode(t *testing.T) {
+	tests := []struct {
+		name        string
+		status      int
+		body        string
+		wantCode    string
+		wantMessage string
+		wantErrText string
+		wantNotFnd  bool
+	}{
+		{
+			name:        "documented envelope",
+			status:      http.StatusBadRequest,
+			body:        `{"code":"ValidationError","message":"bad request"}`,
+			wantCode:    "ValidationError",
+			wantMessage: "bad request",
+			wantErrText: "ValidationError: bad request",
+			wantNotFnd:  false,
+		},
+		{
+			// The API answers some endpoints with this shape. encoding/json ignores the
+			// unknown field, so Code and Message stay empty and the old renderer produced
+			// the useless string ": ".
+			name:        "non-conforming body still reports status and body",
+			status:      http.StatusNotFound,
+			body:        `{"error":"tenant not found"}`,
+			wantCode:    "",
+			wantMessage: "",
+			wantErrText: `API returned status 404: {"error":"tenant not found"}`,
+			wantNotFnd:  true,
+		},
+		{
+			name:        "empty body falls back to the status line",
+			status:      http.StatusNotFound,
+			body:        "",
+			wantErrText: "API returned status 404: 404 Not Found",
+			wantNotFnd:  true,
+		},
+		{
+			name:        "not-found code on a non-404 status",
+			status:      http.StatusBadRequest,
+			body:        `{"code":"EnvironmentNotFound","message":"no such environment"}`,
+			wantCode:    "EnvironmentNotFound",
+			wantMessage: "no such environment",
+			wantErrText: "EnvironmentNotFound: no such environment",
+			wantNotFnd:  false, // IsNotFound is status-based only; code checks are the caller's job.
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+				if tt.body != "" {
+					if _, err := w.Write([]byte(tt.body)); err != nil {
+						t.Errorf("failed to write response body: %v", err)
+					}
+				}
+			}))
+			defer server.Close()
+
+			c := &Client{}
+			c.SetCredential(&mockTokenCredential{token: "test-token"})
+			c.SetBaseURL(server.URL)
+			c.SetAPIVersion(constants.DefaultAPIVersion)
+			c.SetHTTPClient(&http.Client{})
+
+			resp, err := c.Get(context.Background(), "some/path")
+			if resp != nil {
+				t.Fatalf("expected a nil response on error, got %v", resp)
+			}
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+
+			var apiErr *AdminCenterError
+			if !errors.As(err, &apiErr) {
+				t.Fatalf("expected *AdminCenterError, got %T: %v", err, err)
+			}
+			if apiErr.StatusCode != tt.status {
+				t.Errorf("StatusCode = %d, want %d", apiErr.StatusCode, tt.status)
+			}
+			if apiErr.Code != tt.wantCode {
+				t.Errorf("Code = %q, want %q", apiErr.Code, tt.wantCode)
+			}
+			if apiErr.Message != tt.wantMessage {
+				t.Errorf("Message = %q, want %q", apiErr.Message, tt.wantMessage)
+			}
+			if got := err.Error(); got != tt.wantErrText {
+				t.Errorf("Error() = %q, want %q", got, tt.wantErrText)
+			}
+			if got := IsNotFound(err); got != tt.wantNotFnd {
+				t.Errorf("IsNotFound() = %v, want %v", got, tt.wantNotFnd)
+			}
+			// Detection must survive wrapping, which every service layer does.
+			if got := IsNotFound(fmt.Errorf("wrapped: %w", err)); got != tt.wantNotFnd {
+				t.Errorf("IsNotFound(wrapped) = %v, want %v", got, tt.wantNotFnd)
+			}
+		})
+	}
+}
+
+func TestIsNotFound_NonAPIErrors(t *testing.T) {
+	if IsNotFound(nil) {
+		t.Error("IsNotFound(nil) = true, want false")
+	}
+	// Message text must not drive the decision: "404" shows up in addresses and versions.
+	if IsNotFound(fmt.Errorf("dial tcp 10.0.0.404:443: connection refused")) {
+		t.Error("IsNotFound(untyped error containing 404) = true, want false")
 	}
 }

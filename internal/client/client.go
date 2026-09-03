@@ -6,6 +6,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -75,7 +76,22 @@ func (s *staticTokenCredential) GetToken(_ context.Context, _ policy.TokenReques
 }
 
 // AdminCenterError represents an error response from the Business Central Admin Center API.
+//
+// StatusCode, Status and RawBody are populated from the HTTP response rather than the
+// JSON body. The API does not always return the documented {code, message} envelope —
+// some endpoints answer with shapes like {"error": "..."} — and encoding/json ignores
+// unknown fields, so Code and Message can both be empty for a perfectly valid error
+// response. Callers must therefore branch on StatusCode (see IsNotFound) rather than
+// pattern-matching Code or the rendered message.
 type AdminCenterError struct {
+	// StatusCode is the HTTP status of the response that produced this error.
+	StatusCode int `json:"-"`
+	// Status is the HTTP status line (e.g. "404 Not Found").
+	Status string `json:"-"`
+	// RawBody is the trimmed response body, retained so a non-conforming error body
+	// still produces a useful diagnostic instead of an empty "code: message".
+	RawBody string `json:"-"`
+
 	Code       string                 `json:"code"`
 	Message    string                 `json:"message"`
 	Target     string                 `json:"target,omitempty"`
@@ -84,10 +100,42 @@ type AdminCenterError struct {
 }
 
 func (e *AdminCenterError) Error() string {
+	if e.Code == "" && e.Message == "" {
+		detail := e.RawBody
+		if detail == "" {
+			detail = e.Status
+		}
+		return fmt.Sprintf("API returned status %d: %s", e.StatusCode, detail)
+	}
 	if e.Target != "" {
 		return fmt.Sprintf("%s: %s (target: %s)", e.Code, e.Message, e.Target)
 	}
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
+}
+
+// IsNotFound reports whether err is (or wraps) an Admin Center API error carrying
+// HTTP 404. Prefer this over inspecting Code or the message text.
+func IsNotFound(err error) bool {
+	var apiErr *AdminCenterError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
+}
+
+// newAdminCenterError builds a typed error from a >= 400 response. The status is always
+// carried, even when the body is empty or does not use the documented envelope, so
+// callers can detect a 404 without string-matching. The caller closes resp.Body.
+func newAdminCenterError(resp *http.Response) *AdminCenterError {
+	apiError := &AdminCenterError{
+		StatusCode: resp.StatusCode,
+		Status:     resp.Status,
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err == nil && len(body) > 0 {
+		// Unknown fields are ignored, so a non-conforming body leaves Code/Message
+		// empty rather than failing; RawBody keeps the text for the diagnostic.
+		_ = json.Unmarshal(body, apiError)
+		apiError.RawBody = strings.TrimSpace(string(body))
+	}
+	return apiError
 }
 
 // NewClient creates a new Business Central Admin Center API client.
@@ -405,12 +453,7 @@ func (c *Client) DoRequestWithOptions(ctx context.Context, method, path string, 
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
 
-		var apiError AdminCenterError
-		if err := json.NewDecoder(resp.Body).Decode(&apiError); err != nil {
-			return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, resp.Status)
-		}
-
-		return nil, &apiError
+		return nil, newAdminCenterError(resp)
 	}
 
 	return resp, nil
@@ -495,12 +538,7 @@ func (c *Client) DoAutomationRequest(ctx context.Context, method, environmentNam
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
 
-		var apiError AdminCenterError
-		if err := json.NewDecoder(resp.Body).Decode(&apiError); err != nil {
-			return nil, fmt.Errorf("automation API returned status %d: %s", resp.StatusCode, resp.Status)
-		}
-
-		return nil, &apiError
+		return nil, newAdminCenterError(resp)
 	}
 
 	return resp, nil
