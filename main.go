@@ -17,7 +17,8 @@ var (
 	// to appropriate values for the compiled binary.
 	version string = "dev"
 
-	// goreleaser can pass other information to the main package, such as the specific commit
+	// goreleaser can pass other information to the main package, such as the specific
+	// commit, by declaring the variable here and adding a matching -X ldflag.
 	// https://goreleaser.com/cookbooks/using-main.version/
 )
 
@@ -35,6 +36,6 @@ func main() {
 	err := providerserver.Serve(context.Background(), provider.New(version), opts)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 }

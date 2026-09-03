@@ -4,9 +4,11 @@ linters:
   default: none
   enable:
     - copyloopvar
+    - depguard
     - durationcheck
     - errcheck
     - forcetypeassert
+    - godot
     - ineffassign
     - makezero
     - misspell
@@ -28,6 +30,25 @@ linters:
       - third_party$
       - builtin$
       - examples$
+  settings:
+    depguard:
+      rules:
+        main:
+          # lax: a package is allowed if it doesn't match the deny list, or if an
+          # allow rule is more specific (longer) than the matching deny rule.
+          list-mode: lax
+          deny:
+            - pkg: "github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+              desc: "Use github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+
+            - pkg: "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+              desc: "Use github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+            - pkg: "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+              desc: "Use github.com/hashicorp/terraform-plugin-testing/terraform"
+
+            - pkg: "github.com/hashicorp/terraform-plugin-sdk/v2"
+              desc: "Use Terraform Plugin Framework"
 
 issues:
   max-issues-per-linter: 0
