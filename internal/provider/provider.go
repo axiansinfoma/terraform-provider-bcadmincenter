@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/constants"
 	authorizedentraapps "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/authorized_entra_apps"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/available_applications"
 	environmentapps "github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/services/environment_apps"
@@ -167,6 +169,17 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 		"tenant_id":   tenantID,
 		"environment": environment,
 	})
+
+	// A custom endpoint receives an Azure AD access token on every request, so make the
+	// override visible in plan/apply output rather than letting it apply silently.
+	if baseURL != "" && baseURL != constants.DefaultBaseURL {
+		resp.Diagnostics.AddWarning(
+			"Non-default Business Central Admin Center endpoint",
+			fmt.Sprintf("Requests are being sent to %q instead of the default %q. "+
+				"Every request carries an Azure AD access token, so this endpoint must be trusted.",
+				baseURL, constants.DefaultBaseURL),
+		)
+	}
 
 	// Create the client.
 	config := &client.Config{

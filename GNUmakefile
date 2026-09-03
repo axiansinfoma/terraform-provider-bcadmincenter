@@ -18,6 +18,12 @@ fmt:
 test:
 	go test -v -cover -timeout=120s -parallel=10 ./...
 
+# Acceptance tests against the local mock HTTP server. These need the
+# bcadmincenter_testing build tag, which enables the static test token and a plaintext
+# http:// base URL — both refused by release builds.
+testmock:
+	go test -v -cover -timeout=120s -tags bcadmincenter_testing -run TestAcc ./internal/provider/
+
 testacc:
 	TF_ACC=1 go test -v -cover -timeout 120m ./...
 
@@ -39,4 +45,4 @@ validate-examples:
 validate-docs: docs-check validate-examples
 	@echo "All documentation validation passed"
 
-.PHONY: fmt lint test testacc build install generate docs docs-check validate-examples validate-docs
+.PHONY: fmt lint test testmock testacc build install generate docs docs-check validate-examples validate-docs

@@ -992,3 +992,94 @@ func TestIsNotFound_NonAPIErrors(t *testing.T) {
 		t.Error("IsNotFound(untyped error containing 404) = true, want false")
 	}
 }
+
+// TestNewClient_StaticTokenGate pins the security boundary added for the
+// BCADMINCENTER_TEST_TOKEN backdoor: a static bearer token bypasses Azure AD entirely
+// and must only be honoured in builds carrying the bcadmincenter_testing tag.
+func TestNewClient_StaticTokenGate(t *testing.T) {
+	c, err := NewClient(context.Background(), &Config{
+		TenantID:    "00000000-0000-0000-0000-000000000000",
+		AccessToken: "a-static-token",
+	})
+
+	if testingBuild {
+		if err != nil {
+			t.Fatalf("testing build should accept a static access token, got %v", err)
+		}
+		if c == nil {
+			t.Fatal("expected a client")
+		}
+		return
+	}
+
+	if err == nil {
+		t.Fatal("release build must refuse a static access token, got a usable client")
+	}
+	if !strings.Contains(err.Error(), "bcadmincenter_testing") {
+		t.Errorf("error should name the build tag so the cause is actionable, got: %v", err)
+	}
+}
+
+// TestValidateBaseURL guards against sending an Azure AD access token to an untrusted or
+// plaintext endpoint: DoRequest attaches the Authorization header before it inspects the
+// destination, so a bad base_url leaks a live credential.
+func TestValidateBaseURL(t *testing.T) {
+	alwaysValid := []string{
+		"https://api.businesscentral.dynamics.com",
+		"https://example.internal:8443/prefix",
+	}
+	for _, raw := range alwaysValid {
+		t.Run("valid/"+raw, func(t *testing.T) {
+			if err := validateBaseURL(raw); err != nil {
+				t.Errorf("validateBaseURL(%q) = %v, want nil", raw, err)
+			}
+		})
+	}
+
+	alwaysInvalid := []struct{ name, raw string }{
+		{"no scheme or host", "api.businesscentral.dynamics.com"},
+		{"scheme without host", "https://"},
+		{"unsupported scheme", "ftp://example.com"},
+		{"control characters", "https://exa\x7fmple.com"},
+	}
+	for _, tt := range alwaysInvalid {
+		t.Run("invalid/"+tt.name, func(t *testing.T) {
+			if err := validateBaseURL(tt.raw); err == nil {
+				t.Errorf("validateBaseURL(%q) = nil, want an error", tt.raw)
+			}
+		})
+	}
+
+	// http:// is the interesting case: test servers need it, release builds must not.
+	t.Run("plaintext http", func(t *testing.T) {
+		err := validateBaseURL("http://127.0.0.1:8080")
+		if testingBuild {
+			if err != nil {
+				t.Errorf("testing build should allow http for local mock servers, got %v", err)
+			}
+			return
+		}
+		if err == nil {
+			t.Error("release build must reject a plaintext http base_url")
+		}
+	})
+}
+
+// TestNewClient_RejectsPlaintextBaseURL checks the validation is actually wired into
+// NewClient, not just available as a helper.
+func TestNewClient_RejectsPlaintextBaseURL(t *testing.T) {
+	if testingBuild {
+		t.Skip("http:// is intentionally permitted in testing builds")
+	}
+	_, err := NewClient(context.Background(), &Config{
+		TenantID: "00000000-0000-0000-0000-000000000000",
+		ClientID: "client", ClientSecret: "secret",
+		BaseURL: "http://attacker.example.com",
+	})
+	if err == nil {
+		t.Fatal("NewClient accepted a plaintext base_url")
+	}
+	if !strings.Contains(err.Error(), "https") {
+		t.Errorf("error should explain the https requirement, got: %v", err)
+	}
+}
