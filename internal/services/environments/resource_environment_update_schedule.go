@@ -6,6 +6,7 @@ package environments
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -105,8 +106,15 @@ func (r *UpdateScheduleResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Required:            true,
 			},
 			"scheduled_datetime": schema.StringAttribute{
-				MarkdownDescription: "The RFC3339 datetime at which the upgrade should run. If omitted, the upgrade runs in the next update window.",
+				// Computed as well as Optional: when it is omitted the API assigns the next
+				// update window and returns that datetime, which populateModelFromUpdate
+				// writes into the model. With Optional alone the planned value is null, so
+				// storing the assigned value failed the apply with "Provider produced
+				// inconsistent result after apply: .scheduled_datetime: was null, but now
+				// cty.StringVal(...)" — after the update had already been scheduled.
+				MarkdownDescription: "The RFC3339 datetime at which the upgrade should run. If omitted, the upgrade runs in the next update window and this is set to the datetime the API assigned.",
 				Optional:            true,
+				Computed:            true,
 			},
 			"ignore_update_window": schema.BoolAttribute{
 				MarkdownDescription: "When `true`, the upgrade may start at `scheduled_datetime` even if outside the environment's configured update window. Defaults to `false`.",
@@ -195,11 +203,9 @@ func (r *UpdateScheduleResource) Create(ctx context.Context, req resource.Create
 	plan.AADTenantID = types.StringValue(tenantID)
 	plan.ID = types.StringValue(BuildUpdateScheduleID(tenantID, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString()))
 
-	// Read back the scheduled update to populate computed fields.
+	// Read back the scheduled update to populate computed fields. Failures are warnings,
+	// not errors: the schedule already exists remotely and must be recorded either way.
 	r.readAndPopulate(ctx, svc, &plan)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -217,6 +223,15 @@ func (r *UpdateScheduleResource) Read(ctx context.Context, req resource.ReadRequ
 
 	updates, err := svc.GetUpdates(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString())
 	if err != nil {
+		// The environment is gone, so its update schedule is too. Erroring here made plan,
+		// apply and destroy all fail permanently.
+		if isEnvironmentNotFoundError(err) {
+			tflog.Warn(ctx, "Environment no longer exists; removing update schedule from state", map[string]interface{}{
+				"environment_name": state.EnvironmentName.ValueString(),
+			})
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error reading environment updates",
 			fmt.Sprintf("Could not read updates for environment %s: %s", state.EnvironmentName.ValueString(), err),
@@ -311,11 +326,9 @@ func (r *UpdateScheduleResource) Update(ctx context.Context, req resource.Update
 	plan.AADTenantID = state.AADTenantID
 	plan.ID = state.ID
 
-	// Read back the updated schedule.
+	// Read back the updated schedule. As in Create, a read-back failure is a warning: the
+	// PATCH already succeeded, so the new schedule must be recorded either way.
 	r.readAndPopulate(ctx, svc, &plan)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -347,17 +360,42 @@ func (r *UpdateScheduleResource) ImportState(ctx context.Context, req resource.I
 }
 
 // readAndPopulate calls GetUpdates and populates computed fields from the selected update.
+//
+// Failing to read back is not fatal — the PATCH has already succeeded, so the schedule
+// exists and must be recorded — but every computed attribute has to end up known either
+// way. update_status, rollout_status and latest_selectable_datetime are Computed with no
+// default and no UseStateForUnknown, so their planned values are unknown; leaving them
+// that way made resp.State.Set write unknowns into final state, which Terraform rejects
+// with "Provider returned invalid result object after apply".
 func (r *UpdateScheduleResource) readAndPopulate(ctx context.Context, svc *Service, model *UpdateScheduleResourceModel) {
+	defer resolveUnknownScheduleComputed(model)
+
 	updates, err := svc.GetUpdates(ctx, model.ApplicationFamily.ValueString(), model.EnvironmentName.ValueString())
 	if err != nil {
-		// Non-fatal for create/update: just leave computed fields as unknown.
-		tflog.Warn(ctx, "Could not read back update schedule", map[string]interface{}{"error": err.Error()})
+		tflog.Warn(ctx, "Could not read back update schedule; computed attributes will be refreshed on the next plan",
+			map[string]interface{}{"error": err.Error()})
 		return
 	}
 
 	selectedUpdate := findSelectedUpdate(updates)
 	if selectedUpdate != nil {
 		populateModelFromUpdate(model, selectedUpdate)
+	}
+}
+
+// resolveUnknownScheduleComputed turns any still-unknown computed attribute into null so
+// the model can be written to state.
+func resolveUnknownScheduleComputed(model *UpdateScheduleResourceModel) {
+	for _, attr := range []*types.String{
+		&model.UpdateStatus,
+		&model.RolloutStatus,
+		&model.LatestSelectableDatetime,
+		&model.ScheduledDatetime,
+		&model.TargetVersion,
+	} {
+		if attr.IsUnknown() {
+			*attr = types.StringNull()
+		}
 	}
 }
 
@@ -373,7 +411,13 @@ func findSelectedUpdate(updates []EnvironmentUpdate) *EnvironmentUpdate {
 
 // populateModelFromUpdate fills the model's computed fields from an EnvironmentUpdate entry.
 func populateModelFromUpdate(model *UpdateScheduleResourceModel, update *EnvironmentUpdate) {
-	model.TargetVersion = types.StringValue(update.TargetVersion)
+	// target_version is Required, so its planned value is fixed. Echo the API's copy back
+	// only when it genuinely differs — a value differing solely by case or surrounding
+	// whitespace is normalisation, and writing it back failed the apply with
+	// "inconsistent result after apply" after the schedule had been created.
+	if !strings.EqualFold(strings.TrimSpace(update.TargetVersion), strings.TrimSpace(model.TargetVersion.ValueString())) {
+		model.TargetVersion = types.StringValue(update.TargetVersion)
+	}
 
 	if update.UpdateStatus != "" {
 		model.UpdateStatus = types.StringValue(update.UpdateStatus)

@@ -291,24 +291,32 @@ func (r *EnvironmentAppResource) Create(ctx context.Context, req resource.Create
 
 	timeout := utils.OperationTimeout(ctx, plan.Timeouts, "create")
 
+	// The install has been requested, so the app may already exist on the environment.
+	// Every failure past this point records the resource before reporting the error:
+	// returning without state meant a 40-minute install that then hit a network blip left
+	// the app installed and untracked, and the next apply was rejected with
+	// EntityValidationFailed.
+	plan.ID = types.StringValue(BuildEnvironmentAppID(tenantID, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AppID.ValueString()))
+
 	if _, err := svc.WaitForOperation(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), operation.ID, timeout, false); err != nil {
 		resp.Diagnostics.AddError(
 			"Error waiting for app installation",
-			fmt.Sprintf("App installation failed: %s", err),
+			fmt.Sprintf("App installation failed: %s. The app has been recorded in state; run "+
+				"`terraform plan` to reconcile it.", err),
 		)
+		savePartialAppState(ctx, resp, &plan)
 		return
 	}
-
-	// Set the ARM resource ID.
-	plan.ID = types.StringValue(BuildEnvironmentAppID(tenantID, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AppID.ValueString()))
 
 	// Populate computed fields from API.
 	app, err := svc.GetByID(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), plan.AppID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading installed app",
-			fmt.Sprintf("Could not read app after installation: %s", err),
+			fmt.Sprintf("Could not read app after installation: %s. The app has been recorded in "+
+				"state; run `terraform plan` to reconcile it.", err),
 		)
+		savePartialAppState(ctx, resp, &plan)
 		return
 	}
 	if app != nil {
@@ -316,6 +324,27 @@ func (r *EnvironmentAppResource) Create(ctx context.Context, req resource.Create
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// savePartialAppState records an app whose install was requested but could not be
+// confirmed. Terraform rejects a state object holding unknown values, so the computed
+// attributes are resolved to null first.
+func savePartialAppState(ctx context.Context, resp *resource.CreateResponse, plan *EnvironmentAppResourceModel) {
+	for _, attr := range []*types.String{
+		&plan.Name,
+		&plan.Publisher,
+		&plan.PublishedAs,
+		&plan.Status,
+		&plan.TargetVersion,
+		&plan.PendingTargetVersion,
+		&plan.PendingOperationID,
+		&plan.LanguageID,
+	} {
+		if attr.IsUnknown() {
+			*attr = types.StringNull()
+		}
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -337,6 +366,17 @@ func (r *EnvironmentAppResource) Read(ctx context.Context, req resource.ReadRequ
 
 	app, err := svc.GetByID(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString())
 	if err != nil {
+		// The environment itself is gone (deleted or renamed out of band), so the app is
+		// too. Erroring here made plan, apply and destroy all fail permanently, leaving
+		// `terraform state rm` as the only way out.
+		if client.IsNotFound(err) {
+			tflog.Warn(ctx, "App environment no longer exists; removing app from state", map[string]interface{}{
+				"app_id":           state.AppID.ValueString(),
+				"environment_name": state.EnvironmentName.ValueString(),
+			})
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error reading app",
 			fmt.Sprintf("Could not read app %s: %s", state.AppID.ValueString(), err),
@@ -440,11 +480,24 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 			})
 			cancelErr := svc.CancelUpdate(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString(), scheduledOpID)
 			if cancelErr != nil {
-				// Log and proceed: the re-submit below may still succeed if BC accepts it.
-				// If cancel failed AND the re-submit returns "already scheduled" we know the
-				// original operation is still alive with the old window setting — tracked via cancelFailed.
+				// IsCancelNotAllowedError distinguishes "the operation is no longer
+				// cancellable" — expected, and the re-submit below may still succeed — from a
+				// transient network or timeout failure, where proceeding risks a second
+				// scheduled operation. It was written for exactly this and never called.
+				if !IsCancelNotAllowedError(cancelErr) {
+					resp.Diagnostics.AddError(
+						"Error cancelling scheduled app update",
+						fmt.Sprintf("Could not reach the Admin Center to cancel the scheduled update for app %s: %s. "+
+							"Retrying is safe; proceeding would risk scheduling a second update.",
+							state.AppID.ValueString(), cancelErr),
+					)
+					return
+				}
+				// Not cancellable: proceed with the re-submit. If that returns "already
+				// scheduled" we know the original operation is still alive with the old
+				// window setting — tracked via cancelFailed.
 				cancelFailed = true
-				tflog.Debug(ctx, "Could not cancel scheduled app update, proceeding with re-submit", map[string]interface{}{
+				tflog.Debug(ctx, "Scheduled app update was not cancellable, proceeding with re-submit", map[string]interface{}{
 					"app_id":       state.AppID.ValueString(),
 					"operation_id": scheduledOpID,
 					"cancel_error": cancelErr.Error(),
@@ -593,6 +646,15 @@ func (r *EnvironmentAppResource) Delete(ctx context.Context, req resource.Delete
 
 	operation, err := svc.Uninstall(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), state.AppID.ValueString(), uninstallReq)
 	if err != nil {
+		// Already uninstalled (in the portal, or with the environment removed): the desired
+		// end state is reached, so let the destroy succeed rather than stranding the
+		// resource in state where only `terraform state rm` can clear it.
+		if client.IsNotFound(err) {
+			tflog.Debug(ctx, "App already uninstalled; treating destroy as successful", map[string]interface{}{
+				"app_id": state.AppID.ValueString(),
+			})
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error uninstalling app",
 			fmt.Sprintf("Could not uninstall app %s: %s", state.AppID.ValueString(), err),
@@ -632,6 +694,21 @@ func (r *EnvironmentAppResource) ImportState(ctx context.Context, req resource.I
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("environment_name"), environmentName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("app_id"), appID)...)
+
+	// Seed the behavioural attributes with their schema defaults. None of them can be read
+	// back from the API, and Read does not populate them either, so leaving them null meant
+	// the first plan after an import compared a null state value against the default —
+	// a diff on accept_isv_eula and language_id, both of which carry RequiresReplace. The
+	// import therefore proposed destroy + create, and applying it uninstalled and
+	// reinstalled a production app.
+	for attr, value := range map[string]bool{
+		"accept_isv_eula":                       false,
+		"allow_preview_version":                 false,
+		"install_or_update_needed_dependencies": true,
+		"use_environment_update_window":         true,
+	} {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(attr), value)...)
+	}
 }
 
 // updateModelFromApp populates the resource model from an App API response.
