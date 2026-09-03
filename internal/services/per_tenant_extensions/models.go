@@ -41,6 +41,12 @@ const (
 	OperationStatusSucceeded = "succeeded"
 	OperationStatusFailed    = "failed"
 	OperationStatusCanceled  = "canceled"
+	// OperationStatusCancelled is the double-l spelling used by the environment and
+	// environment_apps operations endpoints. Accept both rather than depending on which
+	// one a given endpoint returns: matching only one spelling meant a cancelled
+	// operation was never recognised, so the poller ran to the full timeout and then
+	// reported a misleading "timed out" instead of "was canceled".
+	OperationStatusCancelled = "cancelled"
 	OperationStatusSkipped   = "skipped"
 )
 

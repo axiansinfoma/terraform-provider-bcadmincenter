@@ -15,6 +15,7 @@ import (
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Service handles environment-related operations for the Business Central Admin Center API.
@@ -160,25 +161,20 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 		return fmt.Errorf("failed to check operation status: %w", err)
 	}
 
-	// Log initial operation status.
-	fmt.Printf("[DEBUG] Initial operation status: %s (ID: %s)\n", operation.Status, operation.ID)
+	tflog.Debug(ctx, "Initial operation status", map[string]interface{}{
+		"status":       operation.Status,
+		"operation_id": operation.ID,
+	})
 
-	if operation.Status == OperationStatusSucceeded {
-		fmt.Printf("[DEBUG] Operation already succeeded\n")
-		return nil
-	}
-	if operation.Status == OperationStatusFailed {
-		return fmt.Errorf("operation failed: %s", operation.ErrorMessage)
-	}
-	if operation.Status == OperationStatusCancelled {
-		return fmt.Errorf("operation was cancelled")
+	if done, err := classifyOperation(operation); done {
+		return err
 	}
 
 	// Then poll at intervals.
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("operation timeout after %v", timeout)
+			return operationWaitError(ctx, timeout)
 		case <-ticker.C:
 			operation, err := s.GetOperation(ctx, applicationFamily, environmentName, operationID)
 			if err != nil {
@@ -189,25 +185,44 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 				return fmt.Errorf("failed to check operation status: %w", err)
 			}
 
-			// Log polling status.
-			fmt.Printf("[DEBUG] Polling operation status: %s (ID: %s)\n", operation.Status, operation.ID)
+			tflog.Debug(ctx, "Polling operation status", map[string]interface{}{
+				"status":       operation.Status,
+				"operation_id": operation.ID,
+			})
 
-			switch operation.Status {
-			case OperationStatusSucceeded:
-				fmt.Printf("[DEBUG] Operation succeeded\n")
-				return nil
-			case OperationStatusFailed:
-				return fmt.Errorf("operation failed: %s", operation.ErrorMessage)
-			case OperationStatusCancelled:
-				return fmt.Errorf("operation was cancelled")
-			case OperationStatusQueued, OperationStatusRunning:
-				// Continue polling.
-				continue
-			default:
-				return fmt.Errorf("unknown operation status: %s", operation.Status)
+			if done, err := classifyOperation(operation); done {
+				return err
 			}
+			// Queued, running, or a status this provider does not recognise: keep
+			// polling until the deadline. Failing on an unrecognised status aborted
+			// long-running operations that were progressing normally.
 		}
 	}
+}
+
+// classifyOperation reports whether an operation has reached a terminal state, and with
+// what outcome. Statuses are matched case-insensitively and across both spellings of
+// "cancelled", because the API is inconsistent about each.
+func classifyOperation(operation *Operation) (done bool, err error) {
+	switch {
+	case utils.StatusIs(operation.Status, OperationStatusSucceeded):
+		return true, nil
+	case utils.StatusIs(operation.Status, OperationStatusFailed):
+		return true, fmt.Errorf("operation failed: %s", operation.ErrorMessage)
+	case utils.StatusIs(operation.Status, OperationStatusCancelled, OperationStatusCanceled):
+		return true, fmt.Errorf("operation was cancelled")
+	default:
+		return false, nil
+	}
+}
+
+// operationWaitError distinguishes a genuine timeout from the user interrupting the run,
+// which otherwise reported a misleading "operation timeout after 1h0m0s" after a Ctrl-C.
+func operationWaitError(ctx context.Context, timeout time.Duration) error {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("operation timeout after %v", timeout)
+	}
+	return fmt.Errorf("stopped waiting for operation: %w", ctx.Err())
 }
 
 // isEnvironmentNotFoundError checks if an error is an EnvironmentNotFound error.
@@ -302,8 +317,11 @@ func (s *Service) SelectUpdateVersion(ctx context.Context, applicationFamily, en
 		return err
 	}
 
-	fmt.Printf("[WARN] SelectUpdateVersion: stale past selectedDateTime detected for %s/%s/%s; retrying with refreshed datetime\n",
-		applicationFamily, environmentName, targetVersion)
+	tflog.Warn(ctx, "SelectUpdateVersion: stale past selectedDateTime detected; retrying with refreshed datetime", map[string]interface{}{
+		"application_family": applicationFamily,
+		"environment_name":   environmentName,
+		"target_version":     targetVersion,
+	})
 
 	safeDateTime := time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
 	// Cap to latestSelectableDateTime if the API provides one for this version.
@@ -348,8 +366,12 @@ func (s *Service) ScheduleUpdateVersion(ctx context.Context, applicationFamily, 
 	// Step 1: deselect to clear any past selectedDateTime state (best-effort).
 	deselect := SelectUpdateRequest{Selected: false}
 	if err := s.patchUpdate(ctx, applicationFamily, environmentName, targetVersion, deselect); err != nil {
-		fmt.Printf("[WARN] ScheduleUpdateVersion: failed to deselect %s/%s/%s: %v; proceeding with select\n",
-			applicationFamily, environmentName, targetVersion, err)
+		tflog.Warn(ctx, "ScheduleUpdateVersion: deselect failed; proceeding with select", map[string]interface{}{
+			"application_family": applicationFamily,
+			"environment_name":   environmentName,
+			"target_version":     targetVersion,
+			"error":              err.Error(),
+		})
 	}
 
 	// Step 2: select the version with the desired schedule.

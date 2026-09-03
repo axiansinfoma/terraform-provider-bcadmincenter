@@ -70,14 +70,18 @@ type Operation struct {
 	EnvironmentType        string    `json:"environmentType,omitempty"` // Type of the environment
 }
 
-// OperationStatus represents the possible states of an operation.
-// Note: API returns lowercase status values.
+// OperationStatus represents the possible states of an operation. The API returns these
+// capitalised on some endpoints and lower-cased on others, so always compare with
+// utils.StatusIs rather than ==.
 const (
 	OperationStatusQueued    = "queued"
 	OperationStatusRunning   = "running"
 	OperationStatusSucceeded = "succeeded"
 	OperationStatusFailed    = "failed"
 	OperationStatusCancelled = "cancelled"
+	// OperationStatusCanceled is the single-l spelling. The operations API is documented
+	// with both, so accept either rather than depending on which one an endpoint returns.
+	OperationStatusCanceled = "canceled"
 )
 
 // EnvironmentStatus represents the possible states of an environment.
