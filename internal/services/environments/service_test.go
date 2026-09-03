@@ -6,9 +6,11 @@ package environments
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -935,5 +937,67 @@ func TestService_UpdateScheduleDetails(t *testing.T) {
 				t.Errorf("UpdateScheduleDetails() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// TestClassifyOperation mirrors the environment_apps coverage: environment operations
+// must match statuses case-insensitively, accept both spellings of "cancelled", and
+// treat anything unrecognised as "keep polling" rather than aborting a provisioning
+// operation that is progressing normally.
+func TestClassifyOperation(t *testing.T) {
+	tests := []struct {
+		name         string
+		status       string
+		errorMessage string
+		wantDone     bool
+		wantErr      bool
+	}{
+		{name: "succeeded", status: "succeeded", wantDone: true},
+		{name: "succeeded TitleCase", status: "Succeeded", wantDone: true},
+		{name: "failed", status: "failed", errorMessage: "boom", wantDone: true, wantErr: true},
+		{name: "cancelled double l", status: "cancelled", wantDone: true, wantErr: true},
+		{name: "canceled single l", status: "canceled", wantDone: true, wantErr: true},
+		{name: "queued keeps polling", status: "queued"},
+		{name: "running keeps polling", status: "running"},
+		{name: "unrecognised status keeps polling", status: "notStarted"},
+		{name: "empty status keeps polling", status: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			done, err := classifyOperation(&Operation{Status: tt.status, ErrorMessage: tt.errorMessage})
+
+			if done != tt.wantDone {
+				t.Errorf("done = %v, want %v", done, tt.wantDone)
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestOperationWaitError separates a real deadline from a user interrupt, which
+// previously both reported "operation timeout after 1h0m0s" and sent people looking for
+// a timeout problem that did not exist.
+func TestOperationWaitError(t *testing.T) {
+	deadlineCtx, cancelDeadline := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancelDeadline()
+	<-deadlineCtx.Done()
+
+	if err := operationWaitError(deadlineCtx, time.Hour); !strings.Contains(err.Error(), "timeout after") {
+		t.Errorf("deadline should report a timeout, got: %v", err)
+	}
+
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+	<-cancelledCtx.Done()
+
+	err := operationWaitError(cancelledCtx, time.Hour)
+	if strings.Contains(err.Error(), "timeout after") {
+		t.Errorf("cancellation must not be reported as a timeout, got: %v", err)
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("cancellation error should wrap context.Canceled, got: %v", err)
 	}
 }

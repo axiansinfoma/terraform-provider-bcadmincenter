@@ -72,7 +72,10 @@ func (s *Service) GetByID(ctx context.Context, applicationFamily, environmentNam
 	}
 
 	for i := range appList.Value {
-		if appList.Value[i].ID == appID {
+		// The Admin Center varies GUID casing between what it accepts and what it
+		// returns, so an exact match would report an installed app as missing and make
+		// Read remove it from state.
+		if strings.EqualFold(appList.Value[i].ID, appID) {
 			return &appList.Value[i], nil
 		}
 	}
@@ -266,18 +269,8 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 
 	tflog.Debug(ctx, "Initial app operation status", map[string]interface{}{"status": operation.Status, "operation_id": operation.ID})
 
-	switch operation.Status {
-	case OperationStatusSucceeded:
-		return false, nil
-	case OperationStatusFailed:
-		return false, fmt.Errorf("operation failed: %s", operation.ErrorMessage)
-	case OperationStatusCancelled:
-		return false, fmt.Errorf("operation was cancelled")
-	case OperationStatusScheduled:
-		if skipIfScheduled {
-			// Operation has been deferred to the update window — do not block.
-			return true, nil
-		}
+	if done, deferred, err := classifyOperation(operation, skipIfScheduled); done {
+		return deferred, err
 	}
 
 	// Then poll at intervals.
@@ -293,25 +286,32 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 
 			tflog.Debug(ctx, "Polling app operation status", map[string]interface{}{"status": operation.Status, "operation_id": operation.ID})
 
-			switch operation.Status {
-			case OperationStatusSucceeded:
-				return false, nil
-			case OperationStatusFailed:
-				return false, fmt.Errorf("operation failed: %s", operation.ErrorMessage)
-			case OperationStatusCancelled:
-				return false, fmt.Errorf("operation was cancelled")
-			case OperationStatusScheduled:
-				if skipIfScheduled {
-					// Transitioned to scheduled mid-poll — deferred to update window.
-					return true, nil
-				}
-				continue
-			case OperationStatusQueued, OperationStatusRunning:
-				// Continue polling.
-				continue
-			default:
-				return false, fmt.Errorf("unknown operation status: %s", operation.Status)
+			if done, deferred, err := classifyOperation(operation, skipIfScheduled); done {
+				return deferred, err
 			}
+			// Queued, running, scheduled-but-not-skippable, or a status this provider
+			// does not recognise: keep polling until the context deadline. Treating an
+			// unrecognised status as fatal used to fail an install that had actually
+			// succeeded, and left no state behind for it.
 		}
+	}
+}
+
+// classifyOperation decides whether a polled operation has reached a terminal state.
+// done reports whether polling should stop; deferred reports that the operation was
+// handed off to the environment's update window rather than completed.
+func classifyOperation(operation *Operation, skipIfScheduled bool) (done, deferred bool, err error) {
+	switch {
+	case utils.StatusIs(operation.Status, OperationStatusSucceeded):
+		return true, false, nil
+	case utils.StatusIs(operation.Status, OperationStatusFailed):
+		return true, false, fmt.Errorf("operation failed: %s", operation.ErrorMessage)
+	case utils.StatusIs(operation.Status, OperationStatusCancelled, OperationStatusCanceled):
+		return true, false, fmt.Errorf("operation was cancelled")
+	case utils.StatusIs(operation.Status, OperationStatusScheduled) && skipIfScheduled:
+		// Deferred to the update window — do not block.
+		return true, true, nil
+	default:
+		return false, false, nil
 	}
 }

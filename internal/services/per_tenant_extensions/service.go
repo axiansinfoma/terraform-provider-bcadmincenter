@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -270,7 +271,7 @@ func (s *Service) WaitForOperation(ctx context.Context, applicationFamily, envir
 			// Transient queued state for an immediate operation; keep polling.
 		case strings.EqualFold(operation.Status, OperationStatusFailed):
 			return nil, fmt.Errorf("per-tenant extension operation %s failed: %s", operation.ID, operation.ErrorMessage)
-		case strings.EqualFold(operation.Status, OperationStatusCanceled):
+		case utils.StatusIs(operation.Status, OperationStatusCanceled, OperationStatusCancelled):
 			return nil, fmt.Errorf("per-tenant extension operation %s was canceled", operation.ID)
 		case strings.EqualFold(operation.Status, OperationStatusSkipped):
 			return nil, fmt.Errorf("per-tenant extension operation %s was skipped", operation.ID)

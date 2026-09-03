@@ -73,7 +73,9 @@ type AppOperationsResponse struct {
 	Value []AppOperation `json:"value"`
 }
 
-// OperationStatus constants for app operations.
+// OperationStatus constants for app operations. The API returns these capitalised on
+// some endpoints and lower-cased on others, so always compare with utils.StatusIs
+// rather than ==.
 const (
 	OperationStatusScheduled = "scheduled"
 	OperationStatusQueued    = "queued"
@@ -81,6 +83,10 @@ const (
 	OperationStatusSucceeded = "succeeded"
 	OperationStatusFailed    = "failed"
 	OperationStatusCancelled = "cancelled"
+	// OperationStatusCanceled is the single-l spelling. The operations API is
+	// documented with both, and per_tenant_extensions matches on this one, so accept
+	// either rather than depending on which spelling a given endpoint returns.
+	OperationStatusCanceled = "canceled"
 )
 
 // App status constants.

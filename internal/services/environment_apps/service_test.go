@@ -519,3 +519,55 @@ func TestService_Uninstall(t *testing.T) {
 		})
 	}
 }
+
+// TestClassifyOperation covers the terminal-state matching for app operations. The two
+// behaviours that matter: statuses are matched case-insensitively, because the live API
+// varies the casing between endpoints; and an unrecognised status means "keep polling",
+// not "fail". Failing on an unrecognised status aborted installs that had actually
+// succeeded, and the resource was left out of state entirely.
+func TestClassifyOperation(t *testing.T) {
+	tests := []struct {
+		name            string
+		status          string
+		errorMessage    string
+		skipIfScheduled bool
+		wantDone        bool
+		wantDeferred    bool
+		wantErr         bool
+	}{
+		{name: "succeeded", status: "succeeded", wantDone: true},
+		{name: "succeeded TitleCase", status: "Succeeded", wantDone: true},
+		{name: "succeeded upper", status: "SUCCEEDED", wantDone: true},
+		{name: "failed", status: "failed", errorMessage: "boom", wantDone: true, wantErr: true},
+		{name: "failed TitleCase", status: "Failed", errorMessage: "boom", wantDone: true, wantErr: true},
+		{name: "cancelled double l", status: "cancelled", wantDone: true, wantErr: true},
+		// The same operations API is documented with both spellings; matching only one
+		// left a cancelled operation unrecognised until the poller hit its timeout.
+		{name: "canceled single l", status: "canceled", wantDone: true, wantErr: true},
+		{name: "cancelled TitleCase", status: "Cancelled", wantDone: true, wantErr: true},
+		{name: "scheduled and skippable is deferred", status: "scheduled", skipIfScheduled: true, wantDone: true, wantDeferred: true},
+		{name: "scheduled but not skippable keeps polling", status: "scheduled", skipIfScheduled: false},
+		{name: "queued keeps polling", status: "queued"},
+		{name: "running keeps polling", status: "running"},
+		{name: "unrecognised status keeps polling", status: "notStarted"},
+		{name: "empty status keeps polling", status: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			op := &Operation{Status: tt.status, ErrorMessage: tt.errorMessage}
+
+			done, deferred, err := classifyOperation(op, tt.skipIfScheduled)
+
+			if done != tt.wantDone {
+				t.Errorf("done = %v, want %v", done, tt.wantDone)
+			}
+			if deferred != tt.wantDeferred {
+				t.Errorf("deferred = %v, want %v", deferred, tt.wantDeferred)
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
