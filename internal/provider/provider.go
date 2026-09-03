@@ -165,6 +165,19 @@ func (p *BCAdminCenterProvider) Configure(ctx context.Context, req provider.Conf
 		environment = "public"
 	}
 
+	// `environment` is accepted and passed to the client, but the client never reads it:
+	// constants.DefaultBaseURL is used regardless. Selecting a sovereign cloud therefore
+	// silently talks to the public endpoint. Say so rather than letting it look supported;
+	// implementing the sovereign endpoints needs their real host names confirmed first.
+	if !strings.EqualFold(environment, "public") && baseURL == "" {
+		resp.Diagnostics.AddWarning(
+			"Sovereign cloud environments are not implemented",
+			fmt.Sprintf("`environment` is set to %q, but the provider currently issues every request "+
+				"against the public cloud endpoint %s. Set `base_url` explicitly to target a different "+
+				"cloud.", environment, constants.DefaultBaseURL),
+		)
+	}
+
 	tflog.Debug(ctx, "Configuring Business Central Admin Center client", map[string]interface{}{
 		"tenant_id":   tenantID,
 		"environment": environment,
