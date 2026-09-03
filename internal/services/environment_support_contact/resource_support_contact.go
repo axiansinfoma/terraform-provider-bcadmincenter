@@ -62,11 +62,15 @@ func (r *EnvironmentSupportContactResource) Schema(_ context.Context, _ resource
 				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.",
+				Description: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. Changing this forces a new resource to be created.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					// The tenant selects which API the resource is read from and written
+					// to. Without this, editing it made Terraform plan an in-place update
+					// that talked to the old tenant while recording the new one.
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"application_family": schema.StringAttribute{

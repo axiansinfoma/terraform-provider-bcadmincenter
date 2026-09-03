@@ -6,7 +6,6 @@ package environmentapps
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -82,11 +81,15 @@ func (r *EnvironmentAppResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.",
+				MarkdownDescription: "The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. Changing this forces a new resource to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					// The tenant selects which API the resource is read from and written
+					// to. Without this, editing it made Terraform plan an in-place update
+					// that talked to the old tenant while recording the new one.
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"application_family": schema.StringAttribute{
@@ -286,7 +289,7 @@ func (r *EnvironmentAppResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	timeout := 60 * time.Minute
+	timeout := utils.OperationTimeout(ctx, plan.Timeouts, "create")
 
 	if _, err := svc.WaitForOperation(ctx, plan.ApplicationFamily.ValueString(), plan.EnvironmentName.ValueString(), operation.ID, timeout, false); err != nil {
 		resp.Diagnostics.AddError(
@@ -523,7 +526,7 @@ func (r *EnvironmentAppResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	timeout := 60 * time.Minute
+	timeout := utils.OperationTimeout(ctx, state.Timeouts, "update")
 
 	deferred, err := svc.WaitForOperation(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), operation.ID, timeout, plan.UseEnvironmentUpdateWindow.ValueBool())
 	if err != nil {
@@ -600,7 +603,7 @@ func (r *EnvironmentAppResource) Delete(ctx context.Context, req resource.Delete
 	// If the app was already gone, the uninstall may have returned an error above,
 	// but if the API returns 202 with an operation we still wait for it.
 	if operation != nil {
-		timeout := 60 * time.Minute
+		timeout := utils.OperationTimeout(ctx, state.Timeouts, "delete")
 		if _, err := svc.WaitForOperation(ctx, state.ApplicationFamily.ValueString(), state.EnvironmentName.ValueString(), operation.ID, timeout, state.UseEnvironmentUpdateWindow.ValueBool()); err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for app uninstall",

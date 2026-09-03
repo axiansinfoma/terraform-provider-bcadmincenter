@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 )
 
 func TestPerTenantExtensionResource_Metadata(t *testing.T) {
@@ -296,7 +298,7 @@ func TestOperationTimeout(t *testing.T) {
 			name:     "null object falls back to the default",
 			timeouts: types.ObjectNull(timeoutsType.AttrTypes),
 			key:      "create",
-			want:     defaultOperationTimeout,
+			want:     utils.DefaultOperationTimeout,
 		},
 		{
 			name:     "configured value is used",
@@ -308,19 +310,19 @@ func TestOperationTimeout(t *testing.T) {
 			name:     "unset key falls back to the default",
 			timeouts: withValues(types.StringValue("90m"), types.StringNull(), types.StringNull()),
 			key:      "delete",
-			want:     defaultOperationTimeout,
+			want:     utils.DefaultOperationTimeout,
 		},
 		{
 			name:     "unparseable value falls back to the default",
 			timeouts: withValues(types.StringValue("not-a-duration"), types.StringNull(), types.StringNull()),
 			key:      "create",
-			want:     defaultOperationTimeout,
+			want:     utils.DefaultOperationTimeout,
 		},
 		{
 			name:     "non-positive value falls back to the default",
 			timeouts: withValues(types.StringValue("0s"), types.StringNull(), types.StringNull()),
 			key:      "create",
-			want:     defaultOperationTimeout,
+			want:     utils.DefaultOperationTimeout,
 		},
 	}
 
