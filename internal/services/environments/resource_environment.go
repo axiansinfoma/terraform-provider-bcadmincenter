@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -31,9 +33,11 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &EnvironmentResource{}
-	_ resource.ResourceWithConfigure   = &EnvironmentResource{}
-	_ resource.ResourceWithImportState = &EnvironmentResource{}
+	_ resource.Resource                     = &EnvironmentResource{}
+	_ resource.ResourceWithConfigure        = &EnvironmentResource{}
+	_ resource.ResourceWithImportState      = &EnvironmentResource{}
+	_ resource.ResourceWithConfigValidators = &EnvironmentResource{}
+	_ resource.ResourceWithModifyPlan       = &EnvironmentResource{}
 )
 
 // NewEnvironmentResource is a helper function to simplify the provider implementation.
@@ -824,6 +828,118 @@ func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.Impo
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)...)
 }
 
+// ConfigValidators enforces that an update window is configured completely or not at all.
+//
+// The three attributes are sent as one payload whose fields are `*string` with
+// `omitempty`, so a nil field is simply absent from the request and the API keeps its
+// previous value. Clearing one of three therefore looked like it worked and silently did
+// not. Requiring them together removes the partial state that cannot be expressed.
+func (r *EnvironmentResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.RequiredTogether(
+			path.MatchRoot("settings").AtName("update_window_start_time"),
+			path.MatchRoot("settings").AtName("update_window_end_time"),
+			path.MatchRoot("settings").AtName("update_window_timezone"),
+		),
+	}
+}
+
+// ModifyPlan refuses, at plan time, to "remove" a setting the Admin Center offers no way
+// to unset.
+//
+// applyEnvironmentSettingsChanges can only send values the API accepts. For these
+// settings there is no clear operation, so a removal previously produced no request at
+// all: Terraform reported success, recorded the attribute as gone, and left the
+// environment unchanged. None of them are read back from the API either — they are
+// write-only or need elevated permissions — so no later plan could detect the difference.
+// The result was permanent, invisible drift.
+//
+// Erroring here keeps the failure in `terraform plan`, before anything is applied, and
+// names the value to set instead.
+func (r *EnvironmentResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// Nothing to compare on create (no prior state) or destroy (no plan).
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var plan, state EnvironmentResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(checkUnclearableSettings(&plan, &state)...)
+}
+
+// checkUnclearableSettings reports removals the Admin Center cannot carry out. Kept
+// separate from ModifyPlan so the rules can be tested directly on models.
+func checkUnclearableSettings(plan, state *EnvironmentResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if state.Settings == nil {
+		return diags
+	}
+
+	// Removing the whole block is the same request as clearing every attribute in it.
+	planned := plan.Settings
+	if planned == nil {
+		planned = clearedSettingsModel()
+	}
+
+	settingsPath := path.Root("settings")
+
+	for _, c := range []struct {
+		attribute string
+		wasSet    bool
+		nowUnset  bool
+		remedy    string
+	}{
+		{
+			attribute: "app_update_cadence",
+			wasSet:    !state.Settings.AppUpdateCadence.IsNull(),
+			nowUnset:  planned.AppUpdateCadence.IsNull(),
+			remedy:    `Set it explicitly to "Default" to return to the standard cadence.`,
+		},
+		{
+			attribute: "partner_access_status",
+			wasSet:    !state.Settings.PartnerAccessStatus.IsNull(),
+			nowUnset:  planned.PartnerAccessStatus.IsNull(),
+			remedy:    `Set it explicitly to "Disabled" to withdraw partner access.`,
+		},
+	} {
+		if c.wasSet && c.nowUnset {
+			diags.AddAttributeError(
+				settingsPath.AtName(c.attribute),
+				fmt.Sprintf("Cannot remove %s", c.attribute),
+				fmt.Sprintf("The Admin Center API has no operation to unset %s, so removing it from the "+
+					"configuration would leave the environment unchanged while Terraform recorded it as "+
+					"removed — and this setting is not read back, so the difference would never surface "+
+					"in a later plan.\n\n%s", c.attribute, c.remedy),
+			)
+		}
+	}
+
+	windowWasSet := !state.Settings.UpdateWindowStartTime.IsNull() ||
+		!state.Settings.UpdateWindowEndTime.IsNull() ||
+		!state.Settings.UpdateWindowTimeZone.IsNull()
+	windowNowUnset := planned.UpdateWindowStartTime.IsNull() &&
+		planned.UpdateWindowEndTime.IsNull() &&
+		planned.UpdateWindowTimeZone.IsNull()
+
+	if windowWasSet && windowNowUnset {
+		diags.AddAttributeError(
+			settingsPath.AtName("update_window_start_time"),
+			"Cannot remove the update window",
+			"The Admin Center API has no operation to clear a configured update window: the request "+
+				"omits absent fields, so the previous window would stay in force while Terraform "+
+				"recorded it as removed.\n\nSet the window you want instead, or keep the current "+
+				"values to leave it as it is.",
+		)
+	}
+
+	return diags
+}
+
 // clearedSettingsModel returns a settings model with every attribute null, representing
 // the user having removed the `settings` block. Passing it to
 // applyEnvironmentSettingsChanges reverts each setting through the same code paths that
@@ -1228,8 +1344,14 @@ func (r *EnvironmentResource) applyEnvironmentSettingsChanges(ctx context.Contex
 		}
 	}
 
-	// Update Application Insights key if changed.
-	if !plan.AppInsightsKey.Equal(state.AppInsightsKey) && !plan.AppInsightsKey.IsNull() {
+	// Update Application Insights key if changed, including clearing it.
+	//
+	// The `&& !plan.AppInsightsKey.IsNull()` guard that used to be here made removing the
+	// attribute a silent no-op: no request was sent, so the key stayed on the environment
+	// while state recorded it as gone. Because this setting is never read back from the
+	// API, no later plan could detect the difference either. An empty key is the API's
+	// representation of "not set", so the removal is expressible.
+	if !plan.AppInsightsKey.Equal(state.AppInsightsKey) {
 		if err := svc.SetAppInsightsKey(ctx, applicationFamily, environmentName, plan.AppInsightsKey.ValueString()); err != nil {
 			return fmt.Errorf("updating app insights key: %w", err)
 		}
