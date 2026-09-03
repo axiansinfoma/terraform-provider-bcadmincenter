@@ -439,11 +439,16 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		"environment_name":   envName,
 	})
 
+	// The PUT has been accepted, so the environment now exists in the tenant. Every
+	// failure from here on records what is known before reporting the error, so
+	// Terraform does not forget a live environment.
 	if err := svc.WaitForOperation(ctx, appFamily, envName, operation.ID, timeout); err != nil {
 		resp.Diagnostics.AddError(
 			"Error waiting for environment creation",
-			fmt.Sprintf("Environment creation failed: %s", err),
+			fmt.Sprintf("Environment creation failed: %s. The environment has been recorded in state; "+
+				"run `terraform plan` to reconcile it once provisioning settles.", err),
 		)
+		r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 		return
 	}
 
@@ -472,8 +477,10 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error reading created environment",
-				fmt.Sprintf("Could not read environment after creation: %s", err),
+				fmt.Sprintf("Could not read environment after creation: %s. The environment has been "+
+					"recorded in state; run `terraform plan` to reconcile it.", err),
 			)
+			r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 			return
 		}
 
@@ -481,7 +488,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			"status": env.Status,
 		})
 
-		if env.Status == "Active" {
+		if utils.StatusIs(env.Status, EnvironmentStatusActive) {
 			// Environment is ready, update state and return.
 			r.updateModelFromEnvironment(&plan, env)
 			// Preserve the user-configured short version (e.g. "27.1") if the API
@@ -495,16 +502,20 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 				if err := r.applyEnvironmentSettings(ctx, settingsSvc, plan.ApplicationFamily.ValueString(), envName, plan.Settings); err != nil {
 					resp.Diagnostics.AddError(
 						"Error applying environment settings",
-						"Could not apply settings after environment creation: "+err.Error(),
+						"Could not apply settings after environment creation: "+err.Error()+
+							". The environment exists and has been recorded in state; re-run to apply the settings.",
 					)
+					r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 					return
 				}
 				// Read back readable settings (update_window, security_group, m365 access).
 				if err := r.readEnvironmentSettings(ctx, settingsSvc, plan.ApplicationFamily.ValueString(), envName, plan.Settings); err != nil {
 					resp.Diagnostics.AddError(
 						"Error reading environment settings",
-						"Could not read settings after applying: "+err.Error(),
+						"Could not read settings after applying: "+err.Error()+
+							". The environment exists and has been recorded in state.",
 					)
+					r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 					return
 				}
 			}
@@ -514,11 +525,14 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		// Check for failed states.
-		if env.Status == "Failed" || env.Status == "Suspended" {
+		if utils.StatusIs(env.Status, "Failed", "Suspended") {
 			resp.Diagnostics.AddError(
 				"Environment creation failed",
-				fmt.Sprintf("Environment entered %s state during creation", env.Status),
+				fmt.Sprintf("Environment entered %s state during creation. It has been recorded in "+
+					"state so it can be inspected or destroyed with Terraform.", env.Status),
 			)
+			r.updateModelFromEnvironment(&plan, env)
+			r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 			return
 		}
 
@@ -527,8 +541,11 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		case <-envTimeout.Done():
 			resp.Diagnostics.AddError(
 				"Timeout waiting for environment",
-				fmt.Sprintf("Environment did not become Active within %v (current status: %s)", timeout, env.Status),
+				fmt.Sprintf("Environment did not become Active within %v (current status: %s). It has "+
+					"been recorded in state; run `terraform plan` once provisioning completes.", timeout, env.Status),
 			)
+			r.updateModelFromEnvironment(&plan, env)
+			r.savePartialCreateState(ctx, resp, &plan, tenantID, appFamily, envName)
 			return
 		case <-ticker.C:
 			// Continue polling.
@@ -563,6 +580,17 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 	// Get the environment.
 	env, err := svc.Get(ctx, state.ApplicationFamily.ValueString(), state.Name.ValueString())
 	if err != nil {
+		// Deleted out of band (for example in the Admin Center portal). Removing it from
+		// state lets the next plan recreate it; raising an error instead made every
+		// subsequent plan, apply and destroy fail until the user ran `terraform state rm`.
+		if isEnvironmentNotFoundError(err) {
+			tflog.Warn(ctx, "Environment no longer exists; removing from state", map[string]interface{}{
+				"name":               state.Name.ValueString(),
+				"application_family": state.ApplicationFamily.ValueString(),
+			})
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error reading environment",
 			fmt.Sprintf("Could not read environment: %s", err),
@@ -774,6 +802,60 @@ func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.Impo
 	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
 	resp.State.SetAttribute(ctx, path.Root("name"), environmentName)
 	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
+}
+
+// resolveUnknownComputed replaces any attribute still carrying an unknown value with
+// null.
+//
+// Terraform rejects a state object that contains unknown values after apply, so a model
+// can only be written to state once every unknown has been resolved. Create fills these
+// from the API on the happy path; this is the fallback for saving partial state when a
+// step after the environment already exists fails.
+func resolveUnknownComputed(model *EnvironmentResourceModel) {
+	for _, attr := range []*types.String{
+		&model.ID,
+		&model.ApplicationFamily,
+		&model.RingName,
+		&model.ApplicationVersion,
+		&model.AzureRegion,
+		&model.Status,
+		&model.WebClientLoginURL,
+		&model.WebServiceURL,
+		&model.AppInsightsKey,
+		&model.PlatformVersion,
+		&model.AADTenantID,
+		&model.PendingUpgradeVersion,
+		&model.PendingUpgradeScheduledFor,
+	} {
+		if attr.IsUnknown() {
+			*attr = types.StringNull()
+		}
+	}
+	if model.IgnoreUpdateWindow.IsUnknown() {
+		model.IgnoreUpdateWindow = types.BoolNull()
+	}
+	if model.Settings != nil && model.Settings.AccessWithM365Licenses.IsUnknown() {
+		model.Settings.AccessWithM365Licenses = types.BoolNull()
+	}
+}
+
+// savePartialCreateState records an environment that exists remotely but whose creation
+// could not be completed or read back.
+//
+// Once the PUT succeeds the environment is being provisioned in the tenant. Returning an
+// error without writing state made Terraform forget it entirely: the environment
+// finished provisioning, the next apply re-issued the PUT and failed with "already
+// exists", and the only way out was to delete it by hand in the Admin Center. Recording
+// what is known lets the next plan reconcile it instead.
+func (r *EnvironmentResource) savePartialCreateState(ctx context.Context, resp *resource.CreateResponse, plan *EnvironmentResourceModel, tenantID, appFamily, envName string) {
+	if plan.ID.IsNull() || plan.ID.IsUnknown() || plan.ID.ValueString() == "" {
+		plan.ID = types.StringValue(BuildEnvironmentID(tenantID, appFamily, envName))
+	}
+	if plan.Name.IsNull() || plan.Name.IsUnknown() {
+		plan.Name = types.StringValue(envName)
+	}
+	resolveUnknownComputed(plan)
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 // updateModelFromEnvironment updates the Terraform model with data from the API.

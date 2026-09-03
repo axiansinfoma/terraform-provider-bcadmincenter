@@ -835,3 +835,76 @@ func TestSettingsBlockChanged_UnknownM365DoesNotTriggerChange(t *testing.T) {
 		})
 	}
 }
+
+// TestResolveUnknownComputed underpins partial-state saving after a failed create.
+// Terraform rejects a state object that still contains unknown values, so every unknown
+// has to become null before the model can be written. Without this, an environment that
+// was already provisioning could not be recorded at all, and Terraform forgot it.
+func TestResolveUnknownComputed(t *testing.T) {
+	model := &EnvironmentResourceModel{
+		ID:                         types.StringUnknown(),
+		Name:                       types.StringValue("prod01"),
+		ApplicationFamily:          types.StringValue("BusinessCentral"),
+		Type:                       types.StringValue("Production"),
+		CountryCode:                types.StringValue("US"),
+		RingName:                   types.StringUnknown(),
+		ApplicationVersion:         types.StringUnknown(),
+		IgnoreUpdateWindow:         types.BoolUnknown(),
+		AzureRegion:                types.StringValue("westus2"),
+		Status:                     types.StringUnknown(),
+		WebClientLoginURL:          types.StringUnknown(),
+		WebServiceURL:              types.StringUnknown(),
+		AppInsightsKey:             types.StringUnknown(),
+		PlatformVersion:            types.StringUnknown(),
+		AADTenantID:                types.StringUnknown(),
+		PendingUpgradeVersion:      types.StringUnknown(),
+		PendingUpgradeScheduledFor: types.StringUnknown(),
+		Settings: &EnvironmentSettingsNestedModel{
+			AccessWithM365Licenses: types.BoolUnknown(),
+			SecurityGroupID:        types.StringValue("group-1"),
+		},
+	}
+
+	resolveUnknownComputed(model)
+
+	unknowns := map[string]bool{
+		"id":                            model.ID.IsUnknown(),
+		"ring_name":                     model.RingName.IsUnknown(),
+		"application_version":           model.ApplicationVersion.IsUnknown(),
+		"ignore_update_window":          model.IgnoreUpdateWindow.IsUnknown(),
+		"status":                        model.Status.IsUnknown(),
+		"web_client_login_url":          model.WebClientLoginURL.IsUnknown(),
+		"web_service_url":               model.WebServiceURL.IsUnknown(),
+		"app_insights_key":              model.AppInsightsKey.IsUnknown(),
+		"platform_version":              model.PlatformVersion.IsUnknown(),
+		"aad_tenant_id":                 model.AADTenantID.IsUnknown(),
+		"pending_upgrade_version":       model.PendingUpgradeVersion.IsUnknown(),
+		"pending_upgrade_scheduled_for": model.PendingUpgradeScheduledFor.IsUnknown(),
+		"settings.access_with_m365":     model.Settings.AccessWithM365Licenses.IsUnknown(),
+	}
+	for attr, stillUnknown := range unknowns {
+		if stillUnknown {
+			t.Errorf("%s is still unknown; Terraform would reject the state object", attr)
+		}
+	}
+
+	// Known values must survive untouched.
+	if model.Name.ValueString() != "prod01" {
+		t.Errorf("Name = %v, want prod01", model.Name)
+	}
+	if model.AzureRegion.ValueString() != "westus2" {
+		t.Errorf("AzureRegion = %v, want westus2", model.AzureRegion)
+	}
+	if model.Settings.SecurityGroupID.ValueString() != "group-1" {
+		t.Errorf("SecurityGroupID = %v, want group-1", model.Settings.SecurityGroupID)
+	}
+}
+
+// A nil settings block must not panic — it is an optional block.
+func TestResolveUnknownComputed_NilSettings(t *testing.T) {
+	model := &EnvironmentResourceModel{ID: types.StringUnknown()}
+	resolveUnknownComputed(model)
+	if model.ID.IsUnknown() {
+		t.Error("ID should have been resolved to null")
+	}
+}
