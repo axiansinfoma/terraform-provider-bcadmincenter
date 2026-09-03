@@ -169,7 +169,7 @@ Removes resource from Terraform state but does NOT reset environment settings.
 ## Example Usage
 
 ```terraform
-resource "bc_admin_center_environment" "production" {
+resource "bcadmincenter_environment" "production" {
   name               = "production"
   application_family = "BusinessCentral"
   type               = "Production"
@@ -178,9 +178,9 @@ resource "bc_admin_center_environment" "production" {
   application_version = "25.0"
 }
 
-resource "bc_admin_center_environment_settings" "production" {
-  application_family = bc_admin_center_environment.production.application_family
-  environment_name   = bc_admin_center_environment.production.name
+resource "bcadmincenter_environment_settings" "production" {
+  application_family = bcadmincenter_environment.production.application_family
+  environment_name   = bcadmincenter_environment.production.name
 
   # Update window (Pacific Time, 10 PM - 6 AM)
   update_window_start_time = "22:00"
@@ -203,7 +203,7 @@ resource "bc_admin_center_environment_settings" "production" {
 
 - Template: `templates/resources/environment_settings.md.tmpl`
 - Generated: `docs/resources/environment_settings.md`
-- Examples: `examples/resources/bc_admin_center_environment_settings/resource.tf`
+- Examples: `examples/resources/bcadmincenter_environment_settings/resource.tf`
 
 ## References
 

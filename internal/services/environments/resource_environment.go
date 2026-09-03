@@ -722,6 +722,12 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 			"Error scheduling environment upgrade",
 			fmt.Sprintf("Could not schedule upgrade to version %s: %s", targetVersion, err),
 		)
+		// Any settings changes above were already applied remotely. Returning without
+		// saving left state holding the *old* settings, so state and the environment
+		// disagreed until the next successful apply. Persist everything except the version,
+		// which is the part that failed.
+		plan.ApplicationVersion = state.ApplicationVersion
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return
 	}
 
