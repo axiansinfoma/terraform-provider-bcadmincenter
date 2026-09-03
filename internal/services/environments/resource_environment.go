@@ -808,8 +808,11 @@ func (r *EnvironmentResource) updateModelFromEnvironment(model *EnvironmentResou
 		model.AppInsightsKey = types.StringNull()
 	}
 
-	// Azure region is not returned by the API, so always set to null.
-	model.AzureRegion = types.StringNull()
+	// azure_region is deliberately left untouched. The API accepts it on create but never
+	// returns it, so there is nothing to refresh from, and overwriting the model with null
+	// discarded the configured value. Because the attribute is Optional + Computed +
+	// RequiresReplace, that made every apply fail with "Provider produced inconsistent
+	// result after apply" and every later plan propose replacing the environment.
 
 	// Normalize ring name from API response format to Terraform format.
 	// API accepts "PROD", "PREVIEW", "FAST" on input but returns "Production", "Preview", "Fast" on output.

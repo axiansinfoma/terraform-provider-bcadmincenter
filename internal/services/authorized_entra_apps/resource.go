@@ -6,6 +6,7 @@ package authorized_entra_apps
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -28,9 +29,22 @@ func NewAuthorizedEntraAppResource() resource.Resource {
 }
 
 // AuthorizedEntraAppResource defines the resource implementation.
+//
+// The service is deliberately not cached here: aad_tenant_id can name a tenant other
+// than the provider's, and the target tenant is only known once the plan or state has
+// been read. Each operation builds its own service via client.ForTenant.
 type AuthorizedEntraAppResource struct {
-	client  *client.Client
-	service *Service
+	client *client.Client
+}
+
+// serviceForTenant returns the tenant the operation should target, defaulting to the
+// provider's configured tenant, together with a service bound to it.
+func (r *AuthorizedEntraAppResource) serviceForTenant(configured types.String) (string, *Service) {
+	tenantID := configured.ValueString()
+	if tenantID == "" {
+		tenantID = r.client.GetTenantID()
+	}
+	return tenantID, NewService(r.client.ForTenant(tenantID))
 }
 
 // authorizedEntraAppResourceModel describes the resource data model.
@@ -99,7 +113,6 @@ func (r *AuthorizedEntraAppResource) Configure(_ context.Context, req resource.C
 	}
 
 	r.client = providerClient
-	r.service = NewService(providerClient)
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -110,15 +123,12 @@ func (r *AuthorizedEntraAppResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	// Use provider tenant ID if not specified.
-	tenantID := plan.AADTenantID.ValueString()
-	if tenantID == "" {
-		tenantID = r.client.GetTenantID()
-		plan.AADTenantID = types.StringValue(tenantID)
-	}
+	// Target the tenant named by aad_tenant_id, falling back to the provider's.
+	tenantID, svc := r.serviceForTenant(plan.AADTenantID)
+	plan.AADTenantID = types.StringValue(tenantID)
 
 	// Authorize the app.
-	app, err := r.service.AuthorizeApp(ctx, plan.AppID.ValueString())
+	app, err := svc.AuthorizeApp(ctx, plan.AppID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error authorizing Entra app",
@@ -127,8 +137,11 @@ func (r *AuthorizedEntraAppResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	// Set resource ID.
-	plan.ID = types.StringValue(BuildAuthorizedEntraAppID(tenantID, app.AppID))
+	// Build the ID from the planned app_id rather than the response body: app_id is
+	// Required, so its planned value is fixed, and an empty or absent appId in the
+	// response would otherwise produce an ID with a trailing empty segment that
+	// ParseAuthorizedEntraAppID still accepts.
+	plan.ID = types.StringValue(BuildAuthorizedEntraAppID(tenantID, plan.AppID.ValueString()))
 	plan.IsAdminConsentGranted = types.BoolValue(app.IsAdminConsentGranted)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -142,9 +155,12 @@ func (r *AuthorizedEntraAppResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
+	// Read from the tenant recorded in state, not the provider's default.
+	_, svc := r.serviceForTenant(state.AADTenantID)
+
 	// Get current state from API by listing all apps and filtering.
 	// Note: The API doesn't provide a GET endpoint for a single app.
-	apps, err := r.service.ListAuthorizedApps(ctx)
+	apps, err := svc.ListAuthorizedApps(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading authorized Entra app",
@@ -153,10 +169,11 @@ func (r *AuthorizedEntraAppResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	// Find the specific app in the list.
+	// Find the specific app in the list. The Admin Center varies GUID casing between
+	// what it accepts and what it returns, so compare case-insensitively.
 	var found bool
 	for _, app := range apps {
-		if app.AppID == state.AppID.ValueString() {
+		if strings.EqualFold(app.AppID, state.AppID.ValueString()) {
 			// Update state.
 			state.IsAdminConsentGranted = types.BoolValue(app.IsAdminConsentGranted)
 			found = true
@@ -190,9 +207,18 @@ func (r *AuthorizedEntraAppResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
+	// Delete from the tenant recorded in state, not the provider's default.
+	_, svc := r.serviceForTenant(state.AADTenantID)
+
 	// Remove the authorized app.
-	err := r.service.RemoveAuthorizedApp(ctx, state.AppID.ValueString())
+	err := svc.RemoveAuthorizedApp(ctx, state.AppID.ValueString())
 	if err != nil {
+		// Already gone (removed in the Admin Center portal): the desired end state is
+		// reached, so let the destroy succeed rather than stranding the resource in
+		// state where only `terraform state rm` can clear it.
+		if client.IsNotFound(err) {
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error removing authorized Entra app",
 			fmt.Sprintf("Could not remove app %s: %s", state.AppID.ValueString(), err.Error()),

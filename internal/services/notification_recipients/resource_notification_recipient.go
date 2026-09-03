@@ -161,10 +161,21 @@ func (r *NotificationRecipientResource) Read(ctx context.Context, req resource.R
 
 	recipient, err := svc.Get(ctx, recipientID)
 	if err != nil {
-		// If the recipient is not found, remove it from state.
+		// A failed lookup is not evidence the recipient is gone. Surfacing it as an error
+		// keeps the resource in state; treating it as "not found" would drop the resource
+		// and make the next apply create a duplicate.
+		resp.Diagnostics.AddError(
+			"Error reading notification recipient",
+			fmt.Sprintf("Could not read notification recipient %s: %s", state.ID.ValueString(), err.Error()),
+		)
+		return
+	}
+
+	// Only an authoritative absence from a successfully fetched list removes it.
+	if recipient == nil {
 		resp.Diagnostics.AddWarning(
 			"Notification Recipient Not Found",
-			fmt.Sprintf("The notification recipient with ID %s was not found and will be removed from state.", state.ID.ValueString()),
+			fmt.Sprintf("The notification recipient with ID %s no longer exists and will be removed from state.", state.ID.ValueString()),
 		)
 		resp.State.RemoveResource(ctx)
 		return
@@ -215,6 +226,12 @@ func (r *NotificationRecipientResource) Delete(ctx context.Context, req resource
 	svc := NewService(r.client.ForTenant(tenantID))
 	err = svc.Delete(ctx, recipientID)
 	if err != nil {
+		// Already removed in the Admin Center portal: the desired end state is reached,
+		// so let the destroy succeed instead of stranding the resource in state where
+		// only `terraform state rm` can clear it.
+		if client.IsNotFound(err) {
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Deleting Notification Recipient",
 			"Could not delete notification recipient: "+err.Error(),
