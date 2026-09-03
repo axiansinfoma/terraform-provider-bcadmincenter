@@ -58,7 +58,7 @@ func IsCancelNotAllowedError(err error) bool {
 // GetByID retrieves a specific installed app by its ID.
 // Returns (nil, nil) when the app is not found (not installed).
 func (s *Service) GetByID(ctx context.Context, applicationFamily, environmentName, appID string) (*App, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps", applicationFamily, environmentName)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -84,7 +84,7 @@ func (s *Service) GetByID(ctx context.Context, applicationFamily, environmentNam
 // Install installs an app into the environment.
 // Returns the async operation to poll.
 func (s *Service) Install(ctx context.Context, applicationFamily, environmentName, appID string, req *InstallAppRequest) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/install", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "install")
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -112,7 +112,7 @@ func (s *Service) Install(ctx context.Context, applicationFamily, environmentNam
 // Update updates an installed app to a new version.
 // Returns the async operation to poll.
 func (s *Service) Update(ctx context.Context, applicationFamily, environmentName, appID string, req *UpdateAppRequest) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/update", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "update")
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -140,7 +140,7 @@ func (s *Service) Update(ctx context.Context, applicationFamily, environmentName
 // Uninstall uninstalls an app from the environment.
 // Returns the async operation to poll.
 func (s *Service) Uninstall(ctx context.Context, applicationFamily, environmentName, appID string, req *UninstallAppRequest) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/uninstall", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "uninstall")
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -171,7 +171,7 @@ func (s *Service) Uninstall(ctx context.Context, applicationFamily, environmentN
 // ID in the request body.  Returns an error if no scheduled update operation is
 // found or the API call fails.
 func (s *Service) GetScheduledUpdateOperationID(ctx context.Context, applicationFamily, environmentName, appID string) (string, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/operations", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "operations")
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *Service) GetScheduledUpdateOperationID(ctx context.Context, application
 // state; callers should check with IsCancelNotAllowedError to distinguish that
 // from transient errors.
 func (s *Service) CancelUpdate(ctx context.Context, applicationFamily, environmentName, appID, scheduledOperationID string) error {
-	path := fmt.Sprintf("applications/%s/environments/%s/apps/%s/update/cancel", applicationFamily, environmentName, appID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "apps", appID, "update", "cancel")
 
 	cancelReq := CancelUpdateRequest{ScheduledOperationID: scheduledOperationID}
 	body, err := json.Marshal(cancelReq)
@@ -226,7 +226,7 @@ func (s *Service) CancelUpdate(ctx context.Context, applicationFamily, environme
 
 // getOperation retrieves the current status of an async operation.
 func (s *Service) getOperation(ctx context.Context, applicationFamily, environmentName, operationID string) (*Operation, error) {
-	path := fmt.Sprintf("applications/%s/environments/%s/operations/%s", applicationFamily, environmentName, operationID)
+	path := client.BuildPath("applications", applicationFamily, "environments", environmentName, "operations", operationID)
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
