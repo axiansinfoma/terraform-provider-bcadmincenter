@@ -276,9 +276,7 @@ func TestUpdateModelFromEnvironment(t *testing.T) {
 				if model.AADTenantID.ValueString() != "tenant-id-123" {
 					t.Errorf("AADTenantID = %v, want tenant-id-123", model.AADTenantID.ValueString())
 				}
-				if !model.AzureRegion.IsNull() {
-					t.Error("AzureRegion should be null")
-				}
+				// azure_region preservation is asserted for every case in the runner below.
 			},
 		},
 		{
@@ -360,7 +358,16 @@ func TestUpdateModelFromEnvironment(t *testing.T) {
 			r := &EnvironmentResource{}
 			model := &EnvironmentResourceModel{}
 
+			// The API never returns azure_region, so seed it the way Create and Read do
+			// (from the plan and from prior state respectively). The refresh must leave it
+			// alone; resetting it to null breaks the apply and then forces a replace.
+			model.AzureRegion = types.StringValue("westus2")
+
 			r.updateModelFromEnvironment(model, tt.env)
+
+			if model.AzureRegion.ValueString() != "westus2" {
+				t.Errorf("AzureRegion = %v, want the seeded westus2 to be preserved", model.AzureRegion)
+			}
 
 			tt.validate(t, model)
 		})
