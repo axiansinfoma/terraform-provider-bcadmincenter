@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
+	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -33,10 +34,6 @@ var (
 	_ resource.ResourceWithConfigure   = &PerTenantExtensionResource{}
 	_ resource.ResourceWithImportState = &PerTenantExtensionResource{}
 )
-
-// defaultOperationTimeout bounds how long the resource waits for an install, update, or
-// uninstall operation to reach a terminal state.
-const defaultOperationTimeout = 60 * time.Minute
 
 // NewPerTenantExtensionResource is a helper function to simplify the provider implementation.
 func NewPerTenantExtensionResource() resource.Resource {
@@ -353,34 +350,9 @@ func resolveFileName(data *PerTenantExtensionResourceModel) string {
 	return "extension.app"
 }
 
-// operationTimeout reads one timeout from the optional `timeouts` block, falling back to
-// defaultOperationTimeout when unset or unparseable.
+// operationTimeout reads one timeout from this resource's optional `timeouts` block.
 func operationTimeout(ctx context.Context, timeouts types.Object, key string) time.Duration {
-	if timeouts.IsNull() || timeouts.IsUnknown() {
-		return defaultOperationTimeout
-	}
-
-	attrs := timeouts.Attributes()
-	raw, ok := attrs[key]
-	if !ok {
-		return defaultOperationTimeout
-	}
-
-	value, ok := raw.(types.String)
-	if !ok || !hasValue(value) {
-		return defaultOperationTimeout
-	}
-
-	parsed, err := time.ParseDuration(value.ValueString())
-	if err != nil || parsed <= 0 {
-		tflog.Warn(ctx, "Ignoring unparseable timeout value", map[string]interface{}{
-			"timeout": key,
-			"value":   value.ValueString(),
-		})
-		return defaultOperationTimeout
-	}
-
-	return parsed
+	return utils.OperationTimeout(ctx, timeouts, key)
 }
 
 // uploadAndWait uploads the .app package and waits for the resulting operation to reach a

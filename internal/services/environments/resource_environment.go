@@ -225,11 +225,15 @@ func (r *EnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"aad_tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Azure AD tenant ID for the environment. If not specified, the value is read from the API response.",
+				MarkdownDescription: "The Azure AD tenant ID for the environment. If not specified, the value is read from the API response. Changing this forces a new resource to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					// The tenant selects which API the resource is read from and written
+					// to. Without this, editing it made Terraform plan an in-place update
+					// that talked to the old tenant while recording the new one.
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"pending_upgrade_version": schema.StringAttribute{
@@ -412,9 +416,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		"source_env":         operation.SourceEnvironment,
 	})
 
-	// Determine timeout.
-	// TODO: Parse timeout from plan.Timeouts if needed.
-	timeout := 60 * time.Minute // default
+	timeout := utils.OperationTimeout(ctx, plan.Timeouts, "create")
 
 	// Always use the application_family from the plan when constructing API paths.
 	// The operation response fields (productFamily, applicationFamily) are internal API
@@ -718,9 +720,7 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	// Determine timeout.
-	// TODO: Parse timeout from state.Timeouts if needed.
-	timeout := 60 * time.Minute // default
+	timeout := utils.OperationTimeout(ctx, state.Timeouts, "delete")
 
 	// Wait for the operation to complete.
 	// Use ProductFamily from operation response if available, otherwise fall back to state.
