@@ -217,9 +217,15 @@ func isEnvironmentNotFoundError(err error) bool {
 		return false
 	}
 
+	// HTTP 404 is authoritative. The Admin Center also returns EnvironmentNotFound on
+	// some non-404 statuses, so both checks are needed.
+	if client.IsNotFound(err) {
+		return true
+	}
+
 	var apiErr *client.AdminCenterError
 	if errors.As(err, &apiErr) {
-		return apiErr.Code == "EnvironmentNotFound"
+		return strings.EqualFold(apiErr.Code, "EnvironmentNotFound")
 	}
 
 	return strings.Contains(err.Error(), "EnvironmentNotFound")

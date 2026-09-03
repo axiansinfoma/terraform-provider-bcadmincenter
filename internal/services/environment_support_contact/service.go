@@ -56,12 +56,19 @@ func isNotFoundError(err error) bool {
 		return false
 	}
 
-	var apiErr *client.AdminCenterError
-	if errors.As(err, &apiErr) {
-		return apiErr.Code == "ResourceNotFound" || apiErr.Code == "EnvironmentNotFound"
+	// HTTP 404 is authoritative. The Admin Center also returns not-found *codes* on
+	// some non-404 statuses, so both checks are needed.
+	if client.IsNotFound(err) {
+		return true
 	}
 
-	return strings.Contains(err.Error(), "404")
+	var apiErr *client.AdminCenterError
+	if errors.As(err, &apiErr) {
+		return strings.EqualFold(apiErr.Code, "ResourceNotFound") ||
+			strings.EqualFold(apiErr.Code, "EnvironmentNotFound")
+	}
+
+	return false
 }
 
 // Set updates the support contact information for an environment.

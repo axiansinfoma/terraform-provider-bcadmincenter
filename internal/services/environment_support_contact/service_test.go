@@ -215,9 +215,30 @@ func TestIsNotFoundError(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "fallback 404 message",
-			err:  fmt.Errorf("API returned status 404: Not Found"),
+			// The real API answers a missing support contact with a bare 404 and no
+			// {code, message} envelope, so Code is empty and only the status identifies it.
+			name: "typed 404 with no error code",
+			err: &client.AdminCenterError{
+				StatusCode: http.StatusNotFound,
+				Status:     "404 Not Found",
+			},
 			want: true,
+		},
+		{
+			// A 404 carried on a wrapped error must still be detected.
+			name: "wrapped typed 404",
+			err: fmt.Errorf("failed to get support contact: %w", &client.AdminCenterError{
+				StatusCode: http.StatusNotFound,
+				Status:     "404 Not Found",
+			}),
+			want: true,
+		},
+		{
+			// Untyped errors are no longer matched on message text: "404" can appear in
+			// a version, an app id or an unrelated message and must not mean not-found.
+			name: "untyped error mentioning 404",
+			err:  fmt.Errorf("dial tcp 10.0.0.404:443: connection refused"),
+			want: false,
 		},
 		{
 			name: "different error",
