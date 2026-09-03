@@ -5,6 +5,7 @@ package pertenantextensions
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -12,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -30,9 +34,10 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &PerTenantExtensionResource{}
-	_ resource.ResourceWithConfigure   = &PerTenantExtensionResource{}
-	_ resource.ResourceWithImportState = &PerTenantExtensionResource{}
+	_ resource.Resource                     = &PerTenantExtensionResource{}
+	_ resource.ResourceWithConfigure        = &PerTenantExtensionResource{}
+	_ resource.ResourceWithImportState      = &PerTenantExtensionResource{}
+	_ resource.ResourceWithConfigValidators = &PerTenantExtensionResource{}
 )
 
 // NewPerTenantExtensionResource is a helper function to simplify the provider implementation.
@@ -302,7 +307,7 @@ func (r *PerTenantExtensionResource) Configure(_ context.Context, req resource.C
 // resolveFileBytes returns the raw .app bytes from either file_path or file_content.
 func resolveFileBytes(data *PerTenantExtensionResourceModel) ([]byte, error) {
 	if hasValue(data.FilePath) {
-		return os.ReadFile(data.FilePath.ValueString())
+		return readExtensionFile(data.FilePath.ValueString())
 	}
 
 	if hasValue(data.FileContent) {
@@ -314,6 +319,56 @@ func resolveFileBytes(data *PerTenantExtensionResourceModel) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("exactly one of file_path or file_content must be set")
+}
+
+// readExtensionFile loads a .app package, checking what it is and how big it is before
+// reading it into memory.
+//
+// os.ReadFile alone would slurp the whole path first and only then hit the 50 MB check in
+// buildPteInstallForm, so pointing file_path at a huge file, /dev/zero or a FIFO would
+// exhaust memory or hang instead of returning the limit error.
+func readExtensionFile(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading extension package %q: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("extension package %q is not a regular file", path)
+	}
+	if info.Size() > MaxExtensionFileSize {
+		return nil, fmt.Errorf("extension package %q is %d bytes, which exceeds the %d byte limit enforced by the pteInstall endpoint",
+			path, info.Size(), MaxExtensionFileSize)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading extension package %q: %w", path, err)
+	}
+	return data, nil
+}
+
+// verifyFileChecksum checks the uploaded bytes against the configured file_sha256.
+//
+// Nothing used to compute or compare this value: it existed purely so that editing it
+// produced a diff. Two consequences, both silent. Rebuilding a package in place without
+// touching the hash meant `terraform plan` reported no changes while the environment
+// stayed on the old version. And filesha256() is evaluated at plan time while the file is
+// read at apply time, so a CI job that rebuilds the artifact in between — or a saved plan
+// applied later — uploaded bytes that did not match the recorded hash.
+func verifyFileChecksum(data *PerTenantExtensionResourceModel, content []byte) error {
+	if !hasValue(data.FileSHA256) {
+		return nil
+	}
+
+	want := strings.ToLower(strings.TrimSpace(data.FileSHA256.ValueString()))
+	got := fmt.Sprintf("%x", sha256.Sum256(content))
+	if got == want {
+		return nil
+	}
+
+	return fmt.Errorf("file_sha256 does not match the extension package: configured %q, actual %q. "+
+		"Set file_sha256 = filesha256(<path>) so it always tracks the package, and make sure the "+
+		"package is not rebuilt between plan and apply", want, got)
 }
 
 // hasValue reports whether a string attribute carries a usable non-empty value.
@@ -350,6 +405,38 @@ func resolveFileName(data *PerTenantExtensionResourceModel) string {
 	return "extension.app"
 }
 
+// clearComputedFileName drops a file_name that was derived on a previous apply rather than
+// set by the user.
+//
+// file_name is Optional + Computed, so the plan carries the previously computed value even
+// when the config never mentioned it. resolveFileName prefers file_name, so without this
+// an update that renames the package (MyExt_1.0.app -> MyExt_2.0.app) kept uploading under
+// the stale name forever. Only the config distinguishes the two cases.
+func clearComputedFileName(ctx context.Context, config tfsdk.Config, data *PerTenantExtensionResourceModel, diags *diag.Diagnostics) {
+	var configured types.String
+	diags.Append(config.GetAttribute(ctx, path.Root("file_name"), &configured)...)
+	if diags.HasError() {
+		return
+	}
+	if configured.IsNull() && hasValue(data.FilePath) {
+		data.FileName = types.StringNull()
+	}
+}
+
+// ConfigValidators enforces the documented file_path XOR file_content rule at plan time.
+//
+// It was only checked inside Create and Update, so a config setting both or neither
+// planned cleanly and failed during apply — potentially after other resources in the
+// graph had already been changed.
+func (r *PerTenantExtensionResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.ExactlyOneOf(
+			path.MatchRoot("file_path"),
+			path.MatchRoot("file_content"),
+		),
+	}
+}
+
 // operationTimeout reads one timeout from this resource's optional `timeouts` block.
 func operationTimeout(ctx context.Context, timeouts types.Object, key string) time.Duration {
 	return utils.OperationTimeout(ctx, timeouts, key)
@@ -365,6 +452,12 @@ func (r *PerTenantExtensionResource) uploadAndWait(ctx context.Context, data *Pe
 	fileBytes, err := resolveFileBytes(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read extension file: %w", err)
+	}
+
+	// Check the bytes actually being uploaded against the declared hash before anything
+	// reaches the API.
+	if err := verifyFileChecksum(data, fileBytes); err != nil {
+		return nil, err
 	}
 
 	installReq := &PteInstallRequest{
@@ -405,8 +498,27 @@ func (r *PerTenantExtensionResource) applyOperation(ctx context.Context, data *P
 		return fmt.Errorf("no operation was returned for the per-tenant extension upload")
 	}
 
+	// The uploaded package must be the same extension this resource already manages.
+	// Pointing file_path at a different .app installed the new extension while leaving the
+	// old one behind with no Terraform record, and rewrote app_id — a Computed attribute
+	// whose planned value is the known previous GUID — failing the apply anyway.
+	if operation.AppID != "" && hasValue(data.AppID) && !strings.EqualFold(operation.AppID, data.AppID.ValueString()) {
+		return fmt.Errorf("the uploaded package is extension %s, but this resource manages %s. "+
+			"Changing which extension a resource manages is not an in-place update: remove this "+
+			"resource and declare the other extension separately, or use `terraform state rm` and "+
+			"re-import if you intend to take over the new one",
+			operation.AppID, data.AppID.ValueString())
+	}
+
 	if operation.AppID != "" {
 		data.AppID = types.StringValue(operation.AppID)
+	} else if !hasValue(data.AppID) {
+		// app_id is Computed with UseStateForUnknown, so on Create its planned value is
+		// unknown. Leaving it unknown here propagated an unknown value all the way into
+		// resp.State.Set, which Terraform rejects — after the package had been uploaded.
+		return fmt.Errorf("the pteInstall response did not include an appId, so the installed " +
+			"extension cannot be identified; re-run to reconcile, or import the extension once " +
+			"the install completes")
 	}
 	data.LastOperationID = types.StringValue(operation.ID)
 	data.FileName = types.StringValue(resolveFileName(data))
@@ -483,8 +595,17 @@ func (r *PerTenantExtensionResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	// The package has been uploaded and the extension installed, so a failure to read the
+	// details back must not lose the resource. Returning without writing state meant a
+	// transient 502 on the read-back left an installed extension untracked: the next apply
+	// was rejected as already installed, and the user had to import it by hand.
 	if err := r.applyOperation(ctx, &data, svc, operation); err != nil {
-		resp.Diagnostics.AddError("Failed to read extension details after install", err.Error())
+		resp.Diagnostics.AddError(
+			"Failed to read extension details after install",
+			err.Error()+"\n\nThe extension has been installed and recorded in state; run "+
+				"`terraform plan` to reconcile its details.",
+		)
+		r.savePartialCreateState(ctx, resp, &data, operation)
 		return
 	}
 
@@ -496,6 +617,66 @@ func (r *PerTenantExtensionResource) Create(ctx context.Context, req resource.Cr
 	))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// savePartialCreateState records an extension that was installed but whose details could
+// not be read back. Terraform rejects a state object containing unknown values, so every
+// computed attribute is resolved before the write.
+func (r *PerTenantExtensionResource) savePartialCreateState(ctx context.Context, resp *resource.CreateResponse, data *PerTenantExtensionResourceModel, operation *AppOperation) {
+	if operation != nil {
+		if !hasValue(data.AppID) && operation.AppID != "" {
+			data.AppID = types.StringValue(operation.AppID)
+		}
+		if data.LastOperationID.IsUnknown() || data.LastOperationID.IsNull() {
+			data.LastOperationID = types.StringValue(operation.ID)
+		}
+	}
+
+	// Without an app id there is nothing to key the resource on, so state would be
+	// meaningless; the diagnostic already tells the user to import.
+	if !hasValue(data.AppID) {
+		return
+	}
+
+	data.ID = types.StringValue(BuildPerTenantExtensionID(
+		data.AADTenantID.ValueString(),
+		data.ApplicationFamily.ValueString(),
+		data.EnvironmentName.ValueString(),
+		data.AppID.ValueString(),
+	))
+
+	for _, attr := range []*types.String{
+		&data.FileName,
+		&data.DeploymentSchedule,
+		&data.SyncMode,
+		&data.LanguageID,
+		&data.DisplayName,
+		&data.Publisher,
+		&data.Version,
+		&data.State,
+		&data.AppType,
+		&data.LastOperationID,
+		&data.PendingTargetVersion,
+		&data.PendingScheduleKind,
+	} {
+		if attr.IsUnknown() {
+			*attr = types.StringNull()
+		}
+	}
+	for _, attr := range []*types.Bool{
+		&data.AcceptIsvEula,
+		&data.InstallOrUpdateNeededDependencies,
+		&data.DeleteData,
+		&data.UninstallDependents,
+		&data.UninstallInUpdateWindow,
+		&data.CancelScheduledOnDestroy,
+	} {
+		if attr.IsUnknown() {
+			*attr = types.BoolNull()
+		}
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, data)...)
 }
 
 // Read refreshes the state from the Admin Center API.
@@ -517,6 +698,18 @@ func (r *PerTenantExtensionResource) Read(ctx context.Context, req resource.Read
 
 	app, err := svc.GetApp(ctx, data.ApplicationFamily.ValueString(), data.EnvironmentName.ValueString(), data.AppID.ValueString())
 	if err != nil {
+		// The environment itself is gone (deleted or renamed out of band), so the extension
+		// is too. Erroring here made every plan, apply and destroy fail permanently, with
+		// `terraform state rm` the only way out. IsNotFoundError already existed and was
+		// used in Delete but not here.
+		if IsNotFoundError(err) {
+			tflog.Warn(ctx, "Per-tenant extension or its environment no longer exists; removing from state", map[string]interface{}{
+				"app_id":           data.AppID.ValueString(),
+				"environment_name": data.EnvironmentName.ValueString(),
+			})
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Failed to read per-tenant extension", err.Error())
 		return
 	}
@@ -587,6 +780,12 @@ func (r *PerTenantExtensionResource) Update(ctx context.Context, req resource.Up
 
 	svc := NewService(r.client.ForTenant(data.AADTenantID.ValueString()))
 
+	// Re-derive file_name from file_path unless the user set it explicitly.
+	clearComputedFileName(ctx, req.Config, &data, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	operation, err := r.uploadAndWait(ctx, &data, svc, operationTimeout(ctx, data.Timeouts, "update"))
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update per-tenant extension", err.Error())
@@ -605,14 +804,20 @@ func (r *PerTenantExtensionResource) Update(ctx context.Context, req resource.Up
 // cancelScheduledVersions removes every version of the extension still staged for a
 // future deployment window. Uninstalling does not clear these, so leaving them in place
 // would reinstall the extension after destroy.
-func (r *PerTenantExtensionResource) cancelScheduledVersions(ctx context.Context, data *PerTenantExtensionResourceModel, svc *Service) {
+//
+// It returns the versions it could not cancel. These used to be logged with tflog and
+// otherwise discarded, so a 403 or 500 on the removal left the destroy reporting success
+// while a staged package remained: at the next update window the extension reinstalled
+// itself, live and unmanaged — precisely what cancel_scheduled_on_destroy exists to
+// prevent. The caller surfaces them as a warning the user can actually see.
+func (r *PerTenantExtensionResource) cancelScheduledVersions(ctx context.Context, data *PerTenantExtensionResourceModel, svc *Service) (uncancelled []string) {
 	scheduled, err := svc.GetScheduledPteOperationsForApp(ctx, data.ApplicationFamily.ValueString(), data.EnvironmentName.ValueString(), data.AppID.ValueString())
 	if err != nil {
 		tflog.Warn(ctx, "Failed to list scheduled per-tenant extension versions before destroy", map[string]interface{}{
 			"app_id": data.AppID.ValueString(),
 			"error":  err.Error(),
 		})
-		return
+		return []string{fmt.Sprintf("could not list scheduled versions: %v", err)}
 	}
 
 	for i := range scheduled {
@@ -644,6 +849,7 @@ func (r *PerTenantExtensionResource) cancelScheduledVersions(ctx context.Context
 				"schedule_kind":  scheduleKind,
 				"error":          err.Error(),
 			})
+			uncancelled = append(uncancelled, fmt.Sprintf("%s (%s): %v", targetVersion, scheduleKind, err))
 			continue
 		}
 
@@ -653,6 +859,8 @@ func (r *PerTenantExtensionResource) cancelScheduledVersions(ctx context.Context
 			"schedule_kind":  scheduleKind,
 		})
 	}
+
+	return uncancelled
 }
 
 // Delete cancels any scheduled versions and uninstalls the PTE.
@@ -672,11 +880,23 @@ func (r *PerTenantExtensionResource) Delete(ctx context.Context, req resource.De
 	svc := NewService(r.client.ForTenant(data.AADTenantID.ValueString()))
 
 	if data.CancelScheduledOnDestroy.ValueBool() {
-		r.cancelScheduledVersions(ctx, &data, svc)
+		if uncancelled := r.cancelScheduledVersions(ctx, &data, svc); len(uncancelled) > 0 {
+			resp.Diagnostics.AddWarning(
+				"Scheduled extension versions could not be cancelled",
+				fmt.Sprintf("The extension will be uninstalled, but %d staged version(s) could not be "+
+					"removed and may reinstall it at the next deployment window. Remove them in the "+
+					"Admin Center:\n  %s", len(uncancelled), strings.Join(uncancelled, "\n  ")),
+			)
+		}
 	}
 
 	app, err := svc.GetApp(ctx, data.ApplicationFamily.ValueString(), data.EnvironmentName.ValueString(), data.AppID.ValueString())
 	if err != nil {
+		// Already gone: the desired end state is reached, so let the destroy succeed rather
+		// than stranding the resource in state.
+		if IsNotFoundError(err) {
+			return
+		}
 		resp.Diagnostics.AddError("Failed to read per-tenant extension before uninstall", err.Error())
 		return
 	}
@@ -752,4 +972,21 @@ func (r *PerTenantExtensionResource) ImportState(ctx context.Context, req resour
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_family"), appFamily)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("environment_name"), envName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("app_id"), appID)...)
+
+	// Seed the behavioural attributes with their schema defaults. They cannot be read back
+	// from the API and Read does not populate them, so a null cancel_scheduled_on_destroy
+	// read as false — meaning a destroy straight after an import silently skipped
+	// cancelling staged versions and let the extension reinstall itself at the next update
+	// window, which is exactly what that flag exists to prevent.
+	// accept_isv_eula and file_sha256 are Required, so the user must supply them in config
+	// and they are deliberately not seeded here.
+	for attr, value := range map[string]bool{
+		"install_or_update_needed_dependencies": false,
+		"delete_data":                           false,
+		"uninstall_dependents":                  false,
+		"uninstall_in_update_window":            false,
+		"cancel_scheduled_on_destroy":           true,
+	} {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(attr), value)...)
+	}
 }
