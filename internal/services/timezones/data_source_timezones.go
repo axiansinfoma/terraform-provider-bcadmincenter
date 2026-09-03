@@ -129,8 +129,8 @@ func (d *TimeZonesDataSource) Read(ctx context.Context, req datasource.ReadReque
 		state.TimeZones = append(state.TimeZones, TimeZoneModel{
 			ID:                      types.StringValue(tz.ID),
 			DisplayName:             types.StringValue(tz.DisplayName),
-			SupportsDaylightSavings: types.BoolValue(tz.SupportsDaylightSavings),
-			OffsetFromUTC:           types.StringValue(tz.OffsetFromUTC),
+			SupportsDaylightSavings: types.BoolValue(tz.SupportsDST()),
+			OffsetFromUTC:           types.StringValue(tz.UTCOffset()),
 		})
 	}
 

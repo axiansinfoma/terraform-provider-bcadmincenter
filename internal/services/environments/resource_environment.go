@@ -657,22 +657,37 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Apply inline settings changes if the block was added, modified, or removed.
-	if settingsChanged && plan.Settings != nil {
+	if settingsChanged {
+		// Removing the block means "revert these settings", not "leave them alone".
+		// Guarding this whole branch on plan.Settings != nil made removal a silent no-op:
+		// the apply reported success, state showed no settings, and the environment stayed
+		// locked to its security group. An all-null model drives the existing clearing
+		// paths (ClearSecurityGroup and friends) in applyEnvironmentSettingsChanges.
+		planSettings := plan.Settings
+		blockRemoved := planSettings == nil
+		if blockRemoved {
+			planSettings = clearedSettingsModel()
+		}
+
 		settingsSvc := environmentsettings.NewService(r.client.ForTenant(state.AADTenantID.ValueString()))
-		if err := r.applyEnvironmentSettingsChanges(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), plan.Settings, state.Settings); err != nil {
+		if err := r.applyEnvironmentSettingsChanges(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), planSettings, state.Settings); err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating environment settings",
 				"Could not update inline settings: "+err.Error(),
 			)
 			return
 		}
-		// Read back readable settings to keep state consistent.
-		if err := r.readEnvironmentSettings(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), plan.Settings); err != nil {
-			resp.Diagnostics.AddError(
-				"Error reading environment settings",
-				"Could not read settings after update: "+err.Error(),
-			)
-			return
+		// Read back readable settings to keep state consistent. Skipped when the block was
+		// removed: the config has no settings block, so writing one back into state would
+		// fail the apply with an inconsistent result.
+		if !blockRemoved {
+			if err := r.readEnvironmentSettings(ctx, settingsSvc, state.ApplicationFamily.ValueString(), state.Name.ValueString(), planSettings); err != nil {
+				resp.Diagnostics.AddError(
+					"Error reading environment settings",
+					"Could not read settings after update: "+err.Error(),
+				)
+				return
+			}
 		}
 	}
 
@@ -750,15 +765,14 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	timeout := utils.OperationTimeout(ctx, state.Timeouts, "delete")
 
-	// Wait for the operation to complete.
-	// Use ProductFamily from operation response if available, otherwise fall back to state.
-	appFamily := operation.ProductFamily
-	if appFamily == "" {
-		appFamily = operation.ApplicationFamily
-	}
-	if appFamily == "" {
-		appFamily = state.ApplicationFamily.ValueString()
-	}
+	// Always use the application_family from state when constructing API paths, matching
+	// Create. The operation response's productFamily/applicationFamily are internal API
+	// concepts that differ from the applicationFamily URL segment (the API may return
+	// productFamily="Financials" where the path segment must be "BusinessCentral").
+	// Preferring them built a path that 404s with a code other than EnvironmentNotFound,
+	// so the delete reported failure and Terraform kept the resource in state even though
+	// the deletion was running normally.
+	appFamily := state.ApplicationFamily.ValueString()
 
 	envName := operation.EnvironmentName
 	if envName == "" {
@@ -798,10 +812,28 @@ func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.Impo
 	}
 
 	// Set the attributes.
-	resp.State.SetAttribute(ctx, path.Root("id"), req.ID)
-	resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)
-	resp.State.SetAttribute(ctx, path.Root("name"), environmentName)
-	resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_family"), applicationFamily)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), environmentName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("aad_tenant_id"), tenantID)...)
+}
+
+// clearedSettingsModel returns a settings model with every attribute null, representing
+// the user having removed the `settings` block. Passing it to
+// applyEnvironmentSettingsChanges reverts each setting through the same code paths that
+// handle an individual attribute being cleared.
+func clearedSettingsModel() *EnvironmentSettingsNestedModel {
+	return &EnvironmentSettingsNestedModel{
+		UpdateWindowStartTime:   types.StringNull(),
+		UpdateWindowEndTime:     types.StringNull(),
+		UpdateWindowTimeZone:    types.StringNull(),
+		AppInsightsKey:          types.StringNull(),
+		SecurityGroupID:         types.StringNull(),
+		AccessWithM365Licenses:  types.BoolNull(),
+		AppUpdateCadence:        types.StringNull(),
+		PartnerAccessStatus:     types.StringNull(),
+		AllowedPartnerTenantIDs: types.ListNull(types.StringType),
+	}
 }
 
 // resolveUnknownComputed replaces any attribute still carrying an unknown value with
@@ -1289,10 +1321,13 @@ func (r *EnvironmentResource) readEnvironmentSettings(ctx context.Context, svc *
 	// Read M365 license access.
 	m365Access, err := svc.GetAccessWithM365Licenses(ctx, applicationFamily, environmentName)
 	if err != nil {
-		tflog.Warn(ctx, "Could not read M365 license access for inline settings", map[string]interface{}{
+		// Leave the existing value in place. Nulling it on a transient failure destroyed a
+		// value the user had configured: with a planned value of true and a 503 on the
+		// read-back, the apply failed with "inconsistent result after apply" even though
+		// the write had succeeded. The SecurityGroupID branch above does the same.
+		tflog.Warn(ctx, "Could not read M365 license access for inline settings; keeping the current value", map[string]interface{}{
 			"error": err.Error(),
 		})
-		settings.AccessWithM365Licenses = types.BoolNull()
 	} else if m365Access != nil {
 		settings.AccessWithM365Licenses = types.BoolValue(m365Access.Enabled)
 	} else {

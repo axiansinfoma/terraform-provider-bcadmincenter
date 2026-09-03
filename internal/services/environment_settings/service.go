@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/axiansinfoma/terraform-provider-bcadmincenter/internal/client"
@@ -64,8 +66,20 @@ func (s *Service) SetUpdateSettings(ctx context.Context, applicationFamily, envi
 	}
 	defer resp.Body.Close()
 
+	// Validate the status and tolerate an empty body, matching every other setter in this
+	// file. Decoding unconditionally meant a 204 No Content — a perfectly good response —
+	// produced "failed to decode response: EOF", which the environment resource turned
+	// into a failed Create or Update even though the update window had been applied.
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, utils.ReadResponseBody(resp.Body))
+	}
+
 	var updatedSettings UpdateSettings
 	if err := json.NewDecoder(resp.Body).Decode(&updatedSettings); err != nil {
+		if errors.Is(err, io.EOF) {
+			// No content: the write succeeded, echo back what was requested.
+			return settings, nil
+		}
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -184,9 +198,13 @@ func (s *Service) GetAccessWithM365Licenses(ctx context.Context, applicationFami
 
 	resp, err := s.client.Get(ctx, path)
 	if err != nil {
-		// Check if it's a 404 - feature not available on this environment.
-		if apiErr, ok := err.(*client.AdminCenterError); ok && apiErr.Code == "ResourceNotFound" {
-			return nil, nil // Return nil, nil to indicate feature not available
+		// A 404 means the feature is not available on this environment. errors.As rather
+		// than a bare type assertion, which stops working the moment anyone wraps the
+		// error, and IsNotFound rather than a code comparison, because the API does not
+		// always return the documented {code, message} envelope.
+		var apiErr *client.AdminCenterError
+		if client.IsNotFound(err) || (errors.As(err, &apiErr) && apiErr.Code == "ResourceNotFound") {
+			return nil, nil // Feature not available.
 		}
 		return nil, fmt.Errorf("failed to get M365 license access setting: %w", err)
 	}
