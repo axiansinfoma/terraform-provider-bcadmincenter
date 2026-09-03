@@ -109,7 +109,7 @@ resource "bcadmincenter_environment_update_schedule" "emergency_upgrade" {
 
 - `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, the provider's configured tenant ID is used. Changing this forces a new resource to be created.
 - `ignore_update_window` (Boolean) When `true`, the upgrade may start at `scheduled_datetime` even if outside the environment's configured update window. Defaults to `false`.
-- `scheduled_datetime` (String) The RFC3339 datetime at which the upgrade should run. If omitted, the upgrade runs in the next update window.
+- `scheduled_datetime` (String) The RFC3339 datetime at which the upgrade should run. If omitted, the upgrade runs in the next update window and this is set to the datetime the API assigned.
 
 ### Read-Only
 
