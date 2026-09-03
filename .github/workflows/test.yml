@@ -35,6 +35,8 @@ jobs:
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: latest
+          # Also lint the files behind the testing build tag.
+          args: --build-tags bcadmincenter_testing
 
   generate:
     runs-on: ubuntu-latest
@@ -80,8 +82,12 @@ jobs:
       - run: go mod download
       - name: Run unit tests
         run: go test -v -cover -timeout=120s ./...
+      # The mock-server acceptance tests need the bcadmincenter_testing build tag: it
+      # enables the static test token and the plaintext base URL that release builds
+      # refuse. The unit-test step above deliberately runs untagged, so it also proves
+      # the release-mode guards compile and hold.
       - name: Run provider acceptance tests with mock server
-        run: go test -v -cover -timeout=120s -run TestAcc ./internal/provider/
+        run: go test -v -cover -timeout=120s -tags bcadmincenter_testing -run TestAcc ./internal/provider/
         timeout-minutes: 10
 
   # Run Terraform test framework tests using mock_provider in a matrix with Terraform CLI versions

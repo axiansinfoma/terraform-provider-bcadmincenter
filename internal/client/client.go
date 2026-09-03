@@ -138,6 +138,30 @@ func newAdminCenterError(resp *http.Response) *AdminCenterError {
 	return apiError
 }
 
+// validateBaseURL checks a caller-supplied base URL before it is used.
+//
+// Every request built from this URL carries a live Azure AD bearer token in an
+// Authorization header, and that header is attached before the destination is
+// examined. A plaintext or malformed base URL therefore leaks a usable credential, so
+// http:// is accepted only in testing builds where the target is a local test server.
+func validateBaseURL(raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid base_url %q: %w", raw, err)
+	}
+	if parsed.Host == "" {
+		return fmt.Errorf("invalid base_url %q: must be an absolute URL including a host", raw)
+	}
+	if parsed.Scheme == "https" {
+		return nil
+	}
+	if testingBuild && parsed.Scheme == "http" {
+		return nil
+	}
+	return fmt.Errorf("invalid base_url %q: scheme must be https, because every request to it "+
+		"carries an Azure AD access token", raw)
+}
+
 // NewClient creates a new Business Central Admin Center API client.
 func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	if config == nil {
@@ -152,7 +176,16 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	var credential azcore.TokenCredential
 	var err error
 
-	// If a static access token is provided (for testing only), use it directly.
+	// A static access token bypasses Azure AD entirely, so it is refused unless this
+	// binary was built for testing. Failing loudly beats silently ignoring the value:
+	// a release provider that quietly discarded the token would authenticate as
+	// somebody else without saying so.
+	if config.AccessToken != "" && !testingBuild {
+		return nil, fmt.Errorf("a static access token was supplied (BCADMINCENTER_TEST_TOKEN), " +
+			"but static tokens bypass Azure AD authentication and are only honoured in builds " +
+			"tagged 'bcadmincenter_testing'")
+	}
+
 	if config.AccessToken != "" {
 		credential = &staticTokenCredential{token: config.AccessToken}
 	} else if config.ClientID != "" && config.ClientSecret != "" {
@@ -205,6 +238,8 @@ func NewClient(ctx context.Context, config *Config) (*Client, error) {
 	baseURL := config.BaseURL
 	if baseURL == "" {
 		baseURL = constants.DefaultBaseURL
+	} else if err := validateBaseURL(baseURL); err != nil {
+		return nil, err
 	}
 
 	apiVersion := config.APIVersion
