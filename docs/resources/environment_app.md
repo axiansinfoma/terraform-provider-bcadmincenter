@@ -141,7 +141,7 @@ resource "bcadmincenter_environment_app" "my_app" {
 
 ### Optional
 
-- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID.
+- `aad_tenant_id` (String) The Azure AD tenant ID. If not specified, defaults to the provider's configured tenant ID. Changing this forces a new resource to be created.
 - `accept_isv_eula` (Boolean) When `true`, accepts the ISV End User License Agreement (EULA) for the app. Required for some ISV apps. Defaults to `false`. Changing this forces a new resource to be created.
 - `allow_preview_version` (Boolean) When `true`, allows installing preview versions of the app. Defaults to `false`.
 - `install_or_update_needed_dependencies` (Boolean) When `true`, automatically installs or updates app dependencies. Defaults to `true`.
