@@ -63,7 +63,7 @@ body:
     attributes:
       label: Affected Resource(s)/Data Source(s)
       description: Please list the affected resources and/or data sources.
-      placeholder: bc_admin_center_XXXXX
+      placeholder: bcadmincenter_XXXXX
     validations:
       required: true
   - type: textarea

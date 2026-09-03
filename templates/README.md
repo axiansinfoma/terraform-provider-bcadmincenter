@@ -50,7 +50,7 @@ Templates use Go's `text/template` syntax with special functions provided by ter
 Use the `tffile` function to include example Terraform files:
 
 ```markdown
-{{tffile "examples/resources/bc_admin_center_environment/resource.tf"}}
+{{tffile "examples/resources/bcadmincenter_environment/resource.tf"}}
 ```
 
 This will:
@@ -153,10 +153,10 @@ examples/
 ├── provider/
 │   └── provider.tf                 # Provider configuration
 ├── resources/
-│   └── bc_admin_center_environment/
+│   └── bcadmincenter_environment/
 │       └── resource.tf             # Basic resource example
 └── data-sources/
-    └── bc_admin_center_available_applications/
+    └── bcadmincenter_available_applications/
         └── data-source.tf          # Basic data source example
 ```
 
@@ -249,12 +249,12 @@ When adding a new resource or data source:
 2. Create the example file:
    ```bash
    # For resources
-   mkdir -p examples/resources/bc_admin_center_new_resource
-   touch examples/resources/bc_admin_center_new_resource/resource.tf
+   mkdir -p examples/resources/bcadmincenter_new_resource
+   touch examples/resources/bcadmincenter_new_resource/resource.tf
    
    # For data sources
-   mkdir -p examples/data-sources/bc_admin_center_new_data_source
-   touch examples/data-sources/bc_admin_center_new_data_source/data-source.tf
+   mkdir -p examples/data-sources/bcadmincenter_new_data_source
+   touch examples/data-sources/bcadmincenter_new_data_source/data-source.tf
    ```
 
 3. Write the template following the guidelines above

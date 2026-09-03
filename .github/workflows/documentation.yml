@@ -117,7 +117,7 @@ jobs:
           echo "    This validation will be enabled after the provider is published."
           
           # TODO: Uncomment the following section after provider is published to Terraform Registry
-          # for dir in $(find examples -type d -name "bc_admin_center_*"); do
+          # for dir in $(find examples -type d -name "bcadmincenter_*"); do
           #   if [ -f "$dir/resource.tf" ] || [ -f "$dir/data-source.tf" ]; then
           #     echo "Validating $dir..."
           #     cd "$dir"
@@ -140,7 +140,7 @@ jobs:
           
           # Basic HCL syntax validation using terraform fmt -check
           # This doesn't require provider initialization
-          for dir in $(find examples -type d -name "bc_admin_center_*"); do
+          for dir in $(find examples -type d -name "bcadmincenter_*"); do
             if [ -f "$dir/resource.tf" ] || [ -f "$dir/data-source.tf" ]; then
               echo "Checking HCL syntax in $dir..."
               

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright Axians Infoma GmbH 2025, 2026, 0
+# Copyright (c) 2025 Axians Infoma GmbH
 # SPDX-License-Identifier: MPL-2.0
 
 
